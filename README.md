@@ -104,10 +104,10 @@ plot(model)
 
 #### `simulate_sequences()`
 
-Generate basic Markov chain sequences.
+Generate Markov chain sequences. Can use provided parameters or auto-generate random ones with learning state names.
 
 ```r
-# Basic sequence simulation
+# Method 1: Provide your own transition matrix
 sequences <- simulate_sequences(
   transition_matrix = trans_mat,
   initial_probabilities = init_probs,
@@ -118,11 +118,51 @@ sequences <- simulate_sequences(
   include_na = TRUE
 )
 
+# Method 2: Auto-generate with letter names (A, B, C, ...)
+sequences <- simulate_sequences(
+  max_seq_length = 20,
+  num_rows = 100,
+  n_states = 5,
+  seed = 42
+)
+
+# Method 3: Auto-generate with learning state names
+sequences <- simulate_sequences(
+  max_seq_length = 25,
+  num_rows = 150,
+  n_states = 6,
+  use_learning_states = TRUE,
+  learning_categories = c("metacognitive", "cognitive"),
+  seed = 123
+)
+
 head(sequences)
-#>   V1 V2 V3 V4 V5 V6 V7 V8 V9 V10 ...
-#> 1  A  A  B  A  A  C  B  A  A   B ...
-#> 2  B  C  C  B  A  A  A  B  C  NA ...
-#> 3  C  B  B  A  A  A  B  C  C   B ...
+#>        V1      V2       V3     V4        V5 ...
+#> 1    Plan Monitor     Read  Study  Evaluate ...
+#> 2    Read    Plan  Monitor   Plan      Read ...
+#> 3 Monitor    Read Evaluate   Read      Plan ...
+
+# Method 4: Get sequences AND generating parameters back
+result <- simulate_sequences(
+  max_seq_length = 20,
+  num_rows = 100,
+  n_states = 4,
+  use_learning_states = TRUE,
+  return_params = TRUE,
+  seed = 42
+)
+result$sequences          # The sequences
+result$transition_matrix  # The random transition matrix used
+result$state_names        # e.g., c("Plan", "Monitor", "Read", "Practice")
+
+# Method 5: Custom state names
+sequences <- simulate_sequences(
+  max_seq_length = 20,
+  num_rows = 100,
+  n_states = 4,
+  state_names = c("Explore", "Learn", "Practice", "Master"),
+  seed = 42
+)
 ```
 
 #### `simulate_sequences_advanced()`

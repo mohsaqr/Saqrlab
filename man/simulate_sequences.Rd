@@ -5,40 +5,81 @@
 \title{Simulate Markov Chain Sequences (Basic)}
 \usage{
 simulate_sequences(
-  transition_matrix,
-  initial_probabilities,
+  transition_matrix = NULL,
+  initial_probabilities = NULL,
   max_seq_length,
   num_rows,
+  n_states = 4,
+  state_names = NULL,
+  use_learning_states = FALSE,
+  learning_categories = "all",
+  smart_select = TRUE,
   min_na = 0,
   max_na = 0,
-  include_na = TRUE
+  include_na = TRUE,
+  seed = NULL,
+  return_params = FALSE
 )
 }
 \arguments{
 \item{transition_matrix}{Square numeric matrix of transition probabilities.
-Rows must sum to 1. Row names define state names.}
+Rows must sum to 1. Row names define state names. If NULL, random
+probabilities are generated based on \code{n_states}. Default: NULL.}
 
 \item{initial_probabilities}{Named numeric vector of initial state
-probabilities. Must sum to 1.}
+probabilities. Must sum to 1. If NULL, random probabilities are generated.
+Default: NULL.}
 
 \item{max_seq_length}{Integer. Maximum length of each sequence.}
 
 \item{num_rows}{Integer. Number of sequences (rows) to generate.}
 
-\item{min_na}{Integer. Minimum number of NA values per sequence (default: 0).}
+\item{n_states}{Integer. Number of states when auto-generating probabilities.
+Ignored if \code{transition_matrix} is provided. Default: 4.}
 
-\item{max_na}{Integer. Maximum number of NA values per sequence (default: 0).}
+\item{state_names}{Character vector. Names for states when auto-generating.
+If NULL, uses letters (A, B, C, ...) or learning states if enabled.
+Ignored if \code{transition_matrix} is provided. Default: NULL.}
 
-\item{include_na}{Logical. Whether to include NAs in sequences (default: TRUE).}
+\item{use_learning_states}{Logical. If TRUE and auto-generating, uses
+realistic learning action verbs as state names. Default: FALSE.}
+
+\item{learning_categories}{Character vector. Categories of learning states
+to use. Options: "metacognitive", "cognitive", "behavioral", "social",
+"motivational", "affective", "group_regulation", or "all".
+Only used if \code{use_learning_states = TRUE}. Default: "all".}
+
+\item{smart_select}{Logical. If TRUE, intelligently selects learning states
+based on n_states. Only used if \code{use_learning_states = TRUE}. Default: TRUE.}
+
+\item{min_na}{Integer. Minimum number of NA values per sequence. Default: 0.}
+
+\item{max_na}{Integer. Maximum number of NA values per sequence. Default: 0.}
+
+\item{include_na}{Logical. Whether to include NAs in sequences. Default: TRUE.}
+
+\item{seed}{Integer or NULL. Random seed for reproducibility. Default: NULL.}
+
+\item{return_params}{Logical. If TRUE, returns a list with sequences and
+the generating parameters. Default: FALSE.}
 }
 \value{
-A data frame with \code{num_rows} rows and \code{max_seq_length} columns.
-Each row is a sequence of state names, potentially with trailing NAs.
+If \code{return_params = FALSE} (default), a data frame with \code{num_rows}
+rows and \code{max_seq_length} columns. Each row is a sequence of state names,
+potentially with trailing NAs.
+
+If \code{return_params = TRUE}, a list containing:
+\itemize{
+\item sequences: The data frame of sequences.
+\item transition_matrix: The transition probability matrix used.
+\item initial_probabilities: The initial probabilities used.
+\item state_names: The state names used.
+}
 }
 \description{
-Generate sequences of states from a Markov chain given a transition matrix
-and initial state probabilities. This is the basic version without
-stability modes.
+Generate sequences of states from a Markov chain. Can either use provided
+transition matrix and initial probabilities, or auto-generate random ones
+with optional learning state names.
 }
 \details{
 The function generates sequences by:
@@ -50,34 +91,86 @@ the current state's row in \code{transition_matrix}.
 random number of NAs between \code{min_na} and \code{max_na}.
 }
 
-Input validation ensures:
+\strong{Auto-generation mode}: When \code{transition_matrix} is NULL, the function
+automatically generates random transition probabilities and initial
+probabilities using \code{seqHMM::simulate_transition_probs()} and
+\code{seqHMM::simulate_initial_probs()}.
+
+\strong{Learning States}: When \code{use_learning_states = TRUE}, state names are
+drawn from a curated collection of 180+ student learning action verbs:
 \itemize{
-\item Transition matrix rows sum to 1 (tolerance: 1e-6).
-\item Initial probabilities sum to 1 (tolerance: 1e-6).
-\item Valid NA range parameters.
+\item \strong{metacognitive}: Plan, Monitor, Evaluate, Reflect, ...
+\item \strong{cognitive}: Read, Study, Analyze, Summarize, ...
+\item \strong{behavioral}: Practice, Annotate, Research, Review, ...
+\item \strong{social}: Collaborate, Discuss, Explain, Share, ...
+\item \strong{motivational}: Focus, Persist, Explore, Strive, ...
+\item \strong{affective}: Enjoy, Appreciate, Cope, Curious, ...
+\item \strong{group_regulation}: Adapt, Cohesion, Consensus, ...
 }
 }
 \examples{
 \dontrun{
-# Create a simple 3-state transition matrix
+# Method 1: Provide your own transition matrix
 trans_mat <- matrix(c(
   0.7, 0.2, 0.1,
   0.3, 0.5, 0.2,
   0.2, 0.3, 0.5
 ), nrow = 3, byrow = TRUE)
 rownames(trans_mat) <- colnames(trans_mat) <- c("A", "B", "C")
-
 init_probs <- c(A = 0.5, B = 0.3, C = 0.2)
 
-# Generate 100 sequences of length 20
 sequences <- simulate_sequences(
   transition_matrix = trans_mat,
   initial_probabilities = init_probs,
   max_seq_length = 20,
+  num_rows = 100
+)
+
+# Method 2: Auto-generate with letter names
+sequences <- simulate_sequences(
+  max_seq_length = 20,
   num_rows = 100,
-  min_na = 0,
-  max_na = 5
+  n_states = 5,
+  seed = 42
+)
+
+# Method 3: Auto-generate with learning state names
+sequences <- simulate_sequences(
+  max_seq_length = 25,
+  num_rows = 150,
+  n_states = 6,
+  use_learning_states = TRUE,
+  learning_categories = c("metacognitive", "cognitive"),
+  seed = 123
+)
+
+# Method 4: Get sequences AND the generating parameters
+result <- simulate_sequences(
+  max_seq_length = 20,
+  num_rows = 100,
+  n_states = 4,
+  use_learning_states = TRUE,
+  return_params = TRUE,
+  seed = 42
+)
+result$sequences          # The sequences
+result$transition_matrix  # The random transition matrix
+result$state_names        # e.g., c("Plan", "Monitor", "Read", "Practice")
+
+# Method 5: Custom state names
+sequences <- simulate_sequences(
+  max_seq_length = 20,
+  num_rows = 100,
+  n_states = 4,
+  state_names = c("Explore", "Learn", "Practice", "Master"),
+  seed = 42
 )
 }
 
+}
+\seealso{
+\code{\link{simulate_sequences_advanced}} for sequences with stability modes,
+\code{\link{simulate_long_data}} for long-format educational data,
+\code{\link{get_learning_states}} for available learning state verbs,
+\code{\link{generate_tna_networks}} for generating complete TNA networks.
 }
