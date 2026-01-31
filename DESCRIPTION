@@ -1,0 +1,26 @@
+Package: Saqrlab
+Title: Simulation and Analysis for Temporal Network Analysis
+Version: 0.1.0
+Authors@R: person("Mohammed", "Saqr", email = "saqr@saqr.me", role = c("aut", "cre"))
+Description: Tools for simulating Markov chain sequences, bootstrapping temporal
+    network models, and evaluating edge recovery performance. Supports multiple
+    TNA model variants (tna, ftna, ctna, atna) with parallel processing capabilities.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Imports:
+    tna,
+    seqHMM,
+    dplyr,
+    tidyr,
+    parallel,
+    future,
+    future.apply,
+    progressr,
+    lhs
+Suggests:
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
