@@ -378,3 +378,64 @@ prepare_for_tna <- function(data,
 
   return(result)
 }
+
+
+#' Convert Action Column to One-Hot Encoding
+#'
+#' @description
+#' Convert a categorical Action column to one-hot (binary indicator) columns.
+#'
+#' @param data Data frame containing an action column.
+#' @param action_col Character. Name of the action column. Default: "Action".
+#' @param states Character vector or NULL. States to include as columns.
+#'   If NULL, uses all unique values. Default: NULL.
+#' @param drop_action Logical. Remove the original action column. Default: TRUE.
+#' @param sort_states Logical. Sort state columns alphabetically. Default: FALSE.
+#' @param prefix Character. Prefix for state column names. Default: "".
+#'
+#' @return Data frame with one-hot encoded columns (0/1 integers).
+#'
+#' @examples
+#' \dontrun{
+#' # Generate long format data
+#' long_data <- simulate_long_data(n_groups = 3, seed = 42)
+#'
+#' # Convert to one-hot encoding
+#' onehot_data <- action_to_onehot(long_data)
+#' head(onehot_data)
+#'
+#' # With custom prefix
+#' onehot_data <- action_to_onehot(long_data, prefix = "state_")
+#' names(onehot_data)
+#' }
+#'
+#' @seealso \code{\link{simulate_onehot_data}} for directly generating one-hot data,
+#'   \code{\link{simulate_long_data}} for generating long format data.
+#'
+#' @export
+action_to_onehot <- function(data, action_col = "Action", states = NULL,
+                             drop_action = TRUE, sort_states = FALSE,
+                             prefix = "") {
+  stopifnot(is.data.frame(data))
+  stopifnot(action_col %in% names(data))
+
+  if (is.null(states)) {
+    states <- unique(data[[action_col]])
+    states <- states[!is.na(states)]
+  }
+
+  if (sort_states) {
+    states <- sort(states)
+  }
+
+  for (state in states) {
+    col_name <- paste0(prefix, state)
+    data[[col_name]] <- as.integer(data[[action_col]] == state)
+  }
+
+  if (drop_action) {
+    data[[action_col]] <- NULL
+  }
+
+  return(data)
+}

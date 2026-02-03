@@ -110,6 +110,7 @@
 #' }
 #'
 #' @seealso
+#' \code{\link{simulate_onehot_data}} for one-hot encoded format,
 #' \code{\link{simulate_sequences}} for generating wide-format sequences,
 #' \code{\link{get_learning_states}} for available learning states,
 #' \code{\link{generate_tna_networks}} for generating TNA network objects.
