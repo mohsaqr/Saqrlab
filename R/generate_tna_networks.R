@@ -1,21 +1,26 @@
-#' Generate Sequence Data with Fitted TNA Models
+#' Generate TNA Datasets (Sequences + Models + Probabilities)
 #'
 #' @description
-#' Generate multiple simulated sequence datasets by simulating Markov chain
-#' sequences and fitting TNA models. This function combines the simulation
+#' Generate complete TNA datasets including simulated sequences, fitted models,
+#' and generating probabilities. This function combines the full simulation
 #' workflow: probability generation -> sequence simulation -> model fitting.
+#'
+#' Use \code{\link{generate_tna_networks}} if you only need the fitted models.
 #'
 #' Supports using realistic learning action verbs as state names for
 #' educational research simulations.
 #'
-#' @param n_networks Integer. Number of sequence datasets to generate. Default: 10.
-#' @param n_states Integer. Number of states in each network. Default: 4.
-#' @param state_names Character vector. Names for the states. If NULL and
+#' @param n_datasets Integer. Number of datasets to generate. Default: 1.
+#' @param n_states Integer. Number of states in each network. Default: 5.
+#' @param n_sequences Integer. Number of sequences to simulate per network.
+#'   Default: 100.
+#' @param seq_length Integer. Maximum length of each sequence. Default: 30.
+#' @param states Character vector. Names for the states. If NULL and
 #'   `use_learning_states = FALSE`, uses letters (A, B, C, ...).
 #'   Ignored if `use_learning_states = TRUE`. Default: NULL.
 #' @param use_learning_states Logical. If TRUE, uses learning action verbs
-#'   as state names (e.g., "Plan", "Monitor", "Read"). Default: FALSE.
-#' @param learning_categories Character vector. Which categories of learning
+#'   as state names (e.g., "Plan", "Monitor", "Read"). Default: TRUE.
+#' @param categories Character vector. Which categories of learning
 #'   verbs to use. Options: "metacognitive", "cognitive", "behavioral",
 #'   "social", "motivational", "affective", "group_regulation", or "all".
 #'   If NULL and `use_learning_states = TRUE`, a random category is selected.
@@ -23,11 +28,8 @@
 #' @param smart_select Logical. If TRUE, intelligently selects learning states
 #'   based on n_states (small networks use fewer categories).
 #'   Only used if `use_learning_states = TRUE`. Default: TRUE.
-#' @param num_rows Integer. Number of sequences to simulate per network.
-#'   Default: 100.
-#' @param max_seq_length Integer. Maximum length of each sequence. Default: 30.
-#' @param min_na Integer. Minimum NAs per sequence. Default: 0.
-#' @param max_na Integer. Maximum NAs per sequence. Default: 0.
+#' @param na_range Integer vector of length 2 (min, max) or single integer.
+#'   Range of NA values per sequence. Default: c(0, 0).
 #' @param model_type Character. Type of TNA model to fit. One of:
 #'   "tna", "ftna", "ctna", "atna". Default: "tna".
 #' @param use_advanced Logical. If TRUE, uses `simulate_sequences_advanced()`
@@ -42,21 +44,31 @@
 #'   (Only used if `use_advanced = TRUE`). Default: "random_jump".
 #' @param unstable_random_transition_prob Numeric (0 to 1). Probability of
 #'   unstable action (only used if `use_advanced = TRUE`). Default: 0.5.
+#' @param include_data Logical. If TRUE, includes the generating
+#'   sequence data in the output. Default: TRUE.
+#' @param include_probs Logical. If TRUE, includes the generating
+#'   transition matrix and initial probabilities in the output. Default: TRUE.
 #' @param seed Integer or NULL. Random seed for reproducibility. If NULL,
 #'   no seed is set. Default: NULL.
-#' @param include_probabilities Logical. If TRUE, includes the generating
-#'   transition matrix and initial probabilities in the output. Default: TRUE.
 #' @param verbose Logical. If TRUE, prints progress messages. Default: TRUE.
 #'
-#' @return A list of length `n_networks`. Each element is a list containing:
+#' @param state_names Deprecated. Use `states` instead.
+#' @param learning_categories Deprecated. Use `categories` instead.
+#' @param num_rows Deprecated. Use `n_sequences` instead.
+#' @param max_seq_length Deprecated. Use `seq_length` instead.
+#' @param min_na Deprecated. Use `na_range` instead.
+#' @param max_na Deprecated. Use `na_range` instead.
+#' @param include_probabilities Deprecated. Use `include_probs` instead.
+#'
+#' @return A list of length `n_datasets`. Each element is a list containing:
 #' \describe{
 #'   \item{model}{The fitted TNA model object.}
 #'   \item{transition_probs}{The generating transition matrix
-#'     (if `include_probabilities = TRUE`).}
+#'     (if `include_probs = TRUE`).}
 #'   \item{initial_probs}{The generating initial probabilities
-#'     (if `include_probabilities = TRUE`).}
+#'     (if `include_probs = TRUE`).}
 #'   \item{sequences}{The simulated sequence data frame
-#'     (if `include_probabilities = TRUE`).}
+#'     (if `include_data = TRUE`).}
 #'   \item{params}{List of parameters used for this network.}
 #' }
 #'
@@ -85,18 +97,24 @@
 #'
 #' @examples
 #' \dontrun{
-#' # Generate 5 simple sequence datasets with letter names
-#' data <- generate_sequence_data(
-#'   n_networks = 5,
+#' # Simplest usage - generates 1 dataset with sequences + model + probabilities
+#' data <- generate_tna_datasets(seed = 42)
+#' data[[1]]$sequences        # The sequence data
+#' data[[1]]$model            # The fitted TNA model
+#' data[[1]]$transition_probs # The generating probabilities
+#'
+#' # Generate 5 datasets with learning states
+#' data <- generate_tna_datasets(
+#'   n_datasets = 5,
 #'   n_states = 4,
 #'   seed = 42
 #' )
 #'
-#' # Generate data with learning action verbs
-#' learning_data <- generate_sequence_data(
-#'   n_networks = 5,
+#' # Generate with specific learning category
+#' learning_data <- generate_tna_datasets(
+#'   n_datasets = 5,
 #'   n_states = 6,
-#'   use_learning_states = TRUE,
+#'   categories = c("metacognitive", "cognitive"),
 #'   seed = 42
 #' )
 #'
@@ -104,43 +122,16 @@
 #' learning_data[[1]]$params$state_names
 #' # e.g., c("Plan", "Monitor", "Read", "Practice", "Discuss", "Focus")
 #'
-#' # Focus on metacognitive and cognitive states only
-#' srl_data <- generate_sequence_data(
-#'   n_networks = 5,
+#' # Generate with letter names (disable learning states)
+#' letter_data <- generate_tna_datasets(
+#'   n_datasets = 5,
 #'   n_states = 8,
-#'   use_learning_states = TRUE,
-#'   learning_categories = c("metacognitive", "cognitive"),
+#'   use_learning_states = FALSE,
 #'   seed = 123
 #' )
 #'
-#' # Random category selection (default when learning_categories = NULL)
-#' random_cat_data <- generate_sequence_data(
-#'   n_networks = 3,
-#'   n_states = 5,
-#'   use_learning_states = TRUE,
-#'   seed = 456
-#' )
-#'
-#' # Large dataset with all categories
-#' big_data <- generate_sequence_data(
-#'   n_networks = 1,
-#'   n_states = 20,
-#'   use_learning_states = TRUE,
-#'   learning_categories = "all",
-#'   seed = 789
-#' )
-#'
-#' # Advanced simulation with stability modes
-#' data_adv <- generate_sequence_data(
-#'   n_networks = 3,
-#'   n_states = 5,
-#'   use_learning_states = TRUE,
-#'   learning_categories = "metacognitive",
-#'   use_advanced = TRUE,
-#'   stability_prob = 0.9,
-#'   unstable_mode = "unlikely_jump",
-#'   seed = 123
-#' )
+#' # Old function name still works (deprecated)
+#' data <- generate_sequence_data(n_datasets = 3, seed = 42)
 #' }
 #'
 #' @seealso
@@ -151,44 +142,71 @@
 #' \code{\link{simulate_sequences}} for basic sequence simulation,
 #' \code{\link{fit_network_model}} for model fitting.
 #'
-#' @name generate_sequence_data
-#' @rdname generate_sequence_data
+#' @name generate_tna_datasets
+#' @rdname generate_tna_datasets
 #' @importFrom seqHMM simulate_initial_probs simulate_transition_probs
 #' @import tna
 #' @export
-generate_sequence_data <- function(n_networks = 10,
-                                   n_states = 4,
-                                   state_names = NULL,
-                                   use_learning_states = FALSE,
-                                   learning_categories = NULL,
+generate_tna_datasets <- function(n_datasets = 1,
+                                   n_states = 8,
+                                   n_sequences = 100,
+                                   seq_length = 30,
+                                   states = NULL,
+                                   use_learning_states = TRUE,
+                                   categories = NULL,
                                    smart_select = TRUE,
-                                   num_rows = 100,
-                                   max_seq_length = 30,
-                                   min_na = 0,
-                                   max_na = 0,
+                                   na_range = c(0, 0),
                                    model_type = "tna",
                                    use_advanced = FALSE,
                                    stable_transitions = NULL,
                                    stability_prob = 0.95,
                                    unstable_mode = "random_jump",
                                    unstable_random_transition_prob = 0.5,
+                                   include_data = TRUE,
+                                   include_probs = TRUE,
                                    seed = NULL,
-                                   include_probabilities = TRUE,
-                                   verbose = TRUE) {
+                                   verbose = TRUE,
+                                   # Backward compatibility - old parameter names
+                                   state_names = NULL,
+                                   learning_categories = NULL,
+                                   num_rows = NULL,
+                                   max_seq_length = NULL,
+                                   min_na = NULL,
+                                   max_na = NULL,
+                                   include_probabilities = NULL) {
+  # --- Backward compatibility: map old names to new names ---
+  if (!is.null(state_names)) states <- state_names
+  if (!is.null(learning_categories)) categories <- learning_categories
+  if (!is.null(num_rows)) n_sequences <- num_rows
+  if (!is.null(max_seq_length)) seq_length <- max_seq_length
+  if (!is.null(include_probabilities)) include_probs <- include_probabilities
+
+  # Handle na_range from min_na/max_na
+  if (!is.null(min_na) || !is.null(max_na)) {
+    min_na_val <- if (!is.null(min_na)) min_na else 0
+    max_na_val <- if (!is.null(max_na)) max_na else min_na_val
+    na_range <- c(min_na_val, max_na_val)
+  }
+
+  # Normalize na_range to length 2
+  if (length(na_range) == 1) {
+    na_range <- c(na_range, na_range)
+  }
+
   # --- Input Validation ---
   stopifnot(
-    is.numeric(n_networks), length(n_networks) == 1, n_networks >= 1,
+    is.numeric(n_datasets), length(n_datasets) == 1, n_datasets >= 1,
     is.numeric(n_states), length(n_states) == 1, n_states >= 2,
-    is.numeric(num_rows), length(num_rows) == 1, num_rows >= 1,
-    is.numeric(max_seq_length), length(max_seq_length) == 1, max_seq_length >= 2,
-    is.numeric(min_na), length(min_na) == 1, min_na >= 0,
-    is.numeric(max_na), length(max_na) == 1, max_na >= min_na,
+    is.numeric(n_sequences), length(n_sequences) == 1, n_sequences >= 1,
+    is.numeric(seq_length), length(seq_length) == 1, seq_length >= 2,
+    is.numeric(na_range), length(na_range) == 2, na_range[1] >= 0, na_range[2] >= na_range[1],
     is.character(model_type), length(model_type) == 1,
     model_type %in% c("tna", "ftna", "ctna", "atna"),
     is.logical(use_advanced), length(use_advanced) == 1,
     is.logical(use_learning_states), length(use_learning_states) == 1,
     is.logical(smart_select), length(smart_select) == 1,
-    is.logical(include_probabilities), length(include_probabilities) == 1,
+    is.logical(include_data), length(include_data) == 1,
+    is.logical(include_probs), length(include_probs) == 1,
     is.logical(verbose), length(verbose) == 1
   )
 
@@ -200,81 +218,79 @@ generate_sequence_data <- function(n_networks = 10,
   # --- Determine State Names ---
   if (use_learning_states) {
     # Random category selection if not specified
-    if (is.null(learning_categories)) {
+    if (is.null(categories)) {
       all_cats <- c("metacognitive", "cognitive", "behavioral",
                     "social", "motivational", "affective", "group_regulation")
-      learning_categories <- sample(all_cats, 1)
+      categories <- sample(all_cats, 1)
       if (verbose) {
-        message(sprintf("Randomly selected learning category: %s", learning_categories))
+        message(sprintf("Randomly selected learning category: %s", categories))
       }
     }
 
-    if (smart_select && ("all" %in% learning_categories || length(learning_categories) > 2)) {
+    if (smart_select && ("all" %in% categories || length(categories) > 2)) {
       # Use smart selection for balanced category representation
-      state_names <- smart_select_states(
+      states <- smart_select_states(
         n_states = n_states,
-        primary_categories = if ("all" %in% learning_categories) NULL else learning_categories
+        primary_categories = if ("all" %in% categories) NULL else categories
       )
     } else {
       # Direct selection from specified categories
-      state_names <- get_learning_states(
-        categories = learning_categories,
+      states <- get_learning_states(
+        categories = categories,
         n = n_states
       )
     }
     if (verbose) {
-      message(sprintf("Using learning states: %s", paste(state_names, collapse = ", ")))
+      message(sprintf("Using learning states: %s", paste(states, collapse = ", ")))
     }
-  } else if (is.null(state_names)) {
+  } else if (is.null(states)) {
     # Default to letters or S1, S2, ...
     if (n_states <= 26) {
-      state_names <- LETTERS[1:n_states]
+      states <- LETTERS[1:n_states]
     } else {
-      state_names <- paste0("S", 1:n_states)
+      states <- paste0("S", 1:n_states)
     }
   } else {
-    stopifnot(is.character(state_names), length(state_names) >= n_states)
-    state_names <- state_names[1:n_states]
+    stopifnot(is.character(states), length(states) >= n_states)
+    states <- states[1:n_states]
   }
 
-  # --- Generate Networks ---
-  networks <- vector("list", n_networks)
+  # --- Generate Datasets ---
+  datasets <- vector("list", n_datasets)
 
-  for (i in seq_len(n_networks)) {
+  for (i in seq_len(n_datasets)) {
     if (verbose) {
-      message(sprintf("Generating network %d/%d...", i, n_networks))
+      message(sprintf("Generating dataset %d/%d...", i, n_datasets))
     }
 
     # Generate random transition and initial probabilities
     initial_probs <- seqHMM::simulate_initial_probs(n_states)
-    names(initial_probs) <- state_names
+    names(initial_probs) <- states
     transition_probs <- seqHMM::simulate_transition_probs(n_states)
-    dimnames(transition_probs) <- list(state_names, state_names)
+    dimnames(transition_probs) <- list(states, states)
 
     # Simulate sequences
     if (use_advanced) {
       sequences <- simulate_sequences_advanced(
-        transition_matrix = transition_probs,
-        initial_probabilities = initial_probs,
-        max_seq_length = max_seq_length,
-        num_rows = num_rows,
+        trans_matrix = transition_probs,
+        init_probs = initial_probs,
+        seq_length = seq_length,
+        n_sequences = n_sequences,
         stable_transitions = stable_transitions,
         stability_prob = stability_prob,
         unstable_mode = unstable_mode,
         unstable_random_transition_prob = unstable_random_transition_prob,
-        min_na = min_na,
-        max_na = max_na,
-        include_na = (max_na > 0)
+        na_range = na_range,
+        include_na = (na_range[2] > 0)
       )
     } else {
       sequences <- simulate_sequences(
-        transition_matrix = transition_probs,
-        initial_probabilities = initial_probs,
-        max_seq_length = max_seq_length,
-        num_rows = num_rows,
-        min_na = min_na,
-        max_na = max_na,
-        include_na = (max_na > 0)
+        trans_matrix = transition_probs,
+        init_probs = initial_probs,
+        seq_length = seq_length,
+        n_sequences = n_sequences,
+        na_range = na_range,
+        include_na = (na_range[2] > 0)
       )
     }
 
@@ -284,7 +300,7 @@ generate_sequence_data <- function(n_networks = 10,
         fit_network_model(sequences, model_type)
       },
       error = function(e) {
-        warning(sprintf("Failed to fit model for network %d: %s", i, e$message))
+        warning(sprintf("Failed to fit model for dataset %d: %s", i, e$message))
         NULL
       }
     )
@@ -295,42 +311,57 @@ generate_sequence_data <- function(n_networks = 10,
       params = list(
         network_id = i,
         n_states = n_states,
-        state_names = state_names,
-        num_rows = num_rows,
-        max_seq_length = max_seq_length,
-        min_na = min_na,
-        max_na = max_na,
+        state_names = states,
+        n_sequences = n_sequences,
+        seq_length = seq_length,
+        na_range = na_range,
         model_type = model_type,
         use_advanced = use_advanced,
         use_learning_states = use_learning_states,
-        learning_categories = if (use_learning_states) learning_categories else NULL
+        categories = if (use_learning_states) categories else NULL
       )
     )
 
-    if (include_probabilities) {
+    if (include_probs) {
       result$transition_probs <- transition_probs
       result$initial_probs <- initial_probs
+    }
+
+    if (include_data) {
       result$sequences <- sequences
     }
 
-    networks[[i]] <- result
+    datasets[[i]] <- result
   }
 
   # Name the list elements
-  names(networks) <- paste0("network_", seq_len(n_networks))
+  names(datasets) <- paste0("dataset_", seq_len(n_datasets))
 
   if (verbose) {
-    successful <- sum(sapply(networks, function(x) !is.null(x$model)))
-    message(sprintf("Generated %d/%d networks successfully.", successful, n_networks))
+    successful <- sum(sapply(datasets, function(x) !is.null(x$model)))
+    message(sprintf("Generated %d/%d datasets successfully.", successful, n_datasets))
   }
 
-  return(networks)
+  return(datasets)
 }
 
 
-#' @rdname generate_sequence_data
+#' Generate Sequence Data (Deprecated)
+#'
+#' @description
+#' `r lifecycle::badge("deprecated")`
+#'
+#' This function has been renamed to \code{\link{generate_tna_datasets}}.
+#' Please use `generate_tna_datasets()` instead.
+#'
+#' @inheritParams generate_tna_datasets
+#' @keywords internal
 #' @export
-generate_tna_data <- generate_sequence_data
+generate_sequence_data <- function(...) {
+
+.Deprecated("generate_tna_datasets")
+  generate_tna_datasets(...)
+}
 
 
 #' Generate TNA Network Objects
@@ -339,36 +370,40 @@ generate_tna_data <- generate_sequence_data
 #' Generate multiple TNA network objects (fitted models) for simulation studies.
 #' This function creates TNA model objects by simulating sequence data and
 #' fitting models. For generating raw sequence data with associated probabilities,
-#' use \code{\link{generate_sequence_data}}. For group TNA models, use
+#' use \code{\link{generate_tna_datasets}}. For group TNA models, use
 #' \code{\link{generate_group_tna_networks}}.
 #'
-#' @param n_networks Integer. Number of networks to generate. Default: 10.
+#' @param n_networks Integer. Number of networks to generate. Default: 1.
+#' @param n_states Integer. Number of states/actions in each network. Default: 5.
+#' @param n_sequences Integer. Number of sequences to simulate per network.
+#'   Default: 100.
+#' @param seq_length Integer. Maximum length of each sequence. Default: 30.
 #' @param model_type Character. Type of TNA model to fit:
 #'   "tna", "ftna", "ctna", "atna". Default: "tna".
-#' @param n_states Integer. Number of states/actions in each network. Default: 5.
 #' @param use_learning_states Logical. If TRUE, uses learning action verbs
 #'   as state names. Default: TRUE.
-#' @param learning_categories Character vector or NULL. Which categories of
+#' @param categories Character vector or NULL. Which categories of
 #'   learning verbs to use. Options: "metacognitive", "cognitive", "behavioral",
 #'   "social", "motivational", "affective", "group_regulation", or "all".
 #'   If NULL (default), randomly selects one category.
-#' @param num_sequences Integer. Number of sequences to simulate per network.
-#'   Default: 100.
-#' @param max_seq_length Integer. Maximum length of each sequence. Default: 30.
 #' @param seed Integer or NULL. Random seed for reproducibility. Default: NULL.
 #' @param verbose Logical. If TRUE, prints progress messages. Default: TRUE.
-#' @param ... Additional parameters passed to \code{\link{generate_sequence_data}}.
+#' @param ... Additional parameters passed to \code{\link{generate_tna_datasets}}.
+#'
+#' @param num_sequences Deprecated. Use `n_sequences` instead.
+#' @param max_seq_length Deprecated. Use `seq_length` instead.
+#' @param learning_categories Deprecated. Use `categories` instead.
 #'
 #' @return A list of length `n_networks` containing fitted TNA model objects.
 #'   Each element is a tna model object (class "tna").
 #'
 #' @details
-#' This function differs from \code{\link{generate_sequence_data}} in that it
+#' This function differs from \code{\link{generate_tna_datasets}} in that it
 #' returns only the fitted model objects, not the underlying sequence data or
 #' generating probabilities. Use this when you need TNA network objects for
 #' simulation studies or method comparisons.
 #'
-#' **Random Category Selection**: When `learning_categories = NULL` and
+#' **Random Category Selection**: When `categories = NULL` and
 #' `use_learning_states = TRUE`, a random learning category is selected.
 #' Available categories: metacognitive, cognitive, behavioral, social,
 #' motivational, affective, group_regulation.
@@ -382,7 +417,7 @@ generate_tna_data <- generate_sequence_data
 #' meta_nets <- generate_tna_networks(
 #'   n_networks = 3,
 #'   n_states = 6,
-#'   learning_categories = "metacognitive",
+#'   categories = "metacognitive",
 #'   seed = 123
 #' )
 #'
@@ -396,53 +431,70 @@ generate_tna_data <- generate_sequence_data
 #' # Use the networks
 #' plot(nets[[1]])
 #' tna::centralities(nets[[1]])
+#'
+#' # Old parameter names still work
+#' nets <- generate_tna_networks(
+#'   n_networks = 3,
+#'   num_sequences = 50,
+#'   max_seq_length = 25,
+#'   seed = 42
+#' )
 #' }
 #'
 #' @seealso
 #' \code{\link{generate_group_tna_networks}} for group TNA models,
-#' \code{\link{generate_sequence_data}} for generating sequence data with
+#' \code{\link{generate_tna_datasets}} for generating complete datasets with
 #'   probabilities, \code{\link{fit_network_model}} for model fitting,
 #' \code{\link{get_learning_states}} for learning state verbs.
 #'
 #' @importFrom seqHMM simulate_initial_probs simulate_transition_probs
 #' @import tna
 #' @export
-generate_tna_networks <- function(n_networks = 10,
+generate_tna_networks <- function(n_networks = 1,
+                                   n_states = 8,
+                                   n_sequences = 100,
+                                   seq_length = 30,
                                    model_type = "tna",
-                                   n_states = 5,
                                    use_learning_states = TRUE,
-                                   learning_categories = NULL,
-                                   num_sequences = 100,
-                                   max_seq_length = 30,
+                                   categories = NULL,
                                    seed = NULL,
                                    verbose = TRUE,
+                                   # Backward compatibility - old parameter names
+                                   num_sequences = NULL,
+                                   max_seq_length = NULL,
+                                   learning_categories = NULL,
                                    ...) {
+  # --- Backward compatibility: map old names to new names ---
+  if (!is.null(num_sequences)) n_sequences <- num_sequences
+  if (!is.null(max_seq_length)) seq_length <- max_seq_length
+  if (!is.null(learning_categories)) categories <- learning_categories
+
   # Set seed if provided
   if (!is.null(seed)) {
     set.seed(seed)
   }
 
   # Random category selection if not specified
-  if (use_learning_states && is.null(learning_categories)) {
+  if (use_learning_states && is.null(categories)) {
     all_cats <- c("metacognitive", "cognitive", "behavioral",
                   "social", "motivational", "affective", "group_regulation")
-    learning_categories <- sample(all_cats, 1)
+    categories <- sample(all_cats, 1)
     if (verbose) {
-      message(sprintf("Randomly selected learning category: %s", learning_categories))
+      message(sprintf("Randomly selected learning category: %s", categories))
     }
   }
 
   # Determine state names
   if (use_learning_states) {
-    state_names <- get_learning_states(learning_categories, n = n_states, seed = seed)
+    states <- get_learning_states(categories, n = n_states, seed = seed)
     if (verbose) {
-      message(sprintf("Using learning states: %s", paste(state_names, collapse = ", ")))
+      message(sprintf("Using learning states: %s", paste(states, collapse = ", ")))
     }
   } else {
     if (n_states <= 26) {
-      state_names <- LETTERS[1:n_states]
+      states <- LETTERS[1:n_states]
     } else {
-      state_names <- paste0("S", 1:n_states)
+      states <- paste0("S", 1:n_states)
     }
   }
 
@@ -454,16 +506,17 @@ generate_tna_networks <- function(n_networks = 10,
     }
 
     # Generate sequences and fit tna model
-    seq_data <- generate_sequence_data(
-      n_networks = 1,
+    seq_data <- generate_tna_datasets(
+      n_datasets = 1,
       n_states = n_states,
-      state_names = state_names,
+      states = states,
       use_learning_states = FALSE,
-      num_rows = num_sequences,
-      max_seq_length = max_seq_length,
+      n_sequences = n_sequences,
+      seq_length = seq_length,
       model_type = model_type,
       seed = NULL,
-      include_probabilities = FALSE,
+      include_probs = FALSE,
+      include_data = FALSE,
       verbose = FALSE,
       ...
     )
@@ -487,21 +540,26 @@ generate_tna_networks <- function(n_networks = 10,
 #' (e.g., classrooms, teams) with their own transition patterns.
 #'
 #' @param n_groups Integer. Number of groups in the network. Default: 5.
-#' @param actors_per_group Integer or integer vector. Number of actors per group.
+#' @param n_actors Integer or integer vector. Number of actors per group.
 #'   Accepts: single integer (fixed size), two integers like `c(8, 12)` (min/max),
 #'   or a range like `5:15` (min/max taken from range). Default: 10.
 #' @param n_states Integer. Number of states/actions in the network. Default: 5.
-#' @param min_seq_length Integer. Minimum sequence length per actor. Default: 10.
-#' @param max_seq_length Integer. Maximum sequence length per actor. Default: 30.
+#' @param seq_length_range Integer vector of length 2. Range for sequence lengths
+#'   per actor (min, max). Default: c(10, 30).
 #' @param use_learning_states Logical. If TRUE, uses learning action verbs
 #'   as state names. Default: TRUE.
-#' @param learning_categories Character vector or NULL. Which categories of
+#' @param categories Character vector or NULL. Which categories of
 #'   learning verbs to use. Options: "metacognitive", "cognitive", "behavioral",
 #'   "social", "motivational", "affective", "group_regulation", or "all".
 #'   If NULL (default), randomly selects one category.
 #' @param seed Integer or NULL. Random seed for reproducibility. Default: NULL.
 #' @param verbose Logical. If TRUE, prints progress messages. Default: TRUE.
 #' @param ... Additional parameters passed to \code{\link{simulate_long_data}}.
+#'
+#' @param actors_per_group Deprecated. Use `n_actors` instead.
+#' @param min_seq_length Deprecated. Use `seq_length_range` instead.
+#' @param max_seq_length Deprecated. Use `seq_length_range` instead.
+#' @param learning_categories Deprecated. Use `categories` instead.
 #'
 #' @return A group_tna model object (class "group_tna") containing:
 #' \describe{
@@ -527,7 +585,7 @@ generate_tna_networks <- function(n_networks = 10,
 #' # Generate a group TNA network with 4 groups, 15 actors each
 #' group_net <- generate_group_tna_networks(
 #'   n_groups = 4,
-#'   actors_per_group = 15,
+#'   n_actors = 15,
 #'   n_states = 5,
 #'   seed = 42
 #' )
@@ -535,23 +593,30 @@ generate_tna_networks <- function(n_networks = 10,
 #' # Variable group sizes using range notation
 #' var_net <- generate_group_tna_networks(
 #'   n_groups = 5,
-#'   actors_per_group = 8:15,
-#'   min_seq_length = 5,
-#'   max_seq_length = 25,
+#'   n_actors = c(8, 15),
+#'   seq_length_range = c(5, 25),
 #'   seed = 123
 #' )
 #'
 #' # With specific learning category
 #' ssrl_net <- generate_group_tna_networks(
 #'   n_groups = 6,
-#'   actors_per_group = c(10, 20),
-#'   learning_categories = "group_regulation",
+#'   n_actors = c(10, 20),
+#'   categories = "group_regulation",
 #'   seed = 456
 #' )
 #'
 #' # Access individual group networks
 #' names(group_net)
 #' group_net[[1]]$weights
+#'
+#' # Old parameter names still work
+#' group_net <- generate_group_tna_networks(
+#'   actors_per_group = 10,
+#'   min_seq_length = 5,
+#'   max_seq_length = 20,
+#'   seed = 42
+#' )
 #' }
 #'
 #' @seealso
@@ -563,49 +628,63 @@ generate_tna_networks <- function(n_networks = 10,
 #' @import tna
 #' @export
 generate_group_tna_networks <- function(n_groups = 5,
-                                         actors_per_group = 10,
-                                         n_states = 5,
-                                         min_seq_length = 10,
-                                         max_seq_length = 30,
+                                         n_actors = 10,
+                                         n_states = 8,
+                                         seq_length_range = c(10, 30),
                                          use_learning_states = TRUE,
-                                         learning_categories = NULL,
+                                         categories = NULL,
                                          seed = NULL,
                                          verbose = TRUE,
+                                         # Backward compatibility - old parameter names
+                                         actors_per_group = NULL,
+                                         min_seq_length = NULL,
+                                         max_seq_length = NULL,
+                                         learning_categories = NULL,
                                          ...) {
+  # --- Backward compatibility: map old names to new names ---
+  if (!is.null(actors_per_group)) n_actors <- actors_per_group
+  if (!is.null(learning_categories)) categories <- learning_categories
+
+  # Handle seq_length_range from min/max_seq_length
+  if (!is.null(min_seq_length) || !is.null(max_seq_length)) {
+    min_len <- if (!is.null(min_seq_length)) min_seq_length else seq_length_range[1]
+    max_len <- if (!is.null(max_seq_length)) max_seq_length else seq_length_range[2]
+    seq_length_range <- c(min_len, max_len)
+  }
+
   # Set seed if provided
   if (!is.null(seed)) {
     set.seed(seed)
   }
 
-  # Handle actors_per_group: support single value, c(min, max), or min:max
-
-  if (length(actors_per_group) == 1) {
-    actors_range <- c(actors_per_group, actors_per_group)
+  # Handle n_actors: support single value, c(min, max), or min:max
+  if (length(n_actors) == 1) {
+    actors_range <- c(n_actors, n_actors)
   } else {
-    actors_range <- c(min(actors_per_group), max(actors_per_group))
+    actors_range <- c(min(n_actors), max(n_actors))
   }
 
   # Random category selection if not specified
-  if (use_learning_states && is.null(learning_categories)) {
+  if (use_learning_states && is.null(categories)) {
     all_cats <- c("metacognitive", "cognitive", "behavioral",
                   "social", "motivational", "affective", "group_regulation")
-    learning_categories <- sample(all_cats, 1)
+    categories <- sample(all_cats, 1)
     if (verbose) {
-      message(sprintf("Randomly selected learning category: %s", learning_categories))
+      message(sprintf("Randomly selected learning category: %s", categories))
     }
   }
 
   # Determine state names
   if (use_learning_states) {
-    state_names <- get_learning_states(learning_categories, n = n_states, seed = seed)
+    states <- get_learning_states(categories, n = n_states, seed = seed)
     if (verbose) {
-      message(sprintf("Using learning states: %s", paste(state_names, collapse = ", ")))
+      message(sprintf("Using learning states: %s", paste(states, collapse = ", ")))
     }
   } else {
     if (n_states <= 26) {
-      state_names <- LETTERS[1:n_states]
+      states <- LETTERS[1:n_states]
     } else {
-      state_names <- paste0("S", 1:n_states)
+      states <- paste0("S", 1:n_states)
     }
   }
 
@@ -616,15 +695,15 @@ generate_group_tna_networks <- function(n_groups = 5,
       actors_msg <- sprintf("%d-%d actors/group", actors_range[1], actors_range[2])
     }
     message(sprintf("Generating group TNA network: %d groups, %s, seq length %d-%d",
-                    n_groups, actors_msg, min_seq_length, max_seq_length))
+                    n_groups, actors_msg, seq_length_range[1], seq_length_range[2]))
   }
 
   # Generate grouped long-format data
   long_data <- simulate_long_data(
     n_groups = n_groups,
-    actors_per_group = actors_range,
-    actions = state_names,
-    seq_length_range = c(min_seq_length, max_seq_length),
+    n_actors = actors_range,
+    states = states,
+    seq_length_range = seq_length_range,
     seed = NULL,
     ...
   )
@@ -677,13 +756,15 @@ generate_group_tna_networks <- function(n_groups = 5,
 #' @param self_loops Logical. Allow self-loops (diagonal elements). Default: FALSE.
 #' @param use_learning_states Logical. Use learning state verbs as node names.
 #'   Default: TRUE.
-#' @param learning_categories Character vector or NULL. Categories for node names.
+#' @param categories Character vector or NULL. Categories for node names.
 #'   If NULL with `use_learning_states = TRUE`, uses one random category per group.
 #'   Can be single (same for all) or one per group. Default: NULL.
 #' @param node_prefix Character. Prefix for node names when not using learning
 #'   states. Default: "N".
 #' @param seed Integer or NULL. Random seed. Default: NULL.
 #' @param verbose Logical. Print progress messages. Default: TRUE.
+#'
+#' @param learning_categories Deprecated. Use `categories` instead.
 #'
 #' @return A list with two elements:
 #' \describe{
@@ -724,7 +805,7 @@ generate_group_tna_networks <- function(n_groups = 5,
 #' net <- generate_tna_matrix(
 #'   nodes_per_group = 7,
 #'   group_names = c("Macro", "Meso", "Micro"),
-#'   learning_categories = c("metacognitive", "cognitive", "behavioral"),
+#'   categories = c("metacognitive", "cognitive", "behavioral"),
 #'   seed = 123
 #' )
 #' plot_mlna(net$matrix, layers = net$node_types, minimum = 0.18)
@@ -752,10 +833,15 @@ generate_tna_matrix <- function(nodes_per_group = 5,
                                  edge_prob_range = c(0, 0.3),
                                  self_loops = FALSE,
                                  use_learning_states = TRUE,
-                                 learning_categories = NULL,
+                                 categories = NULL,
                                  node_prefix = "N",
                                  seed = NULL,
-                                 verbose = TRUE) {
+                                 verbose = TRUE,
+                                 # Backward compatibility
+                                 learning_categories = NULL) {
+  # Backward compatibility
+  if (!is.null(learning_categories)) categories <- learning_categories
+
   if (!is.null(seed)) {
     set.seed(seed)
   }
@@ -792,13 +878,13 @@ generate_tna_matrix <- function(nodes_per_group = 5,
                 "social", "motivational", "affective", "group_regulation")
 
   if (use_learning_states) {
-    if (is.null(learning_categories)) {
+    if (is.null(categories)) {
       # Random category for each group
-      learning_categories <- sample(all_cats, n_groups, replace = TRUE)
-    } else if (length(learning_categories) == 1) {
-      learning_categories <- rep(learning_categories, n_groups)
-    } else if (length(learning_categories) != n_groups) {
-      stop("learning_categories must be length 1 or match number of groups")
+      categories <- sample(all_cats, n_groups, replace = TRUE)
+    } else if (length(categories) == 1) {
+      categories <- rep(categories, n_groups)
+    } else if (length(categories) != n_groups) {
+      stop("categories must be length 1 or match number of groups")
     }
   }
 
@@ -810,7 +896,7 @@ generate_tna_matrix <- function(nodes_per_group = 5,
     n_nodes <- nodes_per_group[i]
 
     if (use_learning_states) {
-      node_names <- get_learning_states(learning_categories[i], n = n_nodes)
+      node_names <- get_learning_states(categories[i], n = n_nodes)
       # Ensure unique names across groups by adding suffix if needed
       while (any(node_names %in% all_nodes)) {
         duplicates <- node_names %in% all_nodes

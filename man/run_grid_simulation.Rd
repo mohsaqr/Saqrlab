@@ -8,9 +8,9 @@ run_grid_simulation(
   Model,
   stable_transitions,
   num_runs,
-  num_rows_vec,
-  max_seq_length_vec,
-  na_range_list,
+  n_sequences_vec = NULL,
+  seq_length_vec = NULL,
+  na_range_list = list(list(min = 0, max = 0)),
   stability_prob = 0.95,
   unstable_mode = "random_jump",
   unstable_random_transition_prob = 0.5,
@@ -19,7 +19,9 @@ run_grid_simulation(
   include_na = TRUE,
   consistency_range = c(0.75, 1.25),
   level = 0.05,
-  num_cores = parallel::detectCores() - 1
+  num_cores = parallel::detectCores() - 1,
+  num_rows_vec = NULL,
+  max_seq_length_vec = NULL
 )
 }
 \arguments{
@@ -31,9 +33,9 @@ stable transitions.}
 
 \item{num_runs}{Integer. Number of bootstrap runs per parameter combination.}
 
-\item{num_rows_vec}{Numeric vector. Values of num_rows to test.}
+\item{n_sequences_vec}{Numeric vector. Values of n_sequences to test.}
 
-\item{max_seq_length_vec}{Numeric vector. Values of max_seq_length to test.}
+\item{seq_length_vec}{Numeric vector. Values of seq_length to test.}
 
 \item{na_range_list}{List of lists. Each inner list has \code{min} and \code{max}
 elements defining an NA range to test.}
@@ -58,10 +60,14 @@ range. Default: c(0.75, 1.25).}
 
 \item{num_cores}{Integer. Number of cores for parallel processing.
 Default: detectCores() - 1.}
+
+\item{num_rows_vec}{Deprecated. Use \code{n_sequences_vec} instead.}
+
+\item{max_seq_length_vec}{Deprecated. Use \code{seq_length_vec} instead.}
 }
 \value{
 A named list where each element corresponds to a parameter combination.
-Names follow the pattern \verb{nr<num_rows>_sl<seq_length>_na<min>-<max>}.
+Names follow the pattern \verb{nr<n_sequences>_sl<seq_length>_na<min>-<max>}.
 Each element contains:
 \describe{
 \item{aggregated_summary}{Aggregated performance and edge significance.}
@@ -77,7 +83,7 @@ Useful for studying how different settings affect edge recovery performance.
 \details{
 The function creates a full factorial grid from:
 \itemize{
-\item \code{num_rows_vec} x \code{max_seq_length_vec} x \code{na_range_list}
+\item \code{n_sequences_vec} x \code{seq_length_vec} x \code{na_range_list}
 }
 
 For each combination, it runs \code{run_bootstrap_simulation()} and stores
@@ -107,8 +113,8 @@ grid_results <- run_grid_simulation(
   Model = Model,
   stable_transitions = stable,
   num_runs = 20,
-  num_rows_vec = c(50, 100, 200),
-  max_seq_length_vec = c(20, 30, 50),
+  n_sequences_vec = c(50, 100, 200),
+  seq_length_vec = c(20, 30, 50),
   na_range_list = list(
     list(min = 0, max = 0),
     list(min = 0, max = 5),
@@ -119,6 +125,15 @@ grid_results <- run_grid_simulation(
 
 # Analyze results
 analyze_grid_results(grid_results)
+
+# Old parameter names still work
+grid_results <- run_grid_simulation(
+  Model = Model,
+  stable_transitions = stable,
+  num_runs = 20,
+  num_rows_vec = c(50, 100, 200),
+  max_seq_length_vec = c(20, 30, 50)
+)
 }
 
 }

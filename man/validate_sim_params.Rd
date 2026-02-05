@@ -9,8 +9,8 @@ validate_sim_params(params)
 \arguments{
 \item{params}{List of simulation parameters. May include:
 \describe{
-\item{max_seq_length}{Maximum sequence length (default: 30).}
-\item{num_rows}{Number of sequences to generate (default: 100).}
+\item{seq_length}{Maximum sequence length (default: 30).}
+\item{n_sequences}{Number of sequences to generate (default: 100).}
 \item{min_na}{Minimum number of NA values per sequence (default: 0).}
 \item{max_na}{Maximum number of NA values per sequence (default: 5).}
 }}
@@ -26,21 +26,30 @@ Ensures parameter relationships are valid (e.g., min_na <= max_na).
 The function performs the following validations:
 \itemize{
 \item Sets default values for missing parameters.
-\item Ensures \code{max_na <= max_seq_length}.
+\item Ensures \code{max_na <= seq_length}.
 \item Ensures \code{min_na <= max_na}.
-\item Ensures \code{min_na < max_seq_length}.
+\item Ensures \code{min_na < seq_length}.
 }
+
+Both new (\code{seq_length}, \code{n_sequences}) and old (\code{max_seq_length}, \code{num_rows})
+parameter names are supported for backward compatibility.
 }
 \examples{
 # Validate with defaults
 params <- validate_sim_params(list())
 
-# Validate custom parameters
+# Validate custom parameters (new names)
 params <- validate_sim_params(list(
-  max_seq_length = 50,
-  num_rows = 200,
+  seq_length = 50,
+  n_sequences = 200,
   min_na = 2,
   max_na = 10
+))
+
+# Old parameter names still work
+params <- validate_sim_params(list(
+  max_seq_length = 50,
+  num_rows = 200
 ))
 
 }

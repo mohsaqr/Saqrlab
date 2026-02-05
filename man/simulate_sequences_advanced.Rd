@@ -5,31 +5,55 @@
 \title{Simulate Markov Chain Sequences (Advanced)}
 \usage{
 simulate_sequences_advanced(
-  transition_matrix,
-  initial_probabilities,
-  max_seq_length,
-  num_rows,
+  n_sequences = 1000,
+  seq_length = 20,
+  n_states = 8,
+  states = NULL,
+  use_learning_states = TRUE,
+  categories = "all",
+  trans_matrix = NULL,
+  init_probs = NULL,
   stable_transitions = NULL,
   stability_prob = 0.95,
   unstable_mode = "unlikely_jump",
   unstable_random_transition_prob = 0.4,
   unstable_perturb_noise = 0.5,
   unlikely_prob_threshold = 0.1,
-  min_na = 0,
-  max_na = 0,
-  include_na = TRUE
+  na_range = c(0, 0),
+  include_na = TRUE,
+  seed = NULL,
+  transition_matrix = NULL,
+  initial_probabilities = NULL,
+  num_rows = NULL,
+  max_seq_length = NULL,
+  min_na = NULL,
+  max_na = NULL
 )
 }
 \arguments{
-\item{transition_matrix}{Square numeric matrix of transition probabilities.
-Rows must sum to 1. Row names define state names.}
+\item{n_sequences}{Integer. Number of sequences (rows) to generate. Default: 1000.}
 
-\item{initial_probabilities}{Named numeric vector of initial state
-probabilities. Must sum to 1.}
+\item{seq_length}{Integer. Maximum length of each sequence. Default: 20.}
 
-\item{max_seq_length}{Integer. Maximum length of each sequence.}
+\item{n_states}{Integer. Number of states when auto-generating probabilities.
+Ignored if \code{trans_matrix} is provided. Default: 5.}
 
-\item{num_rows}{Integer. Number of sequences (rows) to generate.}
+\item{states}{Character vector. Names for states when auto-generating.
+If NULL, uses letters (A, B, C, ...) or learning states if enabled.
+Ignored if \code{trans_matrix} is provided. Default: NULL.}
+
+\item{use_learning_states}{Logical. If TRUE and auto-generating, uses
+realistic learning action verbs as state names. Default: TRUE.}
+
+\item{categories}{Character vector. Categories of learning states to use.
+Only used if \code{use_learning_states = TRUE}. Default: "all".}
+
+\item{trans_matrix}{Square numeric matrix of transition probabilities.
+Rows must sum to 1. Row names define state names. If NULL, random
+probabilities are generated. Default: NULL.}
+
+\item{init_probs}{Named numeric vector of initial state probabilities.
+Must sum to 1. If NULL, random probabilities are generated. Default: NULL.}
 
 \item{stable_transitions}{List of character vectors. Each vector contains
 two state names defining a stable transition pair (from, to).
@@ -55,14 +79,27 @@ perturbation mode. Default: 0.5.}
 \item{unlikely_prob_threshold}{Numeric in (0 to 1). Threshold below which
 transitions are considered "unlikely". Default: 0.1.}
 
-\item{min_na}{Integer. Minimum number of NA values per sequence. Default: 0.}
-
-\item{max_na}{Integer. Maximum number of NA values per sequence. Default: 0.}
+\item{na_range}{Integer vector of length 2 (min, max) or single integer (min=max).
+Range of NA values per sequence. Default: c(0, 0).}
 
 \item{include_na}{Logical. Whether to include NAs in sequences. Default: TRUE.}
+
+\item{seed}{Integer or NULL. Random seed for reproducibility. Default: NULL.}
+
+\item{transition_matrix}{Deprecated. Use \code{trans_matrix} instead.}
+
+\item{initial_probabilities}{Deprecated. Use \code{init_probs} instead.}
+
+\item{num_rows}{Deprecated. Use \code{n_sequences} instead.}
+
+\item{max_seq_length}{Deprecated. Use \code{seq_length} instead.}
+
+\item{min_na}{Deprecated. Use \code{na_range} instead.}
+
+\item{max_na}{Deprecated. Use \code{na_range} instead.}
 }
 \value{
-A data frame with \code{num_rows} rows and \code{max_seq_length} columns.
+A data frame with \code{n_sequences} rows and \code{seq_length} columns.
 Each row is a sequence of state names, potentially with trailing NAs.
 }
 \description{
@@ -91,6 +128,9 @@ NAs are added at the end of sequences, preserving at least 2 non-NA values.
 }
 \examples{
 \dontrun{
+# Simplest usage: all defaults
+sequences <- simulate_sequences_advanced(seed = 42)
+
 # Create a 4-state transition matrix
 trans_mat <- matrix(c(
   0.6, 0.2, 0.1, 0.1,
@@ -107,16 +147,23 @@ stable <- list(c("A", "B"), c("C", "D"))
 
 # Generate sequences with unlikely_jump mode
 sequences <- simulate_sequences_advanced(
-  transition_matrix = trans_mat,
-  initial_probabilities = init_probs,
-  max_seq_length = 30,
-  num_rows = 100,
+  trans_matrix = trans_mat,
+  init_probs = init_probs,
+  seq_length = 30,
+  n_sequences = 100,
   stable_transitions = stable,
   stability_prob = 0.95,
   unstable_mode = "unlikely_jump",
   unstable_random_transition_prob = 0.3,
-  min_na = 0,
-  max_na = 5
+  na_range = c(0, 5)
+)
+
+# Old parameter names still work (backward compatible)
+sequences <- simulate_sequences_advanced(
+  transition_matrix = trans_mat,
+  initial_probabilities = init_probs,
+  max_seq_length = 30,
+  num_rows = 100
 )
 }
 

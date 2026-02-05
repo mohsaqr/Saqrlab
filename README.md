@@ -85,10 +85,10 @@ init_probs <- c(A = 0.5, B = 0.3, C = 0.2)
 
 # 3. Simulate sequences
 sequences <- simulate_sequences(
- transition_matrix = trans_mat,
-  initial_probabilities = init_probs,
-  max_seq_length = 20,
-  num_rows = 100
+  trans_matrix = trans_mat,
+  init_probs = init_probs,
+  seq_length = 20,
+  n_sequences = 100
 )
 
 # 4. Fit a TNA model
@@ -109,30 +109,29 @@ Generate Markov chain sequences. Can use provided parameters or auto-generate ra
 ```r
 # Method 1: Provide your own transition matrix
 sequences <- simulate_sequences(
-  transition_matrix = trans_mat,
-  initial_probabilities = init_probs,
-  max_seq_length = 20,
-  num_rows = 100,
-  min_na = 0,
-  max_na = 5,        # Add 0-5 trailing NAs per sequence
+  trans_matrix = trans_mat,
+  init_probs = init_probs,
+  seq_length = 20,
+  n_sequences = 100,
+  na_range = c(0, 5),  # Add 0-5 trailing NAs per sequence
   include_na = TRUE
 )
 
 # Method 2: Auto-generate with letter names (A, B, C, ...)
 sequences <- simulate_sequences(
-  max_seq_length = 20,
-  num_rows = 100,
+  seq_length = 20,
+  n_sequences = 100,
   n_states = 5,
   seed = 42
 )
 
-# Method 3: Auto-generate with learning state names
+# Method 3: Auto-generate with learning state names (default)
 sequences <- simulate_sequences(
-  max_seq_length = 25,
-  num_rows = 150,
+  seq_length = 25,
+  n_sequences = 150,
   n_states = 6,
-  use_learning_states = TRUE,
-  learning_categories = c("metacognitive", "cognitive"),
+  use_learning_states = TRUE,  # This is the default
+  categories = c("metacognitive", "cognitive"),
   seed = 123
 )
 
@@ -144,23 +143,23 @@ head(sequences)
 
 # Method 4: Get sequences AND generating parameters back
 result <- simulate_sequences(
-  max_seq_length = 20,
-  num_rows = 100,
+  seq_length = 20,
+  n_sequences = 100,
   n_states = 4,
   use_learning_states = TRUE,
-  return_params = TRUE,
+  include_params = TRUE,
   seed = 42
 )
-result$sequences          # The sequences
-result$transition_matrix  # The random transition matrix used
-result$state_names        # e.g., c("Plan", "Monitor", "Read", "Practice")
+result$sequences      # The sequences
+result$trans_matrix   # The random transition matrix used
+result$state_names    # e.g., c("Plan", "Monitor", "Read", "Practice")
 
 # Method 5: Custom state names
 sequences <- simulate_sequences(
-  max_seq_length = 20,
-  num_rows = 100,
+  seq_length = 20,
+  n_sequences = 100,
   n_states = 4,
-  state_names = c("Explore", "Learn", "Practice", "Master"),
+  states = c("Explore", "Learn", "Practice", "Master"),
   seed = 42
 )
 ```
@@ -179,10 +178,10 @@ stable_transitions <- list(
 
 # Simulate with 90% stability
 sequences_adv <- simulate_sequences_advanced(
-  transition_matrix = trans_mat,
-  initial_probabilities = init_probs,
-  max_seq_length = 30,
-  num_rows = 200,
+  trans_matrix = trans_mat,
+  init_probs = init_probs,
+  seq_length = 30,
+  n_sequences = 200,
   stable_transitions = stable_transitions,
   stability_prob = 0.90,
   unstable_mode = "random_jump",  # or "perturb_prob", "unlikely_jump"
@@ -197,11 +196,11 @@ Generate long-format data with hierarchical structure (actors in groups in cours
 ```r
 # Simulate educational data with group structure
 long_data <- simulate_long_data(
-  n_groups = 20,
-  actors_per_group = 10,       # or c(8, 12) for variable sizes
+  n_groups = 5,
+  n_actors = 10,               # or c(8, 12) for variable sizes
   n_courses = 3,
-  actions = NULL,              # Use default learning actions
-  action_categories = "group_regulation",
+  states = NULL,               # Use default learning states
+  categories = "group_regulation",
   seq_length_range = c(8, 25),
   achiever_levels = c("High", "Low"),
   achiever_probs = c(0.5, 0.5),
@@ -226,8 +225,8 @@ Generate multiple TNA networks with random or specified parameters.
 networks <- generate_tna_networks(
   n_networks = 5,
   n_states = 4,
-  num_rows = 100,
-  max_seq_length = 30,
+  n_sequences = 100,
+  seq_length = 30,
   model_type = "tna",
   seed = 42,
   verbose = TRUE
@@ -235,16 +234,16 @@ networks <- generate_tna_networks(
 
 # Access network components
 networks$network_1$model              # The TNA model
-networks$network_1$transition_probs   # Generating transition matrix
-networks$network_1$initial_probs      # Generating initial probabilities
+networks$network_1$trans_matrix       # Generating transition matrix
+networks$network_1$init_probs         # Generating initial probabilities
 networks$network_1$sequences          # The simulated sequences
 
-# Generate networks with realistic learning state names
+# Generate networks with realistic learning state names (default)
 learning_networks <- generate_tna_networks(
   n_networks = 5,
   n_states = 8,
-  use_learning_states = TRUE,
-  learning_categories = c("metacognitive", "cognitive"),
+  use_learning_states = TRUE,  # This is the default
+  categories = c("metacognitive", "cognitive"),
   smart_select = TRUE,
   seed = 123
 )
@@ -479,9 +478,9 @@ Run comprehensive network simulations.
 results <- run_network_simulation(
   original_data_list = list(data1, data2, data3),
   sim_params = list(
-    list(max_seq_length = 20, num_rows = 50),
-    list(max_seq_length = 30, num_rows = 100),
-    list(max_seq_length = 40, num_rows = 200)
+    list(seq_length = 20, n_sequences = 50),
+    list(seq_length = 30, n_sequences = 100),
+    list(seq_length = 40, n_sequences = 200)
   ),
   models = c("tna", "ftna"),
   comparisons = c("original", "across_models"),
@@ -517,9 +516,9 @@ Run simulations across a parameter grid.
 ```r
 # Create parameter grid
 param_grid <- create_param_grid(
-  num_rows = c(50, 100, 200),
-  max_seq_length = c(15, 30),
-  num_states = c(4, 6, 8)
+  n_sequences = c(50, 100, 200),
+  seq_length = c(15, 30),
+  n_states = c(4, 6, 8)
 )
 
 # Run grid simulation
@@ -705,8 +704,8 @@ Validate and set defaults for simulation parameters.
 
 ```r
 params <- validate_sim_params(list(
-  num_rows = 100,
-  max_seq_length = 30
+  n_sequences = 100,
+  seq_length = 30
 ))
 # Adds defaults for min_na, max_na, etc.
 ```
@@ -717,9 +716,9 @@ Create parameter combinations for grid simulations.
 
 ```r
 grid <- create_param_grid(
-  num_rows = c(50, 100, 200),
-  max_seq_length = c(15, 30, 45),
-  num_states = c(4, 6)
+  n_sequences = c(50, 100, 200),
+  seq_length = c(15, 30, 45),
+  n_states = c(4, 6)
 )
 
 nrow(grid)  # 18 combinations
@@ -739,17 +738,17 @@ networks <- generate_tna_networks(
   n_networks = 10,
   n_states = 6,
   use_learning_states = TRUE,
-  learning_categories = c("metacognitive", "cognitive"),
-  num_rows = 200,
-  max_seq_length = 30,
+  categories = c("metacognitive", "cognitive"),
+  n_sequences = 200,
+  seq_length = 30,
   model_type = "tna",
-  include_probabilities = TRUE
+  include_data = TRUE
 )
 
 # 2. For each network, simulate recovery at different sample sizes
 results <- lapply(networks, function(net) {
-  original_trans <- net$transition_probs
-  original_init <- net$initial_probs
+  original_trans <- net$trans_matrix
+  original_init <- net$init_probs
 
   # Test different sample sizes
   sample_sizes <- c(50, 100, 200, 500)
@@ -757,10 +756,10 @@ results <- lapply(networks, function(net) {
   recovery_results <- lapply(sample_sizes, function(n) {
     # Simulate new sequences
     new_seqs <- simulate_sequences(
-      transition_matrix = original_trans,
-      initial_probabilities = original_init,
-      max_seq_length = 30,
-      num_rows = n
+      trans_matrix = original_trans,
+      init_probs = original_init,
+      seq_length = 30,
+      n_sequences = n
     )
 
     # Fit model
@@ -809,10 +808,10 @@ rownames(trans_mat) <- colnames(trans_mat) <- c("Plan", "Execute", "Review")
 init_probs <- c(Plan = 0.5, Execute = 0.3, Review = 0.2)
 
 original_data <- simulate_sequences(
-  transition_matrix = trans_mat,
-  initial_probabilities = init_probs,
-  max_seq_length = 25,
-  num_rows = 150
+  trans_matrix = trans_mat,
+  init_probs = init_probs,
+  seq_length = 25,
+  n_sequences = 150
 )
 
 # Fit original model
@@ -844,10 +843,10 @@ library(tna)
 
 # Generate sequences
 sequences <- simulate_sequences(
-  transition_matrix = trans_mat,
-  initial_probabilities = init_probs,
-  max_seq_length = 30,
-  num_rows = 200
+  trans_matrix = trans_mat,
+  init_probs = init_probs,
+  seq_length = 30,
+  n_sequences = 200
 )
 
 # Fit all model types
@@ -877,10 +876,10 @@ library(tna)
 
 # Simulate educational data
 edu_data <- simulate_long_data(
-  n_groups = 50,
-  actors_per_group = c(8, 12),  # Variable group sizes
+  n_groups = 5,
+  n_actors = c(8, 12),  # Variable group sizes
   n_courses = 3,
-  action_categories = "group_regulation",
+  categories = "group_regulation",
   seq_length_range = c(10, 30),
   seed = 42
 )
@@ -916,9 +915,9 @@ Determine how many sequences you need for reliable network recovery.
 ```r
 # Create parameter grid for power analysis
 power_grid <- create_param_grid(
-  num_rows = seq(25, 300, by = 25),
-  max_seq_length = c(15, 25, 40),
-  num_states = c(4, 6, 8)
+  n_sequences = seq(25, 300, by = 25),
+  seq_length = c(15, 25, 40),
+  n_states = c(4, 6, 8)
 )
 
 # Run simulations
@@ -943,7 +942,7 @@ test_networks <- generate_tna_networks(
   n_networks = 20,
   n_states = 6,
   use_learning_states = TRUE,
-  num_rows = 150,
+  n_sequences = 150,
   seed = 42
 )
 
@@ -957,7 +956,7 @@ model_comparison <- lapply(test_networks, function(net) {
   )
 
   # Compare each to generating parameters
-  original <- list(weights = net$transition_probs)
+  original <- list(weights = net$trans_matrix)
 
   list(
     tna_recovery = calculate_edge_recovery(original, models$tna),

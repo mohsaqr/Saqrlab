@@ -9,8 +9,8 @@
 #' @param stable_transitions List of character vectors defining ground truth
 #'   stable transitions. Each vector contains two state names (from, to).
 #' @param num_runs Integer. Number of simulation runs to perform.
-#' @param max_seq_length Integer. Maximum sequence length.
-#' @param num_rows Integer. Number of sequences per run.
+#' @param seq_length Integer. Maximum sequence length.
+#' @param n_sequences Integer. Number of sequences per run.
 #' @param stability_prob Numeric in (0 to 1). Probability of following stable
 #'   transitions. Default: 0.95.
 #' @param unstable_mode Character. Mode for unstable transitions:
@@ -21,14 +21,19 @@
 #'   Default: 0.5.
 #' @param unlikely_prob_threshold Numeric in (0 to 1). Threshold for unlikely
 #'   transitions. Default: 0.1.
-#' @param min_na Integer. Minimum NAs per sequence. Default: 0.
-#' @param max_na Integer. Maximum NAs per sequence. Default: 0.
+#' @param na_range Integer vector of length 2 (min, max) or single integer.
+#'   Range of NA values per sequence. Default: c(0, 0).
 #' @param include_na Logical. Whether to include NAs. Default: TRUE.
 #' @param consistency_range Numeric vector of length 2. Bootstrap consistency
 #'   range. Default: c(0.75, 1.25).
 #' @param level Numeric in (0,1). Significance level. Default: 0.05.
 #' @param num_cores Integer. Number of cores for parallel processing.
 #'   Default: detectCores() - 1.
+#'
+#' @param max_seq_length Deprecated. Use `seq_length` instead.
+#' @param num_rows Deprecated. Use `n_sequences` instead.
+#' @param min_na Deprecated. Use `na_range` instead.
+#' @param max_na Deprecated. Use `na_range` instead.
 #'
 #' @return A list containing:
 #' \describe{
@@ -83,8 +88,8 @@
 #'   Model = Model,
 #'   stable_transitions = stable,
 #'   num_runs = 50,
-#'   max_seq_length = 30,
-#'   num_rows = 100,
+#'   seq_length = 30,
+#'   n_sequences = 100,
 #'   stability_prob = 0.95,
 #'   unstable_mode = "random_jump",
 #'   num_cores = 4
@@ -95,6 +100,15 @@
 #'
 #' # View edge-level results
 #' results$aggregated_summary$edge_significance
+#'
+#' # Old parameter names still work
+#' results <- run_bootstrap_simulation(
+#'   Model = Model,
+#'   stable_transitions = stable,
+#'   num_runs = 50,
+#'   max_seq_length = 30,
+#'   num_rows = 100
+#' )
 #' }
 #'
 #' @import dplyr
@@ -104,19 +118,39 @@
 run_bootstrap_simulation <- function(Model,
                                       stable_transitions,
                                       num_runs,
-                                      max_seq_length,
-                                      num_rows,
+                                      seq_length = 20,
+                                      n_sequences = 100,
                                       stability_prob = 0.95,
                                       unstable_mode = "random_jump",
                                       unstable_random_transition_prob = 0.5,
                                       unstable_perturb_noise = 0.5,
                                       unlikely_prob_threshold = 0.1,
-                                      min_na = 0,
-                                      max_na = 0,
+                                      na_range = c(0, 0),
                                       include_na = TRUE,
                                       consistency_range = c(0.75, 1.25),
                                       level = 0.05,
-                                      num_cores = parallel::detectCores() - 1) {
+                                      num_cores = parallel::detectCores() - 1,
+                                      # Backward compatibility - old parameter names
+                                      max_seq_length = NULL,
+                                      num_rows = NULL,
+                                      min_na = NULL,
+                                      max_na = NULL) {
+  # --- Backward compatibility: map old names to new names ---
+  if (!is.null(max_seq_length)) seq_length <- max_seq_length
+  if (!is.null(num_rows)) n_sequences <- num_rows
+
+  # Handle na_range from min_na/max_na
+  if (!is.null(min_na) || !is.null(max_na)) {
+    min_na_val <- if (!is.null(min_na)) min_na else 0
+    max_na_val <- if (!is.null(max_na)) max_na else min_na_val
+    na_range <- c(min_na_val, max_na_val)
+  }
+
+  # Normalize na_range to length 2
+  if (length(na_range) == 1) {
+    na_range <- c(na_range, na_range)
+  }
+
   # --- Input Validation ---
   stopifnot(
     is.list(Model), all(c("weights", "inits") %in% names(Model)), is.matrix(Model$weights),
@@ -126,9 +160,9 @@ run_bootstrap_simulation <- function(Model,
     is.numeric(num_cores), num_cores > 0
   )
 
-  transition_matrix <- Model$weights
-  initial_probabilities <- Model$inits
-  states_names <- rownames(transition_matrix)
+  trans_matrix <- Model$weights
+  init_probs <- Model$inits
+  states_names <- rownames(trans_matrix)
   if (is.null(states_names)) stop("Model$weights must have rownames.")
   num_states <- length(states_names)
 
@@ -142,12 +176,12 @@ run_bootstrap_simulation <- function(Model,
   run_params_list <- lapply(1:num_runs, function(X) {
     list(
       run_id = X,
-      transition_matrix = transition_matrix, initial_probabilities = initial_probabilities,
-      stable_transitions = stable_transitions, max_seq_length = max_seq_length,
-      num_rows = num_rows, stability_prob = stability_prob,
+      trans_matrix = trans_matrix, init_probs = init_probs,
+      stable_transitions = stable_transitions, seq_length = seq_length,
+      n_sequences = n_sequences, stability_prob = stability_prob,
       unstable_mode = unstable_mode, unstable_random_transition_prob = unstable_random_transition_prob,
       unstable_perturb_noise = unstable_perturb_noise, unlikely_prob_threshold = unlikely_prob_threshold,
-      min_na = min_na, max_na = max_na, include_na = include_na,
+      na_range = na_range, include_na = include_na,
       consistency_range = consistency_range, level = level
     )
   })
@@ -159,12 +193,12 @@ run_bootstrap_simulation <- function(Model,
         {
           evaluate_bootstrap(
             # Pass all params by name
-            transition_matrix = params$transition_matrix, initial_probabilities = params$initial_probabilities,
-            stable_transitions = params$stable_transitions, max_seq_length = params$max_seq_length,
-            num_rows = params$num_rows, stability_prob = params$stability_prob,
+            trans_matrix = params$trans_matrix, init_probs = params$init_probs,
+            stable_transitions = params$stable_transitions, seq_length = params$seq_length,
+            n_sequences = params$n_sequences, stability_prob = params$stability_prob,
             unstable_mode = params$unstable_mode, unstable_random_transition_prob = params$unstable_random_transition_prob,
             unstable_perturb_noise = params$unstable_perturb_noise, unlikely_prob_threshold = params$unlikely_prob_threshold,
-            min_na = params$min_na, max_na = params$max_na, include_na = params$include_na,
+            na_range = params$na_range, include_na = params$include_na,
             consistency_range = params$consistency_range, level = params$level
           )
         },

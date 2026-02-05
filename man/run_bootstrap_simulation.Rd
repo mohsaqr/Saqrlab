@@ -8,19 +8,22 @@ run_bootstrap_simulation(
   Model,
   stable_transitions,
   num_runs,
-  max_seq_length,
-  num_rows,
+  seq_length = 20,
+  n_sequences = 100,
   stability_prob = 0.95,
   unstable_mode = "random_jump",
   unstable_random_transition_prob = 0.5,
   unstable_perturb_noise = 0.5,
   unlikely_prob_threshold = 0.1,
-  min_na = 0,
-  max_na = 0,
+  na_range = c(0, 0),
   include_na = TRUE,
   consistency_range = c(0.75, 1.25),
   level = 0.05,
-  num_cores = parallel::detectCores() - 1
+  num_cores = parallel::detectCores() - 1,
+  max_seq_length = NULL,
+  num_rows = NULL,
+  min_na = NULL,
+  max_na = NULL
 )
 }
 \arguments{
@@ -32,9 +35,9 @@ stable transitions. Each vector contains two state names (from, to).}
 
 \item{num_runs}{Integer. Number of simulation runs to perform.}
 
-\item{max_seq_length}{Integer. Maximum sequence length.}
+\item{seq_length}{Integer. Maximum sequence length.}
 
-\item{num_rows}{Integer. Number of sequences per run.}
+\item{n_sequences}{Integer. Number of sequences per run.}
 
 \item{stability_prob}{Numeric in (0 to 1). Probability of following stable
 transitions. Default: 0.95.}
@@ -51,9 +54,8 @@ Default: 0.5.}
 \item{unlikely_prob_threshold}{Numeric in (0 to 1). Threshold for unlikely
 transitions. Default: 0.1.}
 
-\item{min_na}{Integer. Minimum NAs per sequence. Default: 0.}
-
-\item{max_na}{Integer. Maximum NAs per sequence. Default: 0.}
+\item{na_range}{Integer vector of length 2 (min, max) or single integer.
+Range of NA values per sequence. Default: c(0, 0).}
 
 \item{include_na}{Logical. Whether to include NAs. Default: TRUE.}
 
@@ -64,6 +66,14 @@ range. Default: c(0.75, 1.25).}
 
 \item{num_cores}{Integer. Number of cores for parallel processing.
 Default: detectCores() - 1.}
+
+\item{max_seq_length}{Deprecated. Use \code{seq_length} instead.}
+
+\item{num_rows}{Deprecated. Use \code{n_sequences} instead.}
+
+\item{min_na}{Deprecated. Use \code{na_range} instead.}
+
+\item{max_na}{Deprecated. Use \code{na_range} instead.}
 }
 \value{
 A list containing:
@@ -123,8 +133,8 @@ results <- run_bootstrap_simulation(
   Model = Model,
   stable_transitions = stable,
   num_runs = 50,
-  max_seq_length = 30,
-  num_rows = 100,
+  seq_length = 30,
+  n_sequences = 100,
   stability_prob = 0.95,
   unstable_mode = "random_jump",
   num_cores = 4
@@ -135,6 +145,15 @@ results$aggregated_summary$overall_performance
 
 # View edge-level results
 results$aggregated_summary$edge_significance
+
+# Old parameter names still work
+results <- run_bootstrap_simulation(
+  Model = Model,
+  stable_transitions = stable,
+  num_runs = 50,
+  max_seq_length = 30,
+  num_rows = 100
+)
 }
 
 }

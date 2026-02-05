@@ -5,36 +5,41 @@
 \title{Evaluate Bootstrap Performance for a Single Simulation Run}
 \usage{
 evaluate_bootstrap(
-  transition_matrix,
-  initial_probabilities,
+  trans_matrix = NULL,
+  init_probs = NULL,
   stable_transitions,
-  max_seq_length,
-  num_rows,
-  stability_prob,
-  unstable_mode,
-  unstable_random_transition_prob,
-  unstable_perturb_noise,
-  unlikely_prob_threshold,
-  min_na,
-  max_na,
-  include_na,
-  consistency_range,
-  level
+  seq_length = 20,
+  n_sequences = 100,
+  stability_prob = 0.95,
+  unstable_mode = "random_jump",
+  unstable_random_transition_prob = 0.5,
+  unstable_perturb_noise = 0.5,
+  unlikely_prob_threshold = 0.1,
+  na_range = c(0, 0),
+  include_na = TRUE,
+  consistency_range = c(0.75, 1.25),
+  level = 0.05,
+  transition_matrix = NULL,
+  initial_probabilities = NULL,
+  max_seq_length = NULL,
+  num_rows = NULL,
+  min_na = NULL,
+  max_na = NULL
 )
 }
 \arguments{
-\item{transition_matrix}{Square numeric matrix of transition probabilities.
+\item{trans_matrix}{Square numeric matrix of transition probabilities.
 Rows must sum to 1. Row names define state names.}
 
-\item{initial_probabilities}{Named numeric vector of initial state
+\item{init_probs}{Named numeric vector of initial state
 probabilities. Must sum to 1.}
 
 \item{stable_transitions}{List of character vectors. Each vector contains
 two state names defining a stable (ground truth) transition pair.}
 
-\item{max_seq_length}{Integer. Maximum length of each sequence.}
+\item{seq_length}{Integer. Maximum length of each sequence.}
 
-\item{num_rows}{Integer. Number of sequences to generate.}
+\item{n_sequences}{Integer. Number of sequences to generate.}
 
 \item{stability_prob}{Numeric in (0 to 1). Probability of following stable transitions.}
 
@@ -48,9 +53,8 @@ unstable action.}
 
 \item{unlikely_prob_threshold}{Numeric in (0 to 1). Threshold for unlikely transitions.}
 
-\item{min_na}{Integer. Minimum NAs per sequence.}
-
-\item{max_na}{Integer. Maximum NAs per sequence.}
+\item{na_range}{Integer vector of length 2 (min, max) or single integer (min=max).
+Range of NA values per sequence. Default: c(0, 0).}
 
 \item{include_na}{Logical. Whether to include NAs.}
 
@@ -59,6 +63,18 @@ consistency analysis (e.g., c(0.75, 1.25)).}
 
 \item{level}{Numeric in (0,1). Significance level for p-value threshold
 (e.g., 0.05).}
+
+\item{transition_matrix}{Deprecated. Use \code{trans_matrix} instead.}
+
+\item{initial_probabilities}{Deprecated. Use \code{init_probs} instead.}
+
+\item{max_seq_length}{Deprecated. Use \code{seq_length} instead.}
+
+\item{num_rows}{Deprecated. Use \code{n_sequences} instead.}
+
+\item{min_na}{Deprecated. Use \code{na_range} instead.}
+
+\item{max_na}{Deprecated. Use \code{na_range} instead.}
 }
 \value{
 A list containing:
@@ -106,21 +122,27 @@ stable <- list(c("A", "B"), c("B", "C"))
 
 # Run single bootstrap evaluation
 result <- evaluate_bootstrap(
+  trans_matrix = trans_mat,
+  init_probs = init_probs,
+  stable_transitions = stable,
+  seq_length = 30,
+  n_sequences = 100,
+  stability_prob = 0.95,
+  unstable_mode = "random_jump",
+  unstable_random_transition_prob = 0.5,
+  na_range = c(0, 5),
+  include_na = TRUE,
+  consistency_range = c(0.75, 1.25),
+  level = 0.05
+)
+
+# Old parameter names still work
+result <- evaluate_bootstrap(
   transition_matrix = trans_mat,
   initial_probabilities = init_probs,
   stable_transitions = stable,
   max_seq_length = 30,
-  num_rows = 100,
-  stability_prob = 0.95,
-  unstable_mode = "random_jump",
-  unstable_random_transition_prob = 0.5,
-  unstable_perturb_noise = 0.5,
-  unlikely_prob_threshold = 0.1,
-  min_na = 0,
-  max_na = 5,
-  include_na = TRUE,
-  consistency_range = c(0.75, 1.25),
-  level = 0.05
+  num_rows = 100
 )
 }
 

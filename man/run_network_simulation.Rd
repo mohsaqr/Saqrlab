@@ -79,16 +79,16 @@ rownames(trans_mat) <- colnames(trans_mat) <- c("A", "B", "C")
 init_probs <- c(A = 0.5, B = 0.3, C = 0.2)
 
 original_data <- simulate_sequences(
-  transition_matrix = trans_mat,
-  initial_probabilities = init_probs,
-  max_seq_length = 30,
-  num_rows = 100
+  trans_matrix = trans_mat,
+  init_probs = init_probs,
+  seq_length = 30,
+  n_sequences = 100
 )
 
 # Run simulations comparing tna and ftna models
 results <- run_network_simulation(
   original_data_list = original_data,
-  sim_params = list(max_seq_length = 30, num_rows = 100),
+  sim_params = list(seq_length = 30, n_sequences = 100),
   models = c("tna", "ftna"),
   comparisons = c("original"),
   num_runs = 5

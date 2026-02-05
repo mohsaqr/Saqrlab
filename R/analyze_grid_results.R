@@ -6,14 +6,17 @@
 #' at both the setting level and across all selected settings.
 #'
 #' @param grid_results_list List output from `run_grid_simulation()`.
-#' @param num_rows_range Numeric vector of length 2 (min, max) or NULL.
-#'   Filter settings by num_rows.
-#' @param max_seq_length_range Numeric vector of length 2 (min, max) or NULL.
-#'   Filter settings by max_seq_length.
+#' @param n_sequences_range Numeric vector of length 2 (min, max) or NULL.
+#'   Filter settings by n_sequences.
+#' @param seq_length_range Numeric vector of length 2 (min, max) or NULL.
+#'   Filter settings by seq_length.
 #' @param min_na_range Numeric vector of length 2 (min, max) or NULL.
 #'   Filter settings by min_na.
 #' @param max_na_range Numeric vector of length 2 (min, max) or NULL.
 #'   Filter settings by max_na.
+#'
+#' @param num_rows_range Deprecated. Use `n_sequences_range` instead.
+#' @param max_seq_length_range Deprecated. Use `seq_length_range` instead.
 #' @param level_context Numeric. Significance level used for calculations
 #'   (for context in output). Default: 0.05.
 #' @param print_output Logical. Master switch for console printing. Default: TRUE.
@@ -75,8 +78,8 @@
 #' # Filter to specific parameter ranges
 #' analysis_filtered <- analyze_grid_results(
 #'   grid_results,
-#'   num_rows_range = c(100, 200),
-#'   max_seq_length_range = c(30, 50),
+#'   n_sequences_range = c(100, 200),
+#'   seq_length_range = c(30, 50),
 #'   max_na_range = c(0, 5)
 #' )
 #'
@@ -85,6 +88,13 @@
 #'
 #' # Access setting-level summary
 #' setting_summary <- analysis$selected_settings_summary_df
+#'
+#' # Old parameter names still work
+#' analysis_filtered <- analyze_grid_results(
+#'   grid_results,
+#'   num_rows_range = c(100, 200),
+#'   max_seq_length_range = c(30, 50)
+#' )
 #' }
 #'
 #' @import dplyr
@@ -92,15 +102,22 @@
 #' @importFrom stats sd
 #' @export
 analyze_grid_results <- function(grid_results_list,
-                                  num_rows_range = NULL,
-                                  max_seq_length_range = NULL,
+                                  n_sequences_range = NULL,
+                                  seq_length_range = NULL,
                                   min_na_range = NULL,
                                   max_na_range = NULL,
                                   level_context = 0.05,
                                   print_output = TRUE,
                                   print_aggregated_overall = TRUE,
                                   print_aggregated_edges = TRUE,
-                                  print_settings_summary = TRUE) {
+                                  print_settings_summary = TRUE,
+                                  # Backward compatibility - old parameter names
+                                  num_rows_range = NULL,
+                                  max_seq_length_range = NULL) {
+  # --- Backward compatibility: map old names to new names ---
+  if (!is.null(num_rows_range) && is.null(n_sequences_range)) n_sequences_range <- num_rows_range
+  if (!is.null(max_seq_length_range) && is.null(seq_length_range)) seq_length_range <- max_seq_length_range
+
   # --- Input Validation ---
   if (!is.list(grid_results_list) || length(grid_results_list) == 0) {
     stop("`grid_results_list` must be a non-empty list.")
@@ -115,8 +132,8 @@ analyze_grid_results <- function(grid_results_list,
     TRUE
   }
 
-  validate_range(num_rows_range, "num_rows_range")
-  validate_range(max_seq_length_range, "max_seq_length_range")
+  validate_range(n_sequences_range, "n_sequences_range")
+  validate_range(seq_length_range, "seq_length_range")
   validate_range(min_na_range, "min_na_range")
   validate_range(max_na_range, "max_na_range")
 
@@ -164,12 +181,17 @@ analyze_grid_results <- function(grid_results_list,
       ))
       next
     }
-    param_names <- c("num_rows", "max_seq_length", "min_na", "max_na")
-    missing_params <- setdiff(param_names, names(res$parameters))
-    if (length(missing_params) > 0) {
+    # Check for required parameters (support both old and new names)
+    params <- res$parameters
+    has_n_sequences <- !is.null(params$n_sequences) || !is.null(params$num_rows)
+    has_seq_length <- !is.null(params$seq_length) || !is.null(params$max_seq_length)
+    has_min_na <- !is.null(params$min_na)
+    has_max_na <- !is.null(params$max_na)
+
+    if (!has_n_sequences || !has_seq_length || !has_min_na || !has_max_na) {
       warning(sprintf(
-        "Element %d ('%s') parameters missing: %s - skipping",
-        i, name, paste(missing_params, collapse = ", ")
+        "Element %d ('%s') parameters missing required values - skipping",
+        i, name
       ))
       next
     }
@@ -182,9 +204,12 @@ analyze_grid_results <- function(grid_results_list,
       next
     }
 
-    params <- res$parameters
-    if (check_val_in_range(params$num_rows, num_rows_range) &&
-      check_val_in_range(params$max_seq_length, max_seq_length_range) &&
+    # Get parameter values (support both old and new names)
+    param_n_sequences <- if (!is.null(params$n_sequences)) params$n_sequences else params$num_rows
+    param_seq_length <- if (!is.null(params$seq_length)) params$seq_length else params$max_seq_length
+
+    if (check_val_in_range(param_n_sequences, n_sequences_range) &&
+      check_val_in_range(param_seq_length, seq_length_range) &&
       check_val_in_range(params$min_na, min_na_range) &&
       check_val_in_range(params$max_na, max_na_range)) {
       selected_settings[[name]] <- res
@@ -571,8 +596,8 @@ analyze_grid_results <- function(grid_results_list,
     print_filter <- function(name, range_val) {
       if (!is.null(range_val)) cat(sprintf("  %s: [%s, %s]\n", name, range_val[1], range_val[2]))
     }
-    print_filter("num_rows", num_rows_range)
-    print_filter("max_seq_length", max_seq_length_range)
+    print_filter("n_sequences", n_sequences_range)
+    print_filter("seq_length", seq_length_range)
     print_filter("min_na", min_na_range)
     print_filter("max_na", max_na_range)
     cat(sprintf("  Significance Level (alpha) for Run Metrics: %.3f\n", level_context))

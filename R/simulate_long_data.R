@@ -5,23 +5,25 @@
 #' `group_regulation_long` in the tna package. Creates realistic educational
 #' data with actors nested in groups, groups nested in courses.
 #'
-#' @param n_groups Integer. Number of groups. Default: 20.
-#' @param actors_per_group Integer or integer vector of length 2. If single
+#' @param n_groups Integer. Number of groups. Default: 5.
+#' @param n_actors Integer or integer vector of length 2. If single
 #'   integer, exact number of actors per group. If vector c(min, max), random
 #'   sizes in that range. Default: 10.
 #' @param n_courses Integer or character vector. Number of courses or specific
 #'   course names (e.g., c("A", "B", "C")). Groups are distributed evenly
 #'   across courses. Default: 3.
-#' @param actions Character vector. The action/state names to use. If NULL,
-#'   uses learning states based on `action_categories`. Default: NULL.
-#' @param action_categories Character vector. Categories of learning states
-#'   to use when `actions = NULL`. Options: "metacognitive", "cognitive",
+#' @param n_states Integer. Number of actions to sample when using categories.
+#'   Ignored if `states` is provided. Default: 9.
+#' @param states Character vector. The action/state names to use. If NULL,
+#'   uses learning states based on `categories`. Default: NULL.
+#' @param use_learning_states Logical. If TRUE and `states` is NULL, uses
+#'   learning state verbs from the specified `categories`. Default: TRUE.
+#' @param categories Character vector. Categories of learning states
+#'   to use when `states = NULL`. Options: "metacognitive", "cognitive",
 #'   "behavioral", "social", "motivational", "affective", "group_regulation",
 #'   or "all". Default: "group_regulation".
-#' @param n_actions Integer. Number of actions to sample when using categories.
-#'   Ignored if `actions` is provided. Default: 9.
 #' @param seq_length_range Integer vector of length 2. Range for sequence
-#'   lengths per actor (min, max). Default: c(8, 25).
+#'   lengths per actor (min, max). Default: c(10, 30).
 #' @param achiever_levels Character vector. Levels for the Achiever variable.
 #'   Default: c("High", "Low").
 #' @param achiever_probs Numeric vector. Probabilities for each achiever level.
@@ -30,11 +32,18 @@
 #'   Default: "2025-01-01 10:00:00".
 #' @param time_interval_range Numeric vector of length 2. Range for time
 #'   intervals between actions in seconds (min, max). Default: c(60, 600).
-#' @param transition_probs Matrix or NULL. Custom transition probability matrix.
+#' @param trans_matrix Matrix or NULL. Custom transition probability matrix.
 #'   If NULL, generates random probabilities. Default: NULL.
-#' @param initial_probs Numeric vector or NULL. Custom initial probabilities.
+#' @param init_probs Numeric vector or NULL. Custom initial probabilities.
 #'   If NULL, generates random probabilities. Default: NULL.
 #' @param seed Integer or NULL. Random seed for reproducibility. Default: NULL.
+#'
+#' @param actors_per_group Deprecated. Use `n_actors` instead.
+#' @param actions Deprecated. Use `states` instead.
+#' @param action_categories Deprecated. Use `categories` instead.
+#' @param n_actions Deprecated. Use `n_states` instead.
+#' @param transition_probs Deprecated. Use `trans_matrix` instead.
+#' @param initial_probs Deprecated. Use `init_probs` instead.
 #'
 #' @return A tibble (data frame) with columns:
 #' \describe{
@@ -61,52 +70,53 @@
 #'   \item Actors within a group share the same course
 #' }
 #'
-#' **Built-in Group Regulation Actions**: When `action_categories = "group_regulation"`,
+#' **Built-in Group Regulation Actions**: When `categories = "group_regulation"`,
 #' uses the 9 SSRL (Socially Shared Regulation of Learning) actions:
 #' adapt, cohesion, consensus, coregulate, discuss, emotion, monitor, plan, synthesis.
 #'
 #' @examples
 #' \dontrun{
-#' # Basic usage: 20 groups, 10 actors each, 3 courses
+#' # Basic usage: 5 groups, 10 actors each, 3 courses (new defaults)
+#' data <- simulate_long_data(seed = 42)
+#'
+#' # Explicit new parameter names
 #' data <- simulate_long_data(
-#'   n_groups = 20,
-#'   actors_per_group = 10,
+#'   n_groups = 10,
+#'   n_actors = 15,
+#'   n_states = 6,
+#'   categories = c("metacognitive", "cognitive"),
+#'   seq_length_range = c(15, 40),
 #'   seed = 42
 #' )
 #'
 #' # Check structure
-#' length(unique(data$Actor))   # 200 actors
-#' length(unique(data$Group))   # 20 groups
+#' length(unique(data$Actor))   # 50 actors
+#' length(unique(data$Group))   # 5 groups
 #' table(table(data$Actor, data$Group) > 0)  # 10 actors per group
 #'
-#' # Larger dataset like group_regulation_long
-#' data <- simulate_long_data(
-#'   n_groups = 200,
-#'   actors_per_group = 10,
-#'   n_courses = 3,
-#'   seed = 123
-#' )
-#'
-#' # Custom actions
+#' # Variable group sizes
 #' data <- simulate_long_data(
 #'   n_groups = 30,
-#'   actors_per_group = c(8, 12),
-#'   actions = c("Read", "Write", "Discuss", "Plan", "Review"),
+#'   n_actors = c(8, 12),
+#'   states = c("Read", "Write", "Discuss", "Plan", "Review"),
 #'   seed = 456
 #' )
 #'
-#' # Using learning state categories
+#' # Using specific learning state categories
 #' data <- simulate_long_data(
 #'   n_groups = 50,
-#'   actors_per_group = 10,
-#'   action_categories = c("metacognitive", "cognitive"),
-#'   n_actions = 8,
+#'   n_actors = 10,
+#'   categories = c("metacognitive", "cognitive"),
+#'   n_states = 8,
 #'   seed = 789
 #' )
 #'
-#' # Check groups per course
-#' aggregate(Group ~ Course, data = unique(data[, c("Group", "Course")]),
-#'           FUN = length)
+#' # Old parameter names still work (backward compatible)
+#' data <- simulate_long_data(
+#'   actors_per_group = 10,
+#'   actions = c("A", "B", "C"),
+#'   seed = 42
+#' )
 #' }
 #'
 #' @seealso
@@ -118,20 +128,36 @@
 #' @importFrom seqHMM simulate_initial_probs simulate_transition_probs
 #' @importFrom stats runif
 #' @export
-simulate_long_data <- function(n_groups = 20,
-                                actors_per_group = 10,
+simulate_long_data <- function(n_groups = 5,
+                                n_actors = 10,
                                 n_courses = 3,
-                                actions = NULL,
-                                action_categories = "group_regulation",
-                                n_actions = 9,
-                                seq_length_range = c(8, 25),
+                                n_states = 9,
+                                states = NULL,
+                                use_learning_states = TRUE,
+                                categories = "group_regulation",
+                                seq_length_range = c(10, 30),
                                 achiever_levels = c("High", "Low"),
                                 achiever_probs = c(0.5, 0.5),
                                 start_time = "2025-01-01 10:00:00",
                                 time_interval_range = c(60, 600),
+                                trans_matrix = NULL,
+                                init_probs = NULL,
+                                seed = NULL,
+                                # Backward compatibility - old parameter names
+                                actors_per_group = NULL,
+                                actions = NULL,
+                                action_categories = NULL,
+                                n_actions = NULL,
                                 transition_probs = NULL,
-                                initial_probs = NULL,
-                                seed = NULL) {
+                                initial_probs = NULL) {
+  # --- Backward compatibility: map old names to new names ---
+  if (!is.null(actors_per_group)) n_actors <- actors_per_group
+  if (!is.null(actions)) states <- actions
+  if (!is.null(action_categories)) categories <- action_categories
+  if (!is.null(n_actions)) n_states <- n_actions
+  if (!is.null(transition_probs)) trans_matrix <- transition_probs
+  if (!is.null(initial_probs)) init_probs <- initial_probs
+
   # Set seed if provided
   if (!is.null(seed)) {
     set.seed(seed)
@@ -140,8 +166,8 @@ simulate_long_data <- function(n_groups = 20,
   # --- Input Validation ---
   stopifnot(
     is.numeric(n_groups), length(n_groups) == 1, n_groups >= 1,
-    is.numeric(actors_per_group), length(actors_per_group) %in% c(1, 2),
-    all(actors_per_group >= 1),
+    is.numeric(n_actors), length(n_actors) %in% c(1, 2),
+    all(n_actors >= 1),
     is.numeric(seq_length_range), length(seq_length_range) == 2,
     seq_length_range[1] <= seq_length_range[2], seq_length_range[1] >= 1,
     is.character(achiever_levels), length(achiever_levels) >= 1,
@@ -151,9 +177,9 @@ simulate_long_data <- function(n_groups = 20,
     time_interval_range[1] <= time_interval_range[2], time_interval_range[1] >= 0
   )
 
-  # Normalize actors_per_group to range
-  if (length(actors_per_group) == 1) {
-    actors_per_group <- c(actors_per_group, actors_per_group)
+  # Normalize n_actors to range
+  if (length(n_actors) == 1) {
+    n_actors <- c(n_actors, n_actors)
   }
 
   # --- Setup Course Names ---
@@ -166,45 +192,54 @@ simulate_long_data <- function(n_groups = 20,
   }
   n_courses_num <- length(course_names)
 
-  # --- Determine Actions ---
-  if (is.null(actions)) {
-    if ("group_regulation" %in% action_categories) {
-      # Built-in group regulation actions (SSRL)
-      group_reg_actions <- c(
-        "adapt", "cohesion", "consensus", "coregulate",
-        "discuss", "emotion", "monitor", "plan", "synthesis"
-      )
-      if (length(action_categories) == 1 && action_categories == "group_regulation") {
-        actions <- group_reg_actions
-      } else {
-        # Combine with other categories
-        other_cats <- setdiff(action_categories, "group_regulation")
-        other_actions <- if (length(other_cats) > 0) {
-          get_learning_states(other_cats, n = max(1, n_actions - length(group_reg_actions)))
+  # --- Determine Actions/States ---
+  if (is.null(states)) {
+    if (use_learning_states) {
+      if ("group_regulation" %in% categories) {
+        # Built-in group regulation actions (SSRL)
+        group_reg_actions <- c(
+          "adapt", "cohesion", "consensus", "coregulate",
+          "discuss", "emotion", "monitor", "plan", "synthesis"
+        )
+        if (length(categories) == 1 && categories == "group_regulation") {
+          states <- group_reg_actions
         } else {
-          character(0)
+          # Combine with other categories
+          other_cats <- setdiff(categories, "group_regulation")
+          other_actions <- if (length(other_cats) > 0) {
+            get_learning_states(other_cats, n = max(1, n_states - length(group_reg_actions)))
+          } else {
+            character(0)
+          }
+          states <- unique(c(group_reg_actions, other_actions))
         }
-        actions <- unique(c(group_reg_actions, other_actions))
+      } else {
+        # Use learning states from specified categories
+        states <- get_learning_states(categories, n = n_states)
       }
     } else {
-      # Use learning states from specified categories
-      actions <- get_learning_states(action_categories, n = n_actions)
+      # Default to letters
+      if (n_states <= 26) {
+        states <- LETTERS[1:n_states]
+      } else {
+        states <- paste0("S", 1:n_states)
+      }
     }
   }
 
-  n_action_types <- length(actions)
+  n_action_types <- length(states)
   stopifnot(n_action_types >= 2)
 
   # --- Generate Transition Probabilities ---
-  if (is.null(transition_probs)) {
-    transition_probs <- seqHMM::simulate_transition_probs(n_action_types)
+  if (is.null(trans_matrix)) {
+    trans_matrix <- seqHMM::simulate_transition_probs(n_action_types)
   }
-  dimnames(transition_probs) <- list(actions, actions)
+  dimnames(trans_matrix) <- list(states, states)
 
-  if (is.null(initial_probs)) {
-    initial_probs <- seqHMM::simulate_initial_probs(n_action_types)
+  if (is.null(init_probs)) {
+    init_probs <- seqHMM::simulate_initial_probs(n_action_types)
   }
-  names(initial_probs) <- actions
+  names(init_probs) <- states
 
   # --- Parse Start Time ---
   if (is.character(start_time)) {
@@ -222,10 +257,10 @@ simulate_long_data <- function(n_groups = 20,
 
   for (group_id in 1:n_groups) {
     # Determine number of actors in this group
-    if (actors_per_group[1] == actors_per_group[2]) {
-      n_actors_in_group <- actors_per_group[1]
+    if (n_actors[1] == n_actors[2]) {
+      n_actors_in_group <- n_actors[1]
     } else {
-      n_actors_in_group <- sample(actors_per_group[1]:actors_per_group[2], 1)
+      n_actors_in_group <- sample(n_actors[1]:n_actors[2], 1)
     }
 
     course <- group_to_course[group_id]
@@ -242,13 +277,13 @@ simulate_long_data <- function(n_groups = 20,
 
       # Generate sequence using Markov chain
       sequence <- character(seq_len)
-      sequence[1] <- sample(actions, 1, prob = initial_probs)
+      sequence[1] <- sample(states, 1, prob = init_probs)
 
       if (seq_len > 1) {
         for (j in 2:seq_len) {
           current_state <- sequence[j - 1]
-          current_idx <- match(current_state, actions)
-          sequence[j] <- sample(actions, 1, prob = transition_probs[current_idx, ])
+          current_idx <- match(current_state, states)
+          sequence[j] <- sample(states, 1, prob = trans_matrix[current_idx, ])
         }
       }
 
@@ -318,7 +353,7 @@ simulate_long_data <- function(n_groups = 20,
 #' # Use in simulation
 #' data <- simulate_long_data(
 #'   n_groups = 10,
-#'   actions = GROUP_REGULATION_ACTIONS,
+#'   states = GROUP_REGULATION_ACTIONS,
 #'   seed = 42
 #' )
 #'

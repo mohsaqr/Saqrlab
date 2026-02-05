@@ -31,14 +31,14 @@
 #'
 #' @examples
 #' \dontrun{
-#' # Basic usage
-#' data <- simulate_onehot_data(n_groups = 5, actors_per_group = 3, seed = 42)
+#' # Basic usage with new standardized params
+#' data <- simulate_onehot_data(n_groups = 5, n_actors = 3, seed = 42)
 #' head(data)
 #'
-#' # Custom actions with prefix
+#' # Custom states with prefix
 #' data <- simulate_onehot_data(
 #'   n_groups = 3,
-#'   actions = c("Read", "Write", "Think"),
+#'   states = c("Read", "Write", "Think"),
 #'   state_prefix = "state_",
 #'   seed = 123
 #' )
@@ -47,6 +47,13 @@
 #' # Verify one-hot encoding (each row sums to 1)
 #' state_cols <- setdiff(names(data), c("Actor", "Achiever", "Group", "Course", "Time"))
 #' all(rowSums(data[, state_cols]) == 1)  # TRUE
+#'
+#' # Old parameter names still work (backward compatible)
+#' data <- simulate_onehot_data(
+#'   actors_per_group = 5,
+#'   actions = c("A", "B", "C"),
+#'   seed = 42
+#' )
 #' }
 #'
 #' @seealso
@@ -56,38 +63,55 @@
 #'
 #' @export
 simulate_onehot_data <- function(
-    n_groups = 20,
-    actors_per_group = 10,
+    n_groups = 5,
+    n_actors = 10,
     n_courses = 3,
-    actions = NULL,
-    action_categories = "group_regulation",
-    n_actions = 9,
-    seq_length_range = c(8, 25),
+    n_states = 9,
+    states = NULL,
+    use_learning_states = TRUE,
+    categories = "group_regulation",
+    seq_length_range = c(10, 30),
     achiever_levels = c("High", "Low"),
     achiever_probs = c(0.5, 0.5),
     start_time = "2025-01-01 10:00:00",
     time_interval_range = c(60, 600),
-    transition_probs = NULL,
-    initial_probs = NULL,
+    trans_matrix = NULL,
+    init_probs = NULL,
     sort_states = FALSE,
     state_prefix = "",
-    seed = NULL
+    seed = NULL,
+    # Backward compatibility - old parameter names
+    actors_per_group = NULL,
+    actions = NULL,
+    action_categories = NULL,
+    n_actions = NULL,
+    transition_probs = NULL,
+    initial_probs = NULL
 ) {
+  # --- Backward compatibility: map old names to new names ---
+  if (!is.null(actors_per_group)) n_actors <- actors_per_group
+  if (!is.null(actions)) states <- actions
+  if (!is.null(action_categories)) categories <- action_categories
+  if (!is.null(n_actions)) n_states <- n_actions
+  if (!is.null(transition_probs)) trans_matrix <- transition_probs
+  if (!is.null(initial_probs)) init_probs <- initial_probs
+
   # Generate long format data
   long_data <- simulate_long_data(
     n_groups = n_groups,
-    actors_per_group = actors_per_group,
+    n_actors = n_actors,
     n_courses = n_courses,
-    actions = actions,
-    action_categories = action_categories,
-    n_actions = n_actions,
+    n_states = n_states,
+    states = states,
+    use_learning_states = use_learning_states,
+    categories = categories,
     seq_length_range = seq_length_range,
     achiever_levels = achiever_levels,
     achiever_probs = achiever_probs,
     start_time = start_time,
     time_interval_range = time_interval_range,
-    transition_probs = transition_probs,
-    initial_probs = initial_probs,
+    trans_matrix = trans_matrix,
+    init_probs = init_probs,
     seed = seed
   )
 

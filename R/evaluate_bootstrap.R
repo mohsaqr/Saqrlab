@@ -5,14 +5,14 @@
 #' model, runs bootstrap analysis, and computes classification metrics for edge
 #' detection compared to ground truth stable transitions.
 #'
-#' @param transition_matrix Square numeric matrix of transition probabilities.
+#' @param trans_matrix Square numeric matrix of transition probabilities.
 #'   Rows must sum to 1. Row names define state names.
-#' @param initial_probabilities Named numeric vector of initial state
+#' @param init_probs Named numeric vector of initial state
 #'   probabilities. Must sum to 1.
 #' @param stable_transitions List of character vectors. Each vector contains
 #'   two state names defining a stable (ground truth) transition pair.
-#' @param max_seq_length Integer. Maximum length of each sequence.
-#' @param num_rows Integer. Number of sequences to generate.
+#' @param seq_length Integer. Maximum length of each sequence.
+#' @param n_sequences Integer. Number of sequences to generate.
 #' @param stability_prob Numeric in (0 to 1). Probability of following stable transitions.
 #' @param unstable_mode Character. Mode for unstable transitions:
 #'   "random_jump", "perturb_prob", or "unlikely_jump".
@@ -20,13 +20,20 @@
 #'   unstable action.
 #' @param unstable_perturb_noise Numeric in (0 to 1). Noise factor for perturbation mode.
 #' @param unlikely_prob_threshold Numeric in (0 to 1). Threshold for unlikely transitions.
-#' @param min_na Integer. Minimum NAs per sequence.
-#' @param max_na Integer. Maximum NAs per sequence.
+#' @param na_range Integer vector of length 2 (min, max) or single integer (min=max).
+#'   Range of NA values per sequence. Default: c(0, 0).
 #' @param include_na Logical. Whether to include NAs.
 #' @param consistency_range Numeric vector of length 2. Range for bootstrap
 #'   consistency analysis (e.g., c(0.75, 1.25)).
 #' @param level Numeric in (0,1). Significance level for p-value threshold
 #'   (e.g., 0.05).
+#'
+#' @param transition_matrix Deprecated. Use `trans_matrix` instead.
+#' @param initial_probabilities Deprecated. Use `init_probs` instead.
+#' @param max_seq_length Deprecated. Use `seq_length` instead.
+#' @param num_rows Deprecated. Use `n_sequences` instead.
+#' @param min_na Deprecated. Use `na_range` instead.
+#' @param max_na Deprecated. Use `na_range` instead.
 #'
 #' @return A list containing:
 #' \describe{
@@ -68,42 +75,72 @@
 #'
 #' # Run single bootstrap evaluation
 #' result <- evaluate_bootstrap(
+#'   trans_matrix = trans_mat,
+#'   init_probs = init_probs,
+#'   stable_transitions = stable,
+#'   seq_length = 30,
+#'   n_sequences = 100,
+#'   stability_prob = 0.95,
+#'   unstable_mode = "random_jump",
+#'   unstable_random_transition_prob = 0.5,
+#'   na_range = c(0, 5),
+#'   include_na = TRUE,
+#'   consistency_range = c(0.75, 1.25),
+#'   level = 0.05
+#' )
+#'
+#' # Old parameter names still work
+#' result <- evaluate_bootstrap(
 #'   transition_matrix = trans_mat,
 #'   initial_probabilities = init_probs,
 #'   stable_transitions = stable,
 #'   max_seq_length = 30,
-#'   num_rows = 100,
-#'   stability_prob = 0.95,
-#'   unstable_mode = "random_jump",
-#'   unstable_random_transition_prob = 0.5,
-#'   unstable_perturb_noise = 0.5,
-#'   unlikely_prob_threshold = 0.1,
-#'   min_na = 0,
-#'   max_na = 5,
-#'   include_na = TRUE,
-#'   consistency_range = c(0.75, 1.25),
-#'   level = 0.05
+#'   num_rows = 100
 #' )
 #' }
 #'
 #' @import dplyr
 #' @import tna
 #' @export
-evaluate_bootstrap <- function(transition_matrix,
-                                initial_probabilities,
+evaluate_bootstrap <- function(trans_matrix = NULL,
+                                init_probs = NULL,
                                 stable_transitions,
-                                max_seq_length,
-                                num_rows,
-                                stability_prob,
-                                unstable_mode,
-                                unstable_random_transition_prob,
-                                unstable_perturb_noise,
-                                unlikely_prob_threshold,
-                                min_na,
-                                max_na,
-                                include_na,
-                                consistency_range,
-                                level) {
+                                seq_length = 20,
+                                n_sequences = 100,
+                                stability_prob = 0.95,
+                                unstable_mode = "random_jump",
+                                unstable_random_transition_prob = 0.5,
+                                unstable_perturb_noise = 0.5,
+                                unlikely_prob_threshold = 0.1,
+                                na_range = c(0, 0),
+                                include_na = TRUE,
+                                consistency_range = c(0.75, 1.25),
+                                level = 0.05,
+                                # Backward compatibility - old parameter names
+                                transition_matrix = NULL,
+                                initial_probabilities = NULL,
+                                max_seq_length = NULL,
+                                num_rows = NULL,
+                                min_na = NULL,
+                                max_na = NULL) {
+  # --- Backward compatibility: map old names to new names ---
+  if (!is.null(transition_matrix)) trans_matrix <- transition_matrix
+  if (!is.null(initial_probabilities)) init_probs <- initial_probabilities
+  if (!is.null(max_seq_length)) seq_length <- max_seq_length
+  if (!is.null(num_rows)) n_sequences <- num_rows
+
+  # Handle na_range from min_na/max_na
+  if (!is.null(min_na) || !is.null(max_na)) {
+    min_na_val <- if (!is.null(min_na)) min_na else 0
+    max_na_val <- if (!is.null(max_na)) max_na else min_na_val
+    na_range <- c(min_na_val, max_na_val)
+  }
+
+  # Normalize na_range to length 2
+  if (length(na_range) == 1) {
+    na_range <- c(na_range, na_range)
+  }
+
   # --- Input Validation ---
   stopifnot(
     is.numeric(consistency_range), length(consistency_range) == 2,
@@ -111,24 +148,26 @@ evaluate_bootstrap <- function(transition_matrix,
     is.numeric(level), length(level) == 1, level > 0, level < 1
   )
 
-  states_names <- rownames(transition_matrix)
-  if (is.null(states_names)) stop("transition_matrix requires rownames.")
+  if (is.null(trans_matrix)) stop("trans_matrix is required.")
+  if (is.null(init_probs)) stop("init_probs is required.")
+
+  states_names <- rownames(trans_matrix)
+  if (is.null(states_names)) stop("trans_matrix requires rownames.")
   num_states <- length(states_names)
 
   # 1. Generate Sequences
   sequences_df <- simulate_sequences_advanced(
-    transition_matrix = transition_matrix,
-    initial_probabilities = initial_probabilities,
-    max_seq_length = max_seq_length,
-    num_rows = num_rows,
+    trans_matrix = trans_matrix,
+    init_probs = init_probs,
+    seq_length = seq_length,
+    n_sequences = n_sequences,
     stable_transitions = stable_transitions,
     stability_prob = stability_prob,
     unstable_mode = unstable_mode,
     unstable_random_transition_prob = unstable_random_transition_prob,
     unstable_perturb_noise = unstable_perturb_noise,
     unlikely_prob_threshold = unlikely_prob_threshold,
-    min_na = min_na,
-    max_na = max_na,
+    na_range = na_range,
     include_na = include_na
   )
 

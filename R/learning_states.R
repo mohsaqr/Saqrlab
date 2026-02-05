@@ -23,6 +23,8 @@
 #'     enjoying, coping, managing stress, curiosity.}
 #'   \item{group_regulation}{Socially shared regulation of learning (SSRL):
 #'     collaborative planning, monitoring, adapting in groups.}
+#'   \item{lms}{Learning Management System actions:
+#'     viewing content, accessing resources, submitting assignments, forum posts.}
 #' }
 #'
 #' @examples
@@ -49,7 +51,7 @@
 NULL
 
 #' @rdname learning_states
-#' @format A named list with 7 categories of learning verbs.
+#' @format A named list with 8 categories of learning verbs.
 #' @export
 LEARNING_STATES <- list(
   metacognitive = c(
@@ -250,6 +252,39 @@ LEARNING_STATES <- list(
     "Monitor",
     "Plan",
     "Synthesis"
+  ),
+
+  lms = c(
+    "View",
+    "Access",
+    "Download",
+    "Upload",
+    "Submit",
+    "Click",
+    "Navigate",
+    "Browse",
+    "Login",
+    "Logout",
+    "Post",
+    "Reply",
+    "Forum",
+    "Quiz",
+    "Assignment",
+    "Video",
+    "Resource",
+    "Grade",
+    "Attempt",
+    "Complete",
+    "Module",
+    "Page",
+    "File",
+    "Link",
+    "Course",
+    "Content",
+    "Discussion",
+    "Message",
+    "Announcement",
+    "Calendar"
   )
 )
 
@@ -288,7 +323,7 @@ LEARNING_STATES <- list(
 get_learning_states <- function(categories = "all", n = NULL, seed = NULL) {
   valid_categories <- c("metacognitive", "cognitive", "behavioral",
                         "social", "motivational", "affective",
-                        "group_regulation", "all")
+                        "group_regulation", "lms", "all")
 
   # Handle "all" category
 

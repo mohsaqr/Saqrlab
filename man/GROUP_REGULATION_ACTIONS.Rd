@@ -34,7 +34,7 @@ GROUP_REGULATION_ACTIONS
 # Use in simulation
 data <- simulate_long_data(
   n_groups = 10,
-  actions = GROUP_REGULATION_ACTIONS,
+  states = GROUP_REGULATION_ACTIONS,
   seed = 42
 )
 

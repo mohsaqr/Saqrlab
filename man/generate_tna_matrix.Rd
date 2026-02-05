@@ -11,10 +11,11 @@ generate_tna_matrix(
   edge_prob_range = c(0, 0.3),
   self_loops = FALSE,
   use_learning_states = TRUE,
-  learning_categories = NULL,
+  categories = NULL,
   node_prefix = "N",
   seed = NULL,
-  verbose = TRUE
+  verbose = TRUE,
+  learning_categories = NULL
 )
 }
 \arguments{
@@ -37,7 +38,7 @@ and \code{nodes_per_group} is a single integer. Default: 3.}
 \item{use_learning_states}{Logical. Use learning state verbs as node names.
 Default: TRUE.}
 
-\item{learning_categories}{Character vector or NULL. Categories for node names.
+\item{categories}{Character vector or NULL. Categories for node names.
 If NULL with \code{use_learning_states = TRUE}, uses one random category per group.
 Can be single (same for all) or one per group. Default: NULL.}
 
@@ -47,6 +48,8 @@ states. Default: "N".}
 \item{seed}{Integer or NULL. Random seed. Default: NULL.}
 
 \item{verbose}{Logical. Print progress messages. Default: TRUE.}
+
+\item{learning_categories}{Deprecated. Use \code{categories} instead.}
 }
 \value{
 A list with two elements:
@@ -93,7 +96,7 @@ net <- generate_tna_matrix(
 net <- generate_tna_matrix(
   nodes_per_group = 7,
   group_names = c("Macro", "Meso", "Micro"),
-  learning_categories = c("metacognitive", "cognitive", "behavioral"),
+  categories = c("metacognitive", "cognitive", "behavioral"),
   seed = 123
 )
 plot_mlna(net$matrix, layers = net$node_types, minimum = 0.18)

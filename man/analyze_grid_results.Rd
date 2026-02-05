@@ -6,25 +6,27 @@
 \usage{
 analyze_grid_results(
   grid_results_list,
-  num_rows_range = NULL,
-  max_seq_length_range = NULL,
+  n_sequences_range = NULL,
+  seq_length_range = NULL,
   min_na_range = NULL,
   max_na_range = NULL,
   level_context = 0.05,
   print_output = TRUE,
   print_aggregated_overall = TRUE,
   print_aggregated_edges = TRUE,
-  print_settings_summary = TRUE
+  print_settings_summary = TRUE,
+  num_rows_range = NULL,
+  max_seq_length_range = NULL
 )
 }
 \arguments{
 \item{grid_results_list}{List output from \code{run_grid_simulation()}.}
 
-\item{num_rows_range}{Numeric vector of length 2 (min, max) or NULL.
-Filter settings by num_rows.}
+\item{n_sequences_range}{Numeric vector of length 2 (min, max) or NULL.
+Filter settings by n_sequences.}
 
-\item{max_seq_length_range}{Numeric vector of length 2 (min, max) or NULL.
-Filter settings by max_seq_length.}
+\item{seq_length_range}{Numeric vector of length 2 (min, max) or NULL.
+Filter settings by seq_length.}
 
 \item{min_na_range}{Numeric vector of length 2 (min, max) or NULL.
 Filter settings by min_na.}
@@ -45,6 +47,10 @@ summary. Default: TRUE.}
 
 \item{print_settings_summary}{Logical. Print summary table for each selected
 setting. Default: TRUE.}
+
+\item{num_rows_range}{Deprecated. Use \code{n_sequences_range} instead.}
+
+\item{max_seq_length_range}{Deprecated. Use \code{seq_length_range} instead.}
 }
 \value{
 A list containing:
@@ -105,8 +111,8 @@ analysis <- analyze_grid_results(grid_results)
 # Filter to specific parameter ranges
 analysis_filtered <- analyze_grid_results(
   grid_results,
-  num_rows_range = c(100, 200),
-  max_seq_length_range = c(30, 50),
+  n_sequences_range = c(100, 200),
+  seq_length_range = c(30, 50),
   max_na_range = c(0, 5)
 )
 
@@ -115,6 +121,13 @@ run_metrics <- analysis$compiled_individual_runs$run_level_performance_metrics
 
 # Access setting-level summary
 setting_summary <- analysis$selected_settings_summary_df
+
+# Old parameter names still work
+analysis_filtered <- analyze_grid_results(
+  grid_results,
+  num_rows_range = c(100, 200),
+  max_seq_length_range = c(30, 50)
+)
 }
 
 }

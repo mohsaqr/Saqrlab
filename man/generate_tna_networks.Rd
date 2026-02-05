@@ -5,44 +5,53 @@
 \title{Generate TNA Network Objects}
 \usage{
 generate_tna_networks(
-  n_networks = 10,
+  n_networks = 1,
+  n_states = 8,
+  n_sequences = 100,
+  seq_length = 30,
   model_type = "tna",
-  n_states = 5,
   use_learning_states = TRUE,
-  learning_categories = NULL,
-  num_sequences = 100,
-  max_seq_length = 30,
+  categories = NULL,
   seed = NULL,
   verbose = TRUE,
+  num_sequences = NULL,
+  max_seq_length = NULL,
+  learning_categories = NULL,
   ...
 )
 }
 \arguments{
-\item{n_networks}{Integer. Number of networks to generate. Default: 10.}
+\item{n_networks}{Integer. Number of networks to generate. Default: 1.}
+
+\item{n_states}{Integer. Number of states/actions in each network. Default: 5.}
+
+\item{n_sequences}{Integer. Number of sequences to simulate per network.
+Default: 100.}
+
+\item{seq_length}{Integer. Maximum length of each sequence. Default: 30.}
 
 \item{model_type}{Character. Type of TNA model to fit:
 "tna", "ftna", "ctna", "atna". Default: "tna".}
 
-\item{n_states}{Integer. Number of states/actions in each network. Default: 5.}
-
 \item{use_learning_states}{Logical. If TRUE, uses learning action verbs
 as state names. Default: TRUE.}
 
-\item{learning_categories}{Character vector or NULL. Which categories of
+\item{categories}{Character vector or NULL. Which categories of
 learning verbs to use. Options: "metacognitive", "cognitive", "behavioral",
 "social", "motivational", "affective", "group_regulation", or "all".
 If NULL (default), randomly selects one category.}
-
-\item{num_sequences}{Integer. Number of sequences to simulate per network.
-Default: 100.}
-
-\item{max_seq_length}{Integer. Maximum length of each sequence. Default: 30.}
 
 \item{seed}{Integer or NULL. Random seed for reproducibility. Default: NULL.}
 
 \item{verbose}{Logical. If TRUE, prints progress messages. Default: TRUE.}
 
-\item{...}{Additional parameters passed to \code{\link{generate_sequence_data}}.}
+\item{num_sequences}{Deprecated. Use \code{n_sequences} instead.}
+
+\item{max_seq_length}{Deprecated. Use \code{seq_length} instead.}
+
+\item{learning_categories}{Deprecated. Use \code{categories} instead.}
+
+\item{...}{Additional parameters passed to \code{\link{generate_tna_datasets}}.}
 }
 \value{
 A list of length \code{n_networks} containing fitted TNA model objects.
@@ -52,16 +61,16 @@ Each element is a tna model object (class "tna").
 Generate multiple TNA network objects (fitted models) for simulation studies.
 This function creates TNA model objects by simulating sequence data and
 fitting models. For generating raw sequence data with associated probabilities,
-use \code{\link{generate_sequence_data}}. For group TNA models, use
+use \code{\link{generate_tna_datasets}}. For group TNA models, use
 \code{\link{generate_group_tna_networks}}.
 }
 \details{
-This function differs from \code{\link{generate_sequence_data}} in that it
+This function differs from \code{\link{generate_tna_datasets}} in that it
 returns only the fitted model objects, not the underlying sequence data or
 generating probabilities. Use this when you need TNA network objects for
 simulation studies or method comparisons.
 
-\strong{Random Category Selection}: When \code{learning_categories = NULL} and
+\strong{Random Category Selection}: When \code{categories = NULL} and
 \code{use_learning_states = TRUE}, a random learning category is selected.
 Available categories: metacognitive, cognitive, behavioral, social,
 motivational, affective, group_regulation.
@@ -75,7 +84,7 @@ nets <- generate_tna_networks(n_networks = 5, seed = 42)
 meta_nets <- generate_tna_networks(
   n_networks = 3,
   n_states = 6,
-  learning_categories = "metacognitive",
+  categories = "metacognitive",
   seed = 123
 )
 
@@ -89,12 +98,20 @@ ftna_nets <- generate_tna_networks(
 # Use the networks
 plot(nets[[1]])
 tna::centralities(nets[[1]])
+
+# Old parameter names still work
+nets <- generate_tna_networks(
+  n_networks = 3,
+  num_sequences = 50,
+  max_seq_length = 25,
+  seed = 42
+)
 }
 
 }
 \seealso{
 \code{\link{generate_group_tna_networks}} for group TNA models,
-\code{\link{generate_sequence_data}} for generating sequence data with
+\code{\link{generate_tna_datasets}} for generating complete datasets with
 probabilities, \code{\link{fit_network_model}} for model fitting,
 \code{\link{get_learning_states}} for learning state verbs.
 }

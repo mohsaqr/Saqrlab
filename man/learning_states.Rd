@@ -6,7 +6,7 @@
 \alias{LEARNING_STATES}
 \title{Learning State Verbs for TNA Simulation}
 \format{
-A named list with 7 categories of learning verbs.
+A named list with 8 categories of learning verbs.
 }
 \usage{
 LEARNING_STATES
@@ -34,6 +34,8 @@ focusing, persisting, engaging, striving.}
 enjoying, coping, managing stress, curiosity.}
 \item{group_regulation}{Socially shared regulation of learning (SSRL):
 collaborative planning, monitoring, adapting in groups.}
+\item{lms}{Learning Management System actions:
+viewing content, accessing resources, submitting assignments, forum posts.}
 }
 }
 \examples{

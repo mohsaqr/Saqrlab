@@ -6,34 +6,36 @@
 \usage{
 generate_group_tna_networks(
   n_groups = 5,
-  actors_per_group = 10,
-  n_states = 5,
-  min_seq_length = 10,
-  max_seq_length = 30,
+  n_actors = 10,
+  n_states = 8,
+  seq_length_range = c(10, 30),
   use_learning_states = TRUE,
-  learning_categories = NULL,
+  categories = NULL,
   seed = NULL,
   verbose = TRUE,
+  actors_per_group = NULL,
+  min_seq_length = NULL,
+  max_seq_length = NULL,
+  learning_categories = NULL,
   ...
 )
 }
 \arguments{
 \item{n_groups}{Integer. Number of groups in the network. Default: 5.}
 
-\item{actors_per_group}{Integer or integer vector. Number of actors per group.
+\item{n_actors}{Integer or integer vector. Number of actors per group.
 Accepts: single integer (fixed size), two integers like \code{c(8, 12)} (min/max),
 or a range like \code{5:15} (min/max taken from range). Default: 10.}
 
 \item{n_states}{Integer. Number of states/actions in the network. Default: 5.}
 
-\item{min_seq_length}{Integer. Minimum sequence length per actor. Default: 10.}
-
-\item{max_seq_length}{Integer. Maximum sequence length per actor. Default: 30.}
+\item{seq_length_range}{Integer vector of length 2. Range for sequence lengths
+per actor (min, max). Default: c(10, 30).}
 
 \item{use_learning_states}{Logical. If TRUE, uses learning action verbs
 as state names. Default: TRUE.}
 
-\item{learning_categories}{Character vector or NULL. Which categories of
+\item{categories}{Character vector or NULL. Which categories of
 learning verbs to use. Options: "metacognitive", "cognitive", "behavioral",
 "social", "motivational", "affective", "group_regulation", or "all".
 If NULL (default), randomly selects one category.}
@@ -41,6 +43,14 @@ If NULL (default), randomly selects one category.}
 \item{seed}{Integer or NULL. Random seed for reproducibility. Default: NULL.}
 
 \item{verbose}{Logical. If TRUE, prints progress messages. Default: TRUE.}
+
+\item{actors_per_group}{Deprecated. Use \code{n_actors} instead.}
+
+\item{min_seq_length}{Deprecated. Use \code{seq_length_range} instead.}
+
+\item{max_seq_length}{Deprecated. Use \code{seq_length_range} instead.}
+
+\item{learning_categories}{Deprecated. Use \code{categories} instead.}
 
 \item{...}{Additional parameters passed to \code{\link{simulate_long_data}}.}
 }
@@ -74,7 +84,7 @@ to wide format, and fits a group TNA model using \code{tna::group_model()}.
 # Generate a group TNA network with 4 groups, 15 actors each
 group_net <- generate_group_tna_networks(
   n_groups = 4,
-  actors_per_group = 15,
+  n_actors = 15,
   n_states = 5,
   seed = 42
 )
@@ -82,23 +92,30 @@ group_net <- generate_group_tna_networks(
 # Variable group sizes using range notation
 var_net <- generate_group_tna_networks(
   n_groups = 5,
-  actors_per_group = 8:15,
-  min_seq_length = 5,
-  max_seq_length = 25,
+  n_actors = c(8, 15),
+  seq_length_range = c(5, 25),
   seed = 123
 )
 
 # With specific learning category
 ssrl_net <- generate_group_tna_networks(
   n_groups = 6,
-  actors_per_group = c(10, 20),
-  learning_categories = "group_regulation",
+  n_actors = c(10, 20),
+  categories = "group_regulation",
   seed = 456
 )
 
 # Access individual group networks
 names(group_net)
 group_net[[1]]$weights
+
+# Old parameter names still work
+group_net <- generate_group_tna_networks(
+  actors_per_group = 10,
+  min_seq_length = 5,
+  max_seq_length = 20,
+  seed = 42
+)
 }
 
 }

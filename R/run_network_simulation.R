@@ -57,16 +57,16 @@
 #' init_probs <- c(A = 0.5, B = 0.3, C = 0.2)
 #'
 #' original_data <- simulate_sequences(
-#'   transition_matrix = trans_mat,
-#'   initial_probabilities = init_probs,
-#'   max_seq_length = 30,
-#'   num_rows = 100
+#'   trans_matrix = trans_mat,
+#'   init_probs = init_probs,
+#'   seq_length = 30,
+#'   n_sequences = 100
 #' )
 #'
 #' # Run simulations comparing tna and ftna models
 #' results <- run_network_simulation(
 #'   original_data_list = original_data,
-#'   sim_params = list(max_seq_length = 30, num_rows = 100),
+#'   sim_params = list(seq_length = 30, n_sequences = 100),
 #'   models = c("tna", "ftna"),
 #'   comparisons = c("original"),
 #'   num_runs = 5
@@ -110,7 +110,7 @@ run_network_simulation <- function(original_data_list,
   if (is.null(sim_params)) {
     # Default parameter if none provided
     sim_params <- list(
-      list(max_seq_length = 30, num_rows = 100, min_na = 0, max_na = 5)
+      list(seq_length = 30, n_sequences = 100, min_na = 0, max_na = 5)
     )
   } else if (is.data.frame(sim_params)) {
     # Convert data frame to list of parameter sets
@@ -174,12 +174,11 @@ run_network_simulation <- function(original_data_list,
         for (run_idx in 1:num_runs) {
           # Generate sequences only once per run
           sim_sequences <- simulate_sequences(
-            transition_matrix = original_transition_probs,
-            initial_probabilities = initial_probabilities,
-            max_seq_length = param_set$max_seq_length,
-            num_rows = param_set$num_rows,
-            min_na = param_set$min_na,
-            max_na = param_set$max_na
+            trans_matrix = original_transition_probs,
+            init_probs = initial_probabilities,
+            seq_length = param_set$seq_length,
+            n_sequences = param_set$n_sequences,
+            na_range = c(param_set$min_na, param_set$max_na)
           )
 
           # Check if sequences are valid
@@ -323,12 +322,11 @@ run_network_simulation <- function(original_data_list,
       if ("across_models" %in% comparisons && length(models) > 1) {
         # Generate sequences once for cross-model comparison, specific to this dataset
         cross_model_sequences <- simulate_sequences(
-          transition_matrix = original_transition_probs,
-          initial_probabilities = initial_probabilities,
-          max_seq_length = param_set$max_seq_length,
-          num_rows = param_set$num_rows,
-          min_na = param_set$min_na,
-          max_na = param_set$max_na
+          trans_matrix = original_transition_probs,
+          init_probs = initial_probabilities,
+          seq_length = param_set$seq_length,
+          n_sequences = param_set$n_sequences,
+          na_range = c(param_set$min_na, param_set$max_na)
         )
 
         # Fit all models once for this dataset

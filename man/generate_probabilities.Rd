@@ -4,13 +4,23 @@
 \alias{generate_probabilities}
 \title{Generate Transition and Initial Probabilities}
 \usage{
-generate_probabilities(n_states, possible_state_names)
+generate_probabilities(
+  n_states = 8,
+  states = NULL,
+  seed = NULL,
+  possible_state_names = NULL
+)
 }
 \arguments{
-\item{n_states}{Integer. Number of states in the Markov chain.}
+\item{n_states}{Integer. Number of states in the Markov chain. Default: 5.}
 
-\item{possible_state_names}{Character vector. Names for the states.
-Must have at least \code{n_states} elements.}
+\item{states}{Character vector. Names for the states.
+Must have at least \code{n_states} elements. If NULL, uses letters A, B, C, ...
+Default: NULL.}
+
+\item{seed}{Integer or NULL. Random seed for reproducibility. Default: NULL.}
+
+\item{possible_state_names}{Deprecated. Use \code{states} instead.}
 }
 \value{
 A list containing:
@@ -26,17 +36,20 @@ Generate random transition probabilities and initial state probabilities
 for a Markov chain using the seqHMM package.
 }
 \details{
-This function uses a fixed seed (123) to ensure reproducible probability
-generation. The transition probabilities are generated using
+The transition probabilities are generated using
 \code{seqHMM::simulate_transition_probs()} and initial probabilities using
 \code{seqHMM::simulate_initial_probs()}.
 }
 \examples{
 \dontrun{
-# Generate probabilities for 4 states
+# Generate probabilities for 4 states with default names
+probs <- generate_probabilities(n_states = 4, seed = 42)
+
+# Generate probabilities with custom state names
 probs <- generate_probabilities(
   n_states = 4,
-  possible_state_names = c("A", "B", "C", "D", "E")
+  states = c("A", "B", "C", "D", "E"),
+  seed = 123
 )
 
 # View initial probabilities
@@ -44,6 +57,12 @@ probs$initial_probs
 
 # View transition matrix
 probs$transition_probs
+
+# Old parameter name still works
+probs <- generate_probabilities(
+  n_states = 3,
+  possible_state_names = c("X", "Y", "Z")
+)
 }
 
 }

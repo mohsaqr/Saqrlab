@@ -5,28 +5,35 @@
 \title{Simulate One-Hot Encoded Sequence Data}
 \usage{
 simulate_onehot_data(
-  n_groups = 20,
-  actors_per_group = 10,
+  n_groups = 5,
+  n_actors = 10,
   n_courses = 3,
-  actions = NULL,
-  action_categories = "group_regulation",
-  n_actions = 9,
-  seq_length_range = c(8, 25),
+  n_states = 9,
+  states = NULL,
+  use_learning_states = TRUE,
+  categories = "group_regulation",
+  seq_length_range = c(10, 30),
   achiever_levels = c("High", "Low"),
   achiever_probs = c(0.5, 0.5),
   start_time = "2025-01-01 10:00:00",
   time_interval_range = c(60, 600),
-  transition_probs = NULL,
-  initial_probs = NULL,
+  trans_matrix = NULL,
+  init_probs = NULL,
   sort_states = FALSE,
   state_prefix = "",
-  seed = NULL
+  seed = NULL,
+  actors_per_group = NULL,
+  actions = NULL,
+  action_categories = NULL,
+  n_actions = NULL,
+  transition_probs = NULL,
+  initial_probs = NULL
 )
 }
 \arguments{
-\item{n_groups}{Integer. Number of groups. Default: 20.}
+\item{n_groups}{Integer. Number of groups. Default: 5.}
 
-\item{actors_per_group}{Integer or integer vector of length 2. If single
+\item{n_actors}{Integer or integer vector of length 2. If single
 integer, exact number of actors per group. If vector c(min, max), random
 sizes in that range. Default: 10.}
 
@@ -34,19 +41,22 @@ sizes in that range. Default: 10.}
 course names (e.g., c("A", "B", "C")). Groups are distributed evenly
 across courses. Default: 3.}
 
-\item{actions}{Character vector. The action/state names to use. If NULL,
-uses learning states based on \code{action_categories}. Default: NULL.}
+\item{n_states}{Integer. Number of actions to sample when using categories.
+Ignored if \code{states} is provided. Default: 9.}
 
-\item{action_categories}{Character vector. Categories of learning states
-to use when \code{actions = NULL}. Options: "metacognitive", "cognitive",
+\item{states}{Character vector. The action/state names to use. If NULL,
+uses learning states based on \code{categories}. Default: NULL.}
+
+\item{use_learning_states}{Logical. If TRUE and \code{states} is NULL, uses
+learning state verbs from the specified \code{categories}. Default: TRUE.}
+
+\item{categories}{Character vector. Categories of learning states
+to use when \code{states = NULL}. Options: "metacognitive", "cognitive",
 "behavioral", "social", "motivational", "affective", "group_regulation",
 or "all". Default: "group_regulation".}
 
-\item{n_actions}{Integer. Number of actions to sample when using categories.
-Ignored if \code{actions} is provided. Default: 9.}
-
 \item{seq_length_range}{Integer vector of length 2. Range for sequence
-lengths per actor (min, max). Default: c(8, 25).}
+lengths per actor (min, max). Default: c(10, 30).}
 
 \item{achiever_levels}{Character vector. Levels for the Achiever variable.
 Default: c("High", "Low").}
@@ -60,10 +70,10 @@ Default: "2025-01-01 10:00:00".}
 \item{time_interval_range}{Numeric vector of length 2. Range for time
 intervals between actions in seconds (min, max). Default: c(60, 600).}
 
-\item{transition_probs}{Matrix or NULL. Custom transition probability matrix.
+\item{trans_matrix}{Matrix or NULL. Custom transition probability matrix.
 If NULL, generates random probabilities. Default: NULL.}
 
-\item{initial_probs}{Numeric vector or NULL. Custom initial probabilities.
+\item{init_probs}{Numeric vector or NULL. Custom initial probabilities.
 If NULL, generates random probabilities. Default: NULL.}
 
 \item{sort_states}{Logical. Sort state columns alphabetically. Default: FALSE.}
@@ -71,6 +81,18 @@ If NULL, generates random probabilities. Default: NULL.}
 \item{state_prefix}{Character. Prefix for state column names. Default: "".}
 
 \item{seed}{Integer or NULL. Random seed for reproducibility. Default: NULL.}
+
+\item{actors_per_group}{Deprecated. Use \code{n_actors} instead.}
+
+\item{actions}{Deprecated. Use \code{states} instead.}
+
+\item{action_categories}{Deprecated. Use \code{categories} instead.}
+
+\item{n_actions}{Deprecated. Use \code{n_states} instead.}
+
+\item{transition_probs}{Deprecated. Use \code{trans_matrix} instead.}
+
+\item{initial_probs}{Deprecated. Use \code{init_probs} instead.}
 }
 \value{
 A tibble (data frame) with columns:
@@ -100,14 +122,14 @@ with value 0, representing the action performed at that time point.
 }
 \examples{
 \dontrun{
-# Basic usage
-data <- simulate_onehot_data(n_groups = 5, actors_per_group = 3, seed = 42)
+# Basic usage with new standardized params
+data <- simulate_onehot_data(n_groups = 5, n_actors = 3, seed = 42)
 head(data)
 
-# Custom actions with prefix
+# Custom states with prefix
 data <- simulate_onehot_data(
   n_groups = 3,
-  actions = c("Read", "Write", "Think"),
+  states = c("Read", "Write", "Think"),
   state_prefix = "state_",
   seed = 123
 )
@@ -116,6 +138,13 @@ names(data)
 # Verify one-hot encoding (each row sums to 1)
 state_cols <- setdiff(names(data), c("Actor", "Achiever", "Group", "Course", "Time"))
 all(rowSums(data[, state_cols]) == 1)  # TRUE
+
+# Old parameter names still work (backward compatible)
+data <- simulate_onehot_data(
+  actors_per_group = 5,
+  actions = c("A", "B", "C"),
+  seed = 42
+)
 }
 
 }
