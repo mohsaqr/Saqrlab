@@ -117,12 +117,16 @@ bootstrap_results <- run_bootstrap_simulation(
 
 The most comprehensive approach uses parameter grids:
 
-```{r power-grid}
+```{r power-grid, eval = FALSE}
 # Create parameter grid
 power_grid <- create_param_grid(
-  n_sequences = c(25, 50, 100, 150, 200, 300),
-  seq_length = c(15, 25, 40),
-  n_states = c(4, 6, 8)
+  param_ranges = list(
+    n_sequences = c(25, 300),
+    seq_length = c(15, 40),
+    n_states = c(4, 8)
+  ),
+  n = 50,
+  method = "lhs"
 )
 
 nrow(power_grid)  # Number of conditions
@@ -323,9 +327,13 @@ Longer sequences provide more transitions:
 ```{r factor-length, eval = FALSE}
 # Compare different sequence lengths
 length_grid <- create_param_grid(
-  n_sequences = c(50, 100, 200),
-  seq_length = c(10, 15, 20, 25, 30, 40, 50),
-  n_states = 5
+  param_ranges = list(
+    n_sequences = c(50, 200),
+    seq_length = c(10, 50),
+    n_states = c(5, 5)
+  ),
+  n = 30,
+  method = "lhs"
 )
 
 length_results <- run_grid_simulation(
@@ -343,9 +351,13 @@ More states = more parameters to estimate:
 ```{r factor-states, eval = FALSE}
 # Compare different network sizes
 states_grid <- create_param_grid(
-  n_sequences = c(50, 100, 200, 300),
-  seq_length = 25,
-  n_states = c(3, 4, 5, 6, 8, 10)
+  param_ranges = list(
+    n_sequences = c(50, 300),
+    seq_length = c(25, 25),
+    n_states = c(3, 10)
+  ),
+  n = 30,
+  method = "lhs"
 )
 
 states_results <- run_grid_simulation(
@@ -374,9 +386,13 @@ dense_net <- generate_probabilities(n_states = 6, edge_density = 0.8)
 ```{r full-protocol, eval = FALSE}
 # 1. Define parameter space
 full_grid <- create_param_grid(
-  n_sequences = seq(25, 500, by = 25),
-  seq_length = c(15, 25, 40),
-  n_states = c(4, 6, 8)
+  param_ranges = list(
+    n_sequences = c(25, 500),
+    seq_length = c(15, 40),
+    n_states = c(4, 8)
+  ),
+  n = 100,
+  method = "lhs"
 )
 
 # 2. Run comprehensive simulation

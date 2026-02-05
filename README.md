@@ -230,9 +230,13 @@ library(tna)
 
 # Create parameter grid for power analysis
 power_grid <- create_param_grid(
-  n_sequences = c(25, 50, 100, 200, 300),
-  seq_length = c(15, 25, 40),
-  n_states = c(4, 6, 8)
+  param_ranges = list(
+    n_sequences = c(25, 300),
+    seq_length = c(15, 40),
+    n_states = c(4, 8)
+  ),
+  n = 50,
+  method = "lhs"
 )
 
 # Run power analysis (50 replications per condition)
