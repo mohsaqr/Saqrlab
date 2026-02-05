@@ -1,0 +1,351 @@
+---
+title: "Learning States Reference"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Learning States Reference}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(Saqrlab)
+```
+
+## Overview
+
+Saqrlab includes over 180 learning action verbs organized into 8 categories, designed for educational research simulations. This reference documents all available learning states and how to use them.
+
+## Available Categories
+
+```{r list-categories}
+list_learning_categories()
+```
+
+## Complete Learning States Reference
+
+### Metacognitive (20 verbs)
+
+Self-regulation and awareness actions for planning, monitoring, and evaluating one's own learning.
+
+```{r metacognitive}
+get_learning_states("metacognitive")
+```
+
+### Cognitive (30 verbs)
+
+Mental processing actions for understanding, analyzing, and synthesizing information.
+
+```{r cognitive}
+get_learning_states("cognitive")
+```
+
+### Behavioral (30 verbs)
+
+Observable study actions including reading, writing, practicing, and note-taking.
+
+```{r behavioral}
+get_learning_states("behavioral")
+```
+
+### Social (30 verbs)
+
+Interaction and collaboration actions for discussing, helping, teaching, and asking.
+
+```{r social}
+get_learning_states("social")
+```
+
+### Motivational (30 verbs)
+
+Effort and persistence actions for focusing, persisting, engaging, and striving.
+
+```{r motivational}
+get_learning_states("motivational")
+```
+
+### Affective (30 verbs)
+
+Emotional and attitudinal states including enjoying, coping, managing stress, and curiosity.
+
+```{r affective}
+get_learning_states("affective")
+```
+
+### Group Regulation (9 verbs)
+
+Socially shared regulation of learning (SSRL) actions for collaborative planning, monitoring, and adapting.
+
+```{r group-regulation}
+get_learning_states("group_regulation")
+```
+
+### LMS Actions (30 verbs)
+
+Learning Management System interactions including viewing content, accessing resources, and submitting assignments.
+
+```{r lms}
+get_learning_states("lms")
+```
+
+## Using Learning States
+
+### Basic Retrieval
+
+```{r basic-retrieval}
+# Get all verbs from a category
+metacognitive_verbs <- get_learning_states("metacognitive")
+length(metacognitive_verbs)
+
+# Get verbs from multiple categories
+srl_verbs <- get_learning_states(c("metacognitive", "cognitive", "motivational"))
+length(srl_verbs)
+
+# Get all verbs
+all_verbs <- get_learning_states("all")
+length(all_verbs)
+```
+
+### Random Sampling
+
+```{r random-sampling}
+# Random 8 verbs from any category
+random_8 <- get_learning_states(n = 8, seed = 42)
+random_8
+
+# Random 6 verbs from specific categories
+random_cog <- get_learning_states(c("cognitive", "behavioral"), n = 6, seed = 42)
+random_cog
+```
+
+### Smart Selection
+
+The `smart_select_states()` function intelligently selects states based on network size:
+
+```{r smart-select}
+# Small network: auto-selects from one category
+small_net <- smart_select_states(5, seed = 42)
+small_net
+
+# Medium network: balanced across categories
+medium_net <- smart_select_states(10, seed = 42)
+medium_net
+
+# Large network: wide variety
+large_net <- smart_select_states(20, seed = 42)
+large_net
+```
+
+### Biased Selection
+
+```{r biased-select}
+# Prioritize metacognitive verbs
+meta_focus <- smart_select_states(
+  n_states = 10,
+  primary_categories = "metacognitive",
+  secondary_categories = "cognitive",
+  primary_ratio = 0.7,  # 70% metacognitive
+  seed = 42
+)
+meta_focus
+```
+
+## Integration with Simulation Functions
+
+### With simulate_sequences()
+
+```{r simulate-with-states}
+# Auto-generates with learning states by default
+sequences <- simulate_sequences(
+  n_sequences = 50,
+  seq_length = 15,
+  n_states = 5,
+  seed = 42
+)
+
+# Check states used
+unique(unlist(sequences))
+```
+
+### Specifying Categories
+
+```{r specify-categories}
+# Use specific categories
+sequences <- simulate_sequences(
+  n_sequences = 50,
+  seq_length = 15,
+  n_states = 6,
+  categories = c("metacognitive", "cognitive"),
+  seed = 42
+)
+
+unique(unlist(sequences))
+```
+
+### With simulate_matrix()
+
+```{r matrix-with-states}
+# Matrix uses random category by default
+mat <- simulate_matrix(n_nodes = 5, seed = 42)
+rownames(mat)
+
+# Run again - different category selected
+mat2 <- simulate_matrix(n_nodes = 5, seed = 123)
+rownames(mat2)
+```
+
+### With simulate_htna()
+
+```{r htna-with-states}
+# HTNA uses different category per type
+net <- simulate_htna(seed = 42)
+lapply(net$node_types, head, 3)
+```
+
+## Direct Access to LEARNING_STATES
+
+```{r direct-access}
+# Access the raw data
+names(LEARNING_STATES)
+
+# Get specific category
+LEARNING_STATES$metacognitive
+
+# Count verbs per category
+sapply(LEARNING_STATES, length)
+```
+
+## Global Names Dataset
+
+Saqrlab also includes 300 diverse names for simulation:
+
+```{r global-names}
+# Access names
+head(GLOBAL_NAMES, 20)
+
+# Get random names
+get_global_names(n = 10, seed = 42)
+```
+
+## Educational Research Applications
+
+### Self-Regulated Learning (SRL)
+
+```{r srl-application}
+# Zimmerman's SRL phases
+forethought <- get_learning_states("metacognitive")
+performance <- get_learning_states(c("cognitive", "behavioral"))
+reflection <- c("Evaluate", "Reflect", "Assess", "Judge")
+
+cat("Forethought:", head(forethought, 5), "...\n")
+cat("Performance:", head(performance, 5), "...\n")
+cat("Reflection:", reflection, "\n")
+```
+
+### Socially Shared Regulation of Learning (SSRL)
+
+```{r ssrl-application}
+# SSRL components
+ssrl_verbs <- get_learning_states("group_regulation")
+ssrl_verbs
+```
+
+### Learning Analytics (LMS Data)
+
+```{r la-application}
+# Common LMS actions
+lms_verbs <- get_learning_states("lms")
+head(lms_verbs, 15)
+```
+
+### Collaborative Learning
+
+```{r collab-application}
+# Social and group regulation
+collab_verbs <- get_learning_states(c("social", "group_regulation"))
+length(collab_verbs)
+head(collab_verbs, 10)
+```
+
+## Custom State Names
+
+You can always use your own state names:
+
+```{r custom-names}
+# With simulate_sequences
+sequences <- simulate_sequences(
+  n_sequences = 50,
+  seq_length = 15,
+  n_states = 4,
+  states = c("Explore", "Learn", "Practice", "Master"),
+  seed = 42
+)
+
+unique(unlist(sequences))
+
+# With simulate_matrix
+mat <- simulate_matrix(
+  n_nodes = 4,
+  names = c("Phase1", "Phase2", "Phase3", "Phase4"),
+  seed = 42
+)
+
+rownames(mat)
+```
+
+## Complete Reference Table
+
+```{r reference-table}
+# Create comprehensive reference
+ref_table <- data.frame(
+  Category = names(LEARNING_STATES),
+  Count = sapply(LEARNING_STATES, length),
+  First_5 = sapply(LEARNING_STATES, function(x) {
+    paste(head(x, 5), collapse = ", ")
+  }),
+  row.names = NULL
+)
+
+ref_table
+```
+
+## Summary
+
+### Key Functions
+
+| Function | Purpose |
+|----------|---------|
+| `LEARNING_STATES` | Raw dataset of all verbs |
+| `get_learning_states()` | Retrieve verbs by category |
+| `list_learning_categories()` | Show category summary |
+| `smart_select_states()` | Intelligent selection |
+| `GLOBAL_NAMES` | 300 diverse names |
+| `get_global_names()` | Retrieve names |
+
+### Category Summary
+
+| Category | Count | Focus |
+|----------|-------|-------|
+| metacognitive | 20 | Self-regulation |
+| cognitive | 30 | Mental processing |
+| behavioral | 30 | Observable actions |
+| social | 30 | Interaction |
+| motivational | 30 | Effort/persistence |
+| affective | 30 | Emotions |
+| group_regulation | 9 | SSRL |
+| lms | 30 | System interactions |
+| **Total** | **209** | |
+
+### Usage Tips
+
+1. **Default behavior**: Most functions use learning states automatically
+2. **Categories parameter**: Control which categories to sample from
+3. **Custom names**: Always supported via `states` or `names` parameter
+4. **Reproducibility**: Use `seed` parameter for consistent results
+5. **HTNA/MLNA**: Each type automatically gets different category

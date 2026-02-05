@@ -1,0 +1,492 @@
+---
+title: "Complete Simulation Guide"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Complete Simulation Guide}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+```{r setup}
+library(Saqrlab)
+```
+
+## Overview
+
+This guide covers all simulation functions in Saqrlab. The package provides multiple ways to generate synthetic data for Temporal Network Analysis:
+
+| Function | Output | Use Case |
+|----------|--------|----------|
+| `simulate_matrix()` | Transition matrix | Simple networks |
+| `simulate_htna()` | Multi-type matrix | HTNA/MLNA analysis |
+| `simulate_sequences()` | Wide-format sequences | Basic TNA |
+| `simulate_sequences_advanced()` | Sequences with patterns | Realistic simulations |
+| `simulate_long_data()` | Hierarchical long format | Group/course analysis |
+| `simulate_onehot_data()` | One-hot encoded data | ML applications |
+| `simulate_edge_list()` | Edge list | Social networks |
+
+## Simulating Transition Matrices
+
+### Simple Matrices with `simulate_matrix()`
+
+Generate a basic transition matrix where each row sums to 1:
+
+```{r simulate-matrix}
+# Default: 9-node transition matrix
+mat <- simulate_matrix(seed = 42)
+dim(mat)
+rowSums(mat)  # All sum to 1
+```
+
+The function automatically selects learning state names from a random category:
+
+```{r matrix-names}
+rownames(mat)
+```
+
+#### Matrix Types
+
+```{r matrix-types}
+# Transition matrix (default) - rows sum to 1
+trans_mat <- simulate_matrix(n_nodes = 5, matrix_type = "transition", seed = 42)
+rowSums(trans_mat)
+
+# Frequency matrix - integer counts
+freq_mat <- simulate_matrix(n_nodes = 5, matrix_type = "frequency", seed = 42)
+head(freq_mat)
+
+# Co-occurrence matrix - symmetric
+cooc_mat <- simulate_matrix(n_nodes = 5, matrix_type = "co-occurrence", seed = 42)
+isSymmetric(cooc_mat)
+
+# Adjacency matrix - binary or weighted
+adj_mat <- simulate_matrix(n_nodes = 5, matrix_type = "adjacency",
+                           weighted = FALSE, seed = 42)
+unique(as.vector(adj_mat))
+```
+
+#### Controlling Edge Density
+
+```{r edge-density}
+# Sparse network (30% edge probability, default)
+sparse <- simulate_matrix(n_nodes = 6, edge_prob = 0.3, seed = 42)
+sum(sparse > 0) / length(sparse)
+
+# Dense network (80% edge probability)
+dense <- simulate_matrix(n_nodes = 6, edge_prob = 0.8, seed = 42)
+sum(dense > 0) / length(dense)
+```
+
+#### Custom Node Names
+
+```{r custom-names}
+# Use your own state names
+mat <- simulate_matrix(
+  n_nodes = 4,
+  names = c("Explore", "Learn", "Practice", "Master"),
+  seed = 42
+)
+rownames(mat)
+```
+
+### Multi-Type Matrices with `simulate_htna()`
+
+For hierarchical (HTNA), multilevel (MLNA), or multi-type (MTNA) network analysis:
+
+```{r simulate-htna}
+# Default: 5 types x 5 nodes = 25-node matrix
+net <- simulate_htna(seed = 42)
+dim(net$matrix)
+names(net$node_types)
+```
+
+The output includes components ready for tna package visualization:
+
+```{r htna-components}
+# Node types (for plot_htna/plot_mlna)
+net$node_types
+
+# Nodes per type
+net$n_nodes_per_type
+```
+
+#### Custom Type Configuration
+
+```{r htna-custom}
+# 3 types with 4 nodes each
+net <- simulate_htna(
+  n_nodes = 4,
+  n_types = 3,
+  type_names = c("Macro", "Meso", "Micro"),
+  within_prob = 0.5,    # Higher within-type connectivity
+  between_prob = 0.1,   # Lower between-type connectivity
+  seed = 42
+)
+names(net$node_types)
+```
+
+#### Using with tna Package
+
+```{r htna-tna, eval = FALSE}
+library(tna)
+
+net <- simulate_htna(seed = 42)
+
+# Plot as hierarchical network
+plot_htna(net$matrix, net$node_types, layout = "polygon")
+
+# Plot as multilevel network
+plot_mlna(net$matrix, layers = net$node_types)
+```
+
+## Simulating Sequences
+
+### Basic Sequences with `simulate_sequences()`
+
+Generate Markov chain sequences from a transition matrix:
+
+```{r simulate-sequences}
+# Auto-generate with learning states (default)
+sequences <- simulate_sequences(
+  n_sequences = 100,
+  seq_length = 20,
+  n_states = 5,
+  seed = 42
+)
+head(sequences)
+dim(sequences)
+```
+
+#### Providing Your Own Parameters
+
+```{r custom-params}
+# Define transition matrix
+trans_mat <- matrix(c(
+  0.7, 0.2, 0.1,
+  0.2, 0.5, 0.3,
+  0.1, 0.3, 0.6
+), nrow = 3, byrow = TRUE)
+rownames(trans_mat) <- colnames(trans_mat) <- c("Plan", "Execute", "Review")
+
+# Define initial probabilities
+init_probs <- c(Plan = 0.5, Execute = 0.3, Review = 0.2)
+
+# Generate sequences
+sequences <- simulate_sequences(
+  trans_matrix = trans_mat,
+  init_probs = init_probs,
+  n_sequences = 100,
+  seq_length = 15
+)
+head(sequences)
+```
+
+#### Selecting Learning State Categories
+
+```{r category-selection}
+# Use metacognitive and cognitive verbs
+sequences <- simulate_sequences(
+  n_sequences = 50,
+  seq_length = 20,
+  n_states = 6,
+  categories = c("metacognitive", "cognitive"),
+  seed = 42
+)
+
+# Check the states used
+unique(unlist(sequences))
+```
+
+#### Adding Missing Values
+
+Real data often has variable sequence lengths:
+
+```{r add-nas}
+# Add 0-5 trailing NAs per sequence
+sequences <- simulate_sequences(
+  n_sequences = 50,
+  seq_length = 20,
+  n_states = 5,
+  na_range = c(0, 5),
+  include_na = TRUE,
+  seed = 42
+)
+
+# Check sequence lengths (excluding NAs)
+apply(sequences, 1, function(x) sum(!is.na(x)))
+```
+
+#### Getting Parameters Back
+
+Sometimes you need the generating parameters for analysis:
+
+```{r include-params}
+result <- simulate_sequences(
+  n_sequences = 50,
+  seq_length = 15,
+  n_states = 4,
+  include_params = TRUE,
+  seed = 42
+)
+
+# Access components
+head(result$sequences)
+result$trans_matrix
+result$state_names
+```
+
+### Advanced Sequences with `simulate_sequences_advanced()`
+
+Generate sequences with stable transition patterns for more realistic behavior:
+
+```{r advanced-sequences}
+# Define which transitions should be stable
+stable_transitions <- list(
+  c("Plan", "Monitor"),
+  c("Monitor", "Evaluate")
+)
+
+# First, create a matrix with these states
+trans_mat <- matrix(c(
+  0.3, 0.4, 0.2, 0.1,
+  0.2, 0.3, 0.3, 0.2,
+  0.1, 0.2, 0.4, 0.3,
+  0.3, 0.2, 0.2, 0.3
+), nrow = 4, byrow = TRUE)
+rownames(trans_mat) <- colnames(trans_mat) <- c("Plan", "Monitor", "Evaluate", "Execute")
+init_probs <- c(Plan = 0.4, Monitor = 0.2, Evaluate = 0.2, Execute = 0.2)
+
+# Generate with 90% stability for defined transitions
+sequences <- simulate_sequences_advanced(
+  trans_matrix = trans_mat,
+  init_probs = init_probs,
+  n_sequences = 100,
+  seq_length = 30,
+  stable_transitions = stable_transitions,
+  stability_prob = 0.90,
+  seed = 42
+)
+head(sequences)
+```
+
+#### Stability Modes
+
+```{r stability-modes, eval = FALSE}
+# Random jump mode (default): unstable transitions go to random state
+sequences <- simulate_sequences_advanced(
+  trans_matrix = trans_mat,
+  init_probs = init_probs,
+  n_sequences = 100,
+  seq_length = 30,
+  stable_transitions = stable_transitions,
+  stability_prob = 0.85,
+  unstable_mode = "random_jump"
+)
+
+# Perturb probability mode: adds noise to transition probabilities
+sequences <- simulate_sequences_advanced(
+  trans_matrix = trans_mat,
+  init_probs = init_probs,
+  n_sequences = 100,
+  seq_length = 30,
+  stable_transitions = stable_transitions,
+  stability_prob = 0.85,
+  unstable_mode = "perturb_prob"
+)
+```
+
+## Simulating Hierarchical Data
+
+### Long Format with `simulate_long_data()`
+
+Generate data with hierarchical structure (actors in groups in courses):
+
+```{r simulate-long}
+# Educational data: 5 groups, 10 actors each, 3 courses
+long_data <- simulate_long_data(
+  n_groups = 5,
+  n_actors = 10,
+  n_courses = 3,
+  categories = "group_regulation",
+  seq_length_range = c(10, 25),
+  seed = 42
+)
+
+head(long_data)
+str(long_data)
+```
+
+#### Variable Group Sizes
+
+```{r variable-groups}
+# Groups with 8-12 actors
+long_data <- simulate_long_data(
+  n_groups = 5,
+  n_actors = c(8, 12),  # Min and max
+  n_courses = 2,
+  seed = 42
+)
+
+# Check group sizes
+table(long_data$Group, long_data$Actor)
+```
+
+#### Achievement Levels
+
+```{r achievement}
+# Add achievement stratification
+long_data <- simulate_long_data(
+  n_groups = 5,
+  n_actors = 10,
+  n_courses = 2,
+  achiever_levels = c("High", "Medium", "Low"),
+  achiever_probs = c(0.3, 0.5, 0.2),
+  seed = 42
+)
+
+table(long_data$Achiever)
+```
+
+## One-Hot Encoded Data
+
+### Simulating with `simulate_onehot_data()`
+
+For machine learning applications that require one-hot encoding:
+
+```{r simulate-onehot}
+onehot_data <- simulate_onehot_data(
+  n_sequences = 50,
+  seq_length = 15,
+  n_states = 4,
+  seed = 42
+)
+
+head(onehot_data)
+```
+
+## Edge List Simulation
+
+### Social Networks with `simulate_edge_list()`
+
+Generate edge lists for social network analysis:
+
+```{r simulate-edges}
+edges <- simulate_edge_list(
+  n_nodes = 20,
+  n_edges = 50,
+  directed = TRUE,
+  weighted = TRUE,
+  seed = 42
+)
+
+head(edges)
+```
+
+#### Network Properties
+
+```{r edge-properties}
+# Undirected, unweighted network
+edges <- simulate_edge_list(
+  n_nodes = 15,
+  n_edges = 30,
+  directed = FALSE,
+  weighted = FALSE,
+  seed = 42
+)
+
+head(edges)
+```
+
+## Complete Network Generation
+
+### Generate TNA Datasets with `generate_tna_datasets()`
+
+Create complete datasets with sequences and their generating parameters:
+
+```{r generate-datasets, eval = FALSE}
+datasets <- generate_tna_datasets(
+  n_datasets = 5,
+  n_states = 6,
+  n_sequences = 100,
+  seq_length = 20,
+  use_learning_states = TRUE,
+  seed = 42
+)
+
+# Access components
+datasets$dataset_1$sequences
+datasets$dataset_1$trans_matrix
+datasets$dataset_1$init_probs
+```
+
+### Generate Fitted Networks with `generate_tna_networks()`
+
+Create complete networks with fitted TNA models:
+
+```{r generate-networks, eval = FALSE}
+networks <- generate_tna_networks(
+  n_networks = 5,
+  n_states = 6,
+  n_sequences = 150,
+  seq_length = 25,
+  model_type = "tna",
+  use_learning_states = TRUE,
+  categories = c("metacognitive", "cognitive"),
+  seed = 42
+)
+
+# Access model and data
+networks$network_1$model
+networks$network_1$sequences
+networks$network_1$trans_matrix
+```
+
+### Random Probabilities with `generate_probabilities()`
+
+Generate random transition matrices and initial probabilities:
+
+```{r generate-probs}
+probs <- generate_probabilities(n_states = 5, seed = 42)
+probs$transition_matrix
+probs$initial_probs
+```
+
+## Reproducibility
+
+All simulation functions accept a `seed` parameter for reproducibility:
+```{r reproducibility}
+# Same seed = same results
+mat1 <- simulate_matrix(seed = 123)
+mat2 <- simulate_matrix(seed = 123)
+identical(mat1, mat2)
+```
+
+## Performance Tips
+
+1. **Use parallel processing** for batch operations with `batch_fit_models()`
+2. **Set seeds** for reproducible results
+3. **Start small** when testing, then scale up
+4. **Use `include_params = TRUE`** to save generating parameters for analysis
+
+## Summary
+
+| Task | Function |
+|------|----------|
+| Simple transition matrix | `simulate_matrix()` |
+| HTNA/MLNA matrix | `simulate_htna()` |
+| Basic sequences | `simulate_sequences()` |
+| Sequences with patterns | `simulate_sequences_advanced()` |
+| Hierarchical data | `simulate_long_data()` |
+| One-hot sequences | `simulate_onehot_data()` |
+| Social network edges | `simulate_edge_list()` |
+| Complete datasets | `generate_tna_datasets()` |
+| Fitted networks | `generate_tna_networks()` |

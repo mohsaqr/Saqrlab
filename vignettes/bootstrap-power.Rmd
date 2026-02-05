@@ -1,0 +1,475 @@
+---
+title: "Bootstrap and Power Analysis"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Bootstrap and Power Analysis}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+```{r setup}
+library(Saqrlab)
+```
+
+## Overview
+
+This vignette covers bootstrap analysis and power analysis for TNA studies using Saqrlab. You'll learn how to:
+
+1. Run bootstrap simulations to assess stability
+2. Perform power analysis to determine sample sizes
+3. Use grid simulations for comprehensive evaluation
+4. Analyze and interpret results
+
+## Why Bootstrap and Power Analysis?
+
+### Bootstrap Analysis
+
+Bootstrap helps answer:
+- How stable are my network estimates?
+- What's the confidence interval for edge weights?
+- Are my centrality rankings reliable?
+
+### Power Analysis
+
+Power analysis helps answer:
+- How many sequences do I need for reliable results?
+- What sequence length is sufficient?
+- How do sample size and network size interact?
+
+## Bootstrap Simulations
+
+### Basic Bootstrap
+
+```{r bootstrap-basic, eval = FALSE}
+library(tna)
+
+# Generate some data
+sequences <- simulate_sequences(
+  n_sequences = 150,
+  seq_length = 25,
+  n_states = 5,
+  seed = 42
+)
+
+# Fit original model
+original_model <- fit_network_model(sequences, "tna")
+
+# Run bootstrap
+bootstrap_results <- run_bootstrap_simulation(
+  original_data = sequences,
+  n_bootstrap = 100,
+  model_type = "tna",
+  sample_size = NULL,  # Use original size
+  parallel = TRUE,
+  seed = 42
+)
+```
+
+### Evaluating Bootstrap Results
+
+```{r evaluate-bootstrap, eval = FALSE}
+# Evaluate bootstrap performance
+evaluation <- evaluate_bootstrap(
+  bootstrap_results = bootstrap_results,
+  original_model = original_model
+)
+
+# View summary
+print(evaluation)
+
+# Access specific metrics
+evaluation$edge_stability
+evaluation$centrality_stability
+evaluation$confidence_intervals
+```
+
+### Advanced Bootstrap Options
+
+```{r bootstrap-advanced, eval = FALSE}
+# Define stable transitions to test
+stable_transitions <- list(
+  c("Plan", "Monitor"),
+  c("Monitor", "Evaluate")
+)
+
+# Bootstrap with stability testing
+bootstrap_results <- run_bootstrap_simulation(
+  original_data = sequences,
+  n_bootstrap = 100,
+  model_type = "tna",
+  stable_transitions = stable_transitions,
+  seed = 42
+)
+```
+
+## Power Analysis
+
+### Approach 1: Grid Simulation
+
+The most comprehensive approach uses parameter grids:
+
+```{r power-grid}
+# Create parameter grid
+power_grid <- create_param_grid(
+  n_sequences = c(25, 50, 100, 150, 200, 300),
+  seq_length = c(15, 25, 40),
+  n_states = c(4, 6, 8)
+)
+
+nrow(power_grid)  # Number of conditions
+head(power_grid)
+```
+
+### Running Grid Simulation
+
+```{r run-power-grid, eval = FALSE}
+# Run power analysis
+power_results <- run_grid_simulation(
+  param_grid = power_grid,
+  n_runs_per_setting = 50,  # Replications per condition
+  model_type = "tna",
+  parallel = TRUE,
+  seed = 42
+)
+```
+
+### Analyzing Power Results
+
+```{r analyze-power, eval = FALSE}
+# Comprehensive analysis
+analysis <- analyze_grid_results(power_results)
+
+# Results by sample size
+analysis$by_n_sequences
+
+# Results by sequence length
+analysis$by_seq_length
+
+# Results by number of states
+analysis$by_n_states
+
+# Interaction effects
+analysis$interactions
+```
+
+### Finding Minimum Sample Size
+
+```{r find-min-sample, eval = FALSE}
+# Find minimum n_sequences for target correlation
+target_correlation <- 0.90
+
+summary_by_n <- summarize_simulation(
+  results = power_results,
+  by = "n_sequences",
+  metrics = c("mean", "ci_lower")
+)
+
+# Find first sample size meeting target
+min_n <- summary_by_n$n_sequences[
+  which(summary_by_n$correlation_mean >= target_correlation)[1]
+]
+
+cat("Minimum sample size for r >=", target_correlation, ":", min_n)
+```
+
+## Approach 2: Targeted Power Study
+
+For specific scenarios, run targeted simulations:
+
+```{r targeted-power, eval = FALSE}
+# Define ground truth
+true_probs <- generate_probabilities(n_states = 5, seed = 42)
+
+# Test specific sample sizes
+sample_sizes <- c(25, 50, 75, 100, 125, 150, 200, 300, 500)
+
+power_results <- lapply(sample_sizes, function(n) {
+  # Run multiple replications
+  correlations <- sapply(1:100, function(rep) {
+    # Generate sequences
+    seqs <- simulate_sequences(
+      trans_matrix = true_probs$transition_matrix,
+      init_probs = true_probs$initial_probs,
+      n_sequences = n,
+      seq_length = 25,
+      seed = rep * 1000 + n
+    )
+
+    # Fit model
+    model <- fit_network_model(seqs, "tna")
+
+    # Compare to truth
+    estimated <- extract_transition_matrix(model, type = "scaled")
+    cor(as.vector(true_probs$transition_matrix),
+        as.vector(estimated))
+  })
+
+  data.frame(
+    n_sequences = n,
+    mean_r = mean(correlations),
+    sd_r = sd(correlations),
+    ci_lower = mean(correlations) - 1.96 * sd(correlations),
+    ci_upper = mean(correlations) + 1.96 * sd(correlations),
+    prop_above_90 = mean(correlations >= 0.90)
+  )
+})
+
+power_df <- do.call(rbind, power_results)
+print(power_df)
+```
+
+## Interpreting Results
+
+### Key Metrics
+
+| Metric | Description | Target |
+|--------|-------------|--------|
+| Mean correlation | Average recovery accuracy | >= 0.90 |
+| SD | Estimation variability | Low is better |
+| CI width | Precision of estimates | Narrow is better |
+| Prop above 90 | Power at r = 0.90 | >= 0.80 |
+
+### Visualizing Power Curves
+
+```{r power-curves, eval = FALSE}
+library(ggplot2)
+
+ggplot(power_df, aes(x = n_sequences, y = mean_r)) +
+geom_line() +
+  geom_point() +
+  geom_ribbon(aes(ymin = ci_lower, ymax = ci_upper), alpha = 0.2) +
+  geom_hline(yintercept = 0.90, linetype = "dashed", color = "red") +
+  labs(
+    x = "Number of Sequences",
+    y = "Mean Correlation with True Network",
+    title = "Power Analysis: Network Recovery by Sample Size"
+  ) +
+  theme_minimal()
+```
+
+## Edge Recovery Analysis
+
+### Recovery Metrics
+
+Beyond correlation, examine edge recovery:
+
+```{r edge-recovery-power, eval = FALSE}
+# For each sample size, calculate edge recovery
+recovery_results <- lapply(sample_sizes, function(n) {
+  recoveries <- lapply(1:50, function(rep) {
+    seqs <- simulate_sequences(
+      trans_matrix = true_probs$transition_matrix,
+      init_probs = true_probs$initial_probs,
+      n_sequences = n,
+      seq_length = 25,
+      seed = rep * 1000 + n
+    )
+
+    model <- fit_network_model(seqs, "tna")
+
+    # Create pseudo-model from true matrix
+    true_model <- list(weights = true_probs$transition_matrix)
+
+    recovery <- calculate_edge_recovery(
+      original = true_model,
+      simulated = model,
+      threshold = 0.05
+    )
+
+    c(precision = recovery$precision,
+      recall = recovery$recall,
+      f1 = recovery$f1_score)
+  })
+
+  df <- do.call(rbind, recoveries)
+  data.frame(
+    n_sequences = n,
+    precision_mean = mean(df[,"precision"]),
+    recall_mean = mean(df[,"recall"]),
+    f1_mean = mean(df[,"f1"])
+  )
+})
+
+recovery_df <- do.call(rbind, recovery_results)
+print(recovery_df)
+```
+
+## Factors Affecting Power
+
+### Sample Size (n_sequences)
+
+Typically the most important factor:
+
+```{r factor-n}
+# Typical power curve behavior
+# - Steep improvement from 25-100
+# - Diminishing returns after 200-300
+# - Asymptotic approach to perfect recovery
+```
+
+### Sequence Length
+
+Longer sequences provide more transitions:
+
+```{r factor-length, eval = FALSE}
+# Compare different sequence lengths
+length_grid <- create_param_grid(
+  n_sequences = c(50, 100, 200),
+  seq_length = c(10, 15, 20, 25, 30, 40, 50),
+  n_states = 5
+)
+
+length_results <- run_grid_simulation(
+  param_grid = length_grid,
+  n_runs_per_setting = 30,
+  model_type = "tna",
+  seed = 42
+)
+```
+
+### Network Size (n_states)
+
+More states = more parameters to estimate:
+
+```{r factor-states, eval = FALSE}
+# Compare different network sizes
+states_grid <- create_param_grid(
+  n_sequences = c(50, 100, 200, 300),
+  seq_length = 25,
+  n_states = c(3, 4, 5, 6, 8, 10)
+)
+
+states_results <- run_grid_simulation(
+  param_grid = states_grid,
+  n_runs_per_setting = 30,
+  model_type = "tna",
+  seed = 42
+)
+```
+
+### Network Density
+
+Sparser networks may be harder to recover:
+
+```{r factor-density, eval = FALSE}
+# Test different network densities
+# Use generate_probabilities with different parameters
+sparse_net <- generate_probabilities(n_states = 6, edge_density = 0.3)
+dense_net <- generate_probabilities(n_states = 6, edge_density = 0.8)
+```
+
+## Comprehensive Power Study Design
+
+### Recommended Protocol
+
+```{r full-protocol, eval = FALSE}
+# 1. Define parameter space
+full_grid <- create_param_grid(
+  n_sequences = seq(25, 500, by = 25),
+  seq_length = c(15, 25, 40),
+  n_states = c(4, 6, 8)
+)
+
+# 2. Run comprehensive simulation
+full_results <- run_grid_simulation(
+  param_grid = full_grid,
+  n_runs_per_setting = 100,
+  model_type = "tna",
+  parallel = TRUE,
+  cores = parallel::detectCores() - 1,
+  seed = 42,
+  verbose = TRUE
+)
+
+# 3. Analyze results
+analysis <- analyze_grid_results(full_results)
+
+# 4. Generate power tables
+power_table <- summarize_simulation(
+  full_results,
+  by = c("n_sequences", "seq_length", "n_states"),
+  metrics = c("mean", "sd", "ci_lower", "ci_upper")
+)
+
+# 5. Find recommended sample sizes
+recommendations <- power_table[power_table$correlation_ci_lower >= 0.85, ]
+min_by_condition <- aggregate(
+  n_sequences ~ seq_length + n_states,
+  data = recommendations,
+  FUN = min
+)
+print(min_by_condition)
+```
+
+## Reporting Results
+
+### Power Analysis Report Template
+
+```{r report-template, eval = FALSE}
+# Generate summary statistics
+summary_stats <- summarize_simulation(
+  power_results,
+  by = "n_sequences",
+  metrics = "all"
+)
+
+# Create report
+cat("
+Power Analysis Results
+=====================
+
+Study Parameters:
+- Sequence length: 25
+- Number of states: 5
+- Replications per condition: 100
+- Target correlation: 0.90
+
+Results by Sample Size:
+")
+print(summary_stats)
+
+cat("
+Recommendations:
+- Minimum sample size for r >= 0.90:", min_n, "sequences
+- Recommended sample size (with margin):", ceiling(min_n * 1.2), "sequences
+")
+```
+
+## Summary
+
+### Key Functions
+
+| Function | Purpose |
+|----------|---------|
+| `run_bootstrap_simulation()` | Bootstrap analysis |
+| `evaluate_bootstrap()` | Evaluate bootstrap results |
+| `run_grid_simulation()` | Parameter grid simulation |
+| `analyze_grid_results()` | Analyze grid output |
+| `create_param_grid()` | Create parameter combinations |
+| `summarize_simulation()` | Summary statistics |
+
+### Recommended Workflow
+
+1. **Define research question**: What parameters affect recovery?
+2. **Create parameter grid**: Use `create_param_grid()`
+3. **Run simulations**: Use `run_grid_simulation()` with many replications
+4. **Analyze results**: Use `analyze_grid_results()` and `summarize_simulation()`
+5. **Determine minimum sample**: Find smallest n meeting target
+6. **Add safety margin**: Recommend 10-20% above minimum
+
+### Rules of Thumb
+
+- **Small networks (3-4 states)**: ~50-100 sequences often sufficient
+- **Medium networks (5-7 states)**: ~100-200 sequences recommended
+- **Large networks (8+ states)**: ~200-500 sequences may be needed
+- **Sequence length**: 20-30 actions typically adequate
+- **Always validate**: Run pilot simulations for your specific scenario

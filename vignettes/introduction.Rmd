@@ -1,0 +1,243 @@
+---
+title: "Introduction to Saqrlab"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to Saqrlab}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+## Overview
+
+Saqrlab is an R package designed for simulating and analyzing Temporal Network Analysis (TNA) models. It provides tools for:
+
+- **Simulating** Markov chain sequences and transition matrices
+- **Generating** complete TNA datasets with realistic parameters
+- **Fitting** various TNA model types (TNA, fTNA, cTNA, aTNA)
+- **Comparing** networks using multiple metrics
+- **Running** bootstrap and simulation studies
+
+The package is particularly useful for educational researchers working with learning analytics data, as it includes built-in learning state vocabularies for realistic simulations.
+
+## Installation
+
+```{r installation, eval = FALSE}
+# Install from GitHub
+devtools::install_github("mohsaqr/Saqrlab")
+```
+
+## Getting Started
+
+```{r setup}
+library(Saqrlab)
+```
+
+### Your First Simulation
+
+The simplest way to get started is to simulate sequences using the built-in learning states:
+
+```{r first-simulation}
+# Simulate 100 sequences, each with 20 actions across 5 states
+sequences <- simulate_sequences(
+  n_sequences = 100,
+  seq_length = 20,
+  n_states = 5,
+  seed = 42
+)
+
+# View the first few sequences
+head(sequences)
+
+# See the state names (randomly selected learning verbs)
+colnames(unique(as.matrix(sequences)))
+```
+
+### Fitting a TNA Model
+
+Once you have sequences, you can fit a TNA model:
+
+```{r fit-model, eval = FALSE}
+library(tna)
+
+# Fit a TNA model
+model <- fit_network_model(sequences, "tna")
+
+# View the model
+print(model)
+
+# Plot the network
+plot(model)
+```
+
+### Extracting Network Components
+
+You can extract various components from fitted models:
+
+```{r extract-components, eval = FALSE}
+# Get the transition matrix
+trans_mat <- extract_transition_matrix(model)
+print(trans_mat)
+
+# Get initial probabilities
+init_probs <- extract_initial_probs(model)
+print(init_probs)
+
+# Get edge list
+edges <- extract_edges(model, threshold = 0.05)
+head(edges)
+```
+
+## Key Concepts
+
+### Learning States
+
+Saqrlab includes over 180 learning action verbs organized into 8 categories:
+
+```{r learning-states}
+# View available categories
+list_learning_categories()
+```
+
+You can retrieve verbs from specific categories:
+
+```{r get-states}
+# Get metacognitive verbs
+get_learning_states("metacognitive")
+
+# Get 6 random verbs from cognitive and behavioral
+get_learning_states(c("cognitive", "behavioral"), n = 6, seed = 42)
+```
+
+### Transition Matrices
+
+A transition matrix defines the probability of moving from one state to another. Each row sums to 1:
+
+```{r transition-matrix}
+# Generate a simple transition matrix
+mat <- simulate_matrix(n_nodes = 4, seed = 42)
+print(mat)
+
+# Verify rows sum to 1
+rowSums(mat)
+```
+
+### Multi-Type Networks (HTNA/MLNA)
+
+For hierarchical or multilevel network analysis, you can generate matrices with multiple node types:
+
+```{r htna-matrix}
+# Generate a 15-node matrix with 3 types (5 nodes each)
+net <- simulate_htna(n_nodes = 5, n_types = 3, seed = 42)
+
+# View the node types
+net$node_types
+```
+
+## Basic Workflows
+
+### Workflow 1: Simulate and Analyze
+
+```{r workflow1, eval = FALSE}
+library(Saqrlab)
+library(tna)
+
+# 1. Simulate sequences
+sequences <- simulate_sequences(
+  n_sequences = 200,
+  seq_length = 25,
+  n_states = 6,
+  categories = c("metacognitive", "cognitive"),
+  seed = 42
+)
+
+# 2. Fit TNA model
+model <- fit_network_model(sequences, "tna")
+
+# 3. Analyze
+plot(model)
+centralities(model)
+```
+
+### Workflow 2: Compare Two Networks
+
+```{r workflow2, eval = FALSE}
+# Create two different networks
+net1 <- generate_tna_networks(1, n_states = 5, seed = 42)
+net2 <- generate_tna_networks(1, n_states = 5, seed = 123)
+
+# Compare them
+comparison <- compare_networks(
+  net1$network_1$model,
+  net2$network_1$model
+)
+
+# View metrics
+comparison$metrics
+```
+
+### Workflow 3: Bootstrap Analysis
+
+```{r workflow3, eval = FALSE}
+# Run bootstrap simulation
+results <- run_bootstrap_simulation(
+  original_data = sequences,
+  n_bootstrap = 50,
+  model_type = "tna",
+  seed = 42
+)
+```
+
+## Data Formats
+
+Saqrlab works with multiple data formats:
+
+### Wide Format (Default)
+Each row is a sequence, columns are time points:
+```
+   V1       V2        V3      V4
+1  Plan     Monitor   Read    Plan
+2  Read     Plan      Study   Monitor
+```
+
+### Long Format
+One observation per row with ID, time, and action columns:
+```
+  id  Time  Action
+  1   1     Plan
+  1   2     Monitor
+  1   3     Read
+```
+
+Convert between formats:
+
+```{r convert-formats, eval = FALSE}
+# Wide to long
+long_data <- wide_to_long(sequences)
+
+# Long to wide
+wide_data <- long_to_wide(long_data, id_col = "id",
+                          time_col = "Time", action_col = "Action")
+```
+
+## Next Steps
+
+- **Simulation Guide**: Learn all simulation functions in detail
+- **TNA Workflow**: Complete end-to-end analysis examples
+- **HTNA & MLNA**: Hierarchical and multilevel network analysis
+- **Bootstrap Power**: Power analysis for sample size planning
+- **Learning States**: Full reference for educational research
+
+## Getting Help
+
+- Package documentation: `?Saqrlab`
+- Function help: `?function_name`
+- GitHub issues: [https://github.com/mohsaqr/Saqrlab/issues](https://github.com/mohsaqr/Saqrlab/issues)

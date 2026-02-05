@@ -1,0 +1,468 @@
+---
+title: "End-to-End TNA Workflow"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{End-to-End TNA Workflow}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+```{r setup, message = FALSE}
+library(Saqrlab)
+```
+
+## Overview
+
+This vignette demonstrates complete workflows for Temporal Network Analysis using Saqrlab and the tna package. We cover:
+
+1. Basic TNA workflow
+2. Model comparison
+3. Network comparison metrics
+4. Batch processing
+5. Grid simulations
+
+## Workflow 1: Basic TNA Analysis
+
+### Step 1: Simulate Data
+
+```{r basic-simulate}
+# Generate sequences with metacognitive learning states
+sequences <- simulate_sequences(
+  n_sequences = 200,
+  seq_length = 25,
+  n_states = 6,
+  categories = c("metacognitive", "cognitive"),
+  seed = 42
+)
+
+head(sequences)
+dim(sequences)
+```
+
+### Step 2: Fit TNA Model
+
+```{r basic-fit, eval = FALSE}
+library(tna)
+
+# Fit standard TNA model
+model <- fit_network_model(sequences, "tna")
+
+# View model summary
+print(model)
+```
+
+### Step 3: Extract Components
+
+```{r basic-extract, eval = FALSE}
+# Transition matrix
+trans_mat <- extract_transition_matrix(model)
+print(round(trans_mat, 3))
+
+# Initial probabilities
+init_probs <- extract_initial_probs(model)
+print(round(init_probs, 3))
+
+# Edge list (filtered by threshold)
+edges <- extract_edges(model, threshold = 0.05)
+head(edges)
+```
+
+### Step 4: Visualize
+
+```{r basic-visualize, eval = FALSE}
+# Plot the network
+plot(model)
+
+# Get centrality measures
+centralities(model)
+```
+
+## Workflow 2: Comparing Model Types
+
+Saqrlab supports multiple TNA model variants:
+
+| Model | Description |
+|-------|-------------|
+| `tna` | Standard Temporal Network Analysis |
+| `ftna` | Filtered TNA (removes weak edges) |
+| `ctna` | Conditional TNA (time-varying) |
+| `atna` | Aggregated TNA |
+
+### Fit Multiple Models
+
+```{r compare-models, eval = FALSE}
+# Generate sequences
+sequences <- simulate_sequences(
+  n_sequences = 200,
+  seq_length = 30,
+  n_states = 6,
+  seed = 42
+)
+
+# Fit all model types
+models <- list(
+  tna = fit_network_model(sequences, "tna"),
+  ftna = fit_network_model(sequences, "ftna"),
+  ctna = fit_network_model(sequences, "ctna"),
+  atna = fit_network_model(sequences, "atna")
+)
+```
+
+### Compare Models
+
+```{r compare-to-reference, eval = FALSE}
+# Compare each model to TNA as reference
+ref_model <- models$tna
+
+comparisons <- lapply(names(models)[-1], function(m) {
+  comp <- compare_networks(ref_model, models[[m]])
+  data.frame(
+    model = m,
+    correlation = comp$metrics$correlation,
+    rmse = comp$metrics$rmse,
+    edge_diff = comp$metrics$edge_diff
+  )
+})
+
+do.call(rbind, comparisons)
+```
+
+## Workflow 3: Network Comparison
+
+### Using `compare_networks()`
+
+Compare two networks with multiple metrics:
+
+```{r network-comparison, eval = FALSE}
+# Generate two different networks
+net1 <- generate_tna_networks(1, n_states = 6, n_sequences = 150, seed = 42)
+net2 <- generate_tna_networks(1, n_states = 6, n_sequences = 150, seed = 123)
+
+# Compare
+comparison <- compare_networks(
+  model1 = net1$network_1$model,
+  model2 = net2$network_1$model,
+  metrics = c("correlation", "rmse", "mae", "edge_diff", "cosine"),
+  scaling = "none",
+  include_self = TRUE,
+  threshold = 0.05
+)
+
+# View metrics
+comparison$metrics
+
+# View edge-level comparison
+head(comparison$edge_comparison)
+
+# Print summary
+cat(comparison$summary)
+```
+
+### Using `compare_centralities()`
+
+Compare centrality profiles between networks:
+
+```{r centrality-comparison, eval = FALSE}
+cent_comp <- compare_centralities(
+  model1 = net1$network_1$model,
+  model2 = net2$network_1$model,
+  measures = c("OutStrength", "InStrength", "Betweenness"),
+  method = "both"
+)
+
+cent_comp$correlations
+```
+
+### Using `calculate_edge_recovery()`
+
+Evaluate edge recovery performance:
+
+```{r edge-recovery, eval = FALSE}
+recovery <- calculate_edge_recovery(
+  original = net1$network_1$model,
+  simulated = net2$network_1$model,
+  threshold = 0.05,
+  return_edges = TRUE
+)
+
+# Classification metrics
+cat("Precision:", recovery$precision, "\n")
+cat("Recall:", recovery$recall, "\n")
+cat("F1 Score:", recovery$f1_score, "\n")
+cat("Accuracy:", recovery$accuracy, "\n")
+
+# Confusion matrix
+cat("\nConfusion Matrix:\n")
+cat("TP:", recovery$true_positives, "\n")
+cat("FP:", recovery$false_positives, "\n")
+cat("FN:", recovery$false_negatives, "\n")
+cat("TN:", recovery$true_negatives, "\n")
+```
+
+## Workflow 4: Batch Processing
+
+### Fitting Multiple Models
+
+Process multiple datasets efficiently:
+
+```{r batch-fit, eval = FALSE}
+# Generate 20 datasets
+datasets <- lapply(1:20, function(i) {
+  simulate_sequences(
+    n_sequences = 100,
+    seq_length = 20,
+    n_states = 5,
+    seed = i
+  )
+})
+
+# Fit models in parallel
+models <- batch_fit_models(
+  data_list = datasets,
+  model_type = "tna",
+  parallel = TRUE,
+  cores = 4,
+  progress = TRUE
+)
+
+length(models)
+```
+
+### Applying Functions to Multiple Models
+
+```{r batch-apply, eval = FALSE}
+# Extract all transition matrices
+trans_matrices <- batch_apply(
+  object_list = models,
+  fun = extract_transition_matrix,
+  parallel = TRUE
+)
+
+# Get network densities
+densities <- batch_apply(
+  models,
+  function(m) {
+    mat <- extract_transition_matrix(m)
+    sum(mat > 0.05) / length(mat)
+  },
+  simplify = TRUE
+)
+
+summary(densities)
+```
+
+### Comparing to Reference
+
+```{r batch-compare, eval = FALSE}
+# Compare all models to first as reference
+ref_model <- models[[1]]
+
+correlations <- batch_apply(
+  models[-1],
+  function(m) compare_networks(ref_model, m)$metrics$correlation,
+  simplify = TRUE
+)
+
+summary(correlations)
+```
+
+## Workflow 5: Grid Simulations
+
+### Create Parameter Grid
+
+```{r create-grid}
+# Define parameter combinations
+param_grid <- create_param_grid(
+  n_sequences = c(50, 100, 200),
+  seq_length = c(15, 25, 40),
+  n_states = c(4, 6, 8)
+)
+
+head(param_grid)
+nrow(param_grid)  # 27 combinations
+```
+
+### Run Grid Simulation
+
+```{r run-grid, eval = FALSE}
+# Run simulations across the grid
+grid_results <- run_grid_simulation(
+  param_grid = param_grid,
+  n_runs_per_setting = 10,
+  model_type = "tna",
+  parallel = TRUE,
+  seed = 42
+)
+```
+
+### Analyze Results
+
+```{r analyze-grid, eval = FALSE}
+# Analyze grid results
+analysis <- analyze_grid_results(grid_results)
+
+# Summary by parameter
+analysis$by_n_sequences
+analysis$by_seq_length
+analysis$by_n_states
+```
+
+## Workflow 6: Summarizing Results
+
+### Simulation Summary
+
+```{r summarize-sim, eval = FALSE}
+# After running simulations, summarize results
+summary_all <- summarize_simulation(
+  results = grid_results,
+  metrics = c("mean", "sd", "ci")
+)
+
+# Summary by specific parameter
+summary_by_n <- summarize_simulation(
+  results = grid_results,
+  by = "n_sequences",
+  metrics = "all"
+)
+
+print(summary_by_n)
+```
+
+### Network Summary
+
+```{r summarize-networks, eval = FALSE}
+# Summarize multiple network models
+network_summary <- summarize_networks(
+  model_list = models,
+  include = c("density", "centrality", "edges"),
+  threshold = 0.01,
+  centrality_measures = c("OutStrength", "InStrength")
+)
+
+# Per-network statistics
+network_summary$summary_table
+
+# Aggregate statistics
+network_summary$aggregate
+```
+
+## Data Format Conversions
+
+### Wide to Long
+
+```{r wide-to-long, eval = FALSE}
+# Convert sequences to long format
+long_data <- wide_to_long(
+  data = sequences,
+  id_col = NULL,           # Auto-generate IDs
+  time_prefix = "V",       # Column prefix
+  action_col = "Action",
+  time_col = "Time",
+  drop_na = TRUE
+)
+
+head(long_data)
+```
+### Long to Wide
+
+```{r long-to-wide, eval = FALSE}
+# Convert back to wide format
+wide_data <- long_to_wide(
+  data = long_data,
+  id_col = "id",
+  time_col = "Time",
+  action_col = "Action",
+  time_prefix = "V",
+  fill_na = TRUE
+)
+
+head(wide_data)
+```
+
+### Prepare for TNA Package
+
+```{r prepare-tna, eval = FALSE}
+# Auto-detect format and prepare
+tna_ready <- prepare_for_tna(
+  data = my_data,
+  type = "auto",
+  state_names = c("Plan", "Execute", "Review"),
+  validate = TRUE
+)
+```
+
+## Complete Example: Recovery Study
+
+This example simulates a complete study of network recovery across sample sizes:
+
+```{r recovery-study, eval = FALSE}
+library(Saqrlab)
+library(tna)
+
+# 1. Create ground truth network
+true_probs <- generate_probabilities(n_states = 5, seed = 42)
+
+# 2. Test different sample sizes
+sample_sizes <- c(25, 50, 100, 200, 500)
+results <- list()
+
+for (n in sample_sizes) {
+  # Run 20 replications
+  replications <- lapply(1:20, function(rep) {
+    # Generate sequences from true parameters
+    seqs <- simulate_sequences(
+      trans_matrix = true_probs$transition_matrix,
+      init_probs = true_probs$initial_probs,
+      n_sequences = n,
+      seq_length = 25,
+      seed = rep * 1000 + n
+    )
+
+    # Fit model
+    model <- fit_network_model(seqs, "tna")
+
+    # Compare to true matrix
+    estimated_mat <- extract_transition_matrix(model, type = "scaled")
+    cor(as.vector(true_probs$transition_matrix), as.vector(estimated_mat))
+  })
+
+  results[[as.character(n)]] <- unlist(replications)
+}
+
+# 3. Summarize
+summary_df <- data.frame(
+  sample_size = sample_sizes,
+  mean_correlation = sapply(results, mean),
+  sd_correlation = sapply(results, sd)
+)
+
+print(summary_df)
+```
+
+## Tips for Effective Workflows
+
+1. **Start with known parameters**: Use `generate_probabilities()` to create ground truth
+2. **Use seeds consistently**: For reproducible simulation studies
+3. **Leverage parallel processing**: Use `parallel = TRUE` in batch functions
+4. **Build incrementally**: Test with small samples before scaling up
+5. **Track all parameters**: Use `include_params = TRUE` when simulating
+
+## Summary
+
+| Workflow | Key Functions |
+|----------|---------------|
+| Basic TNA | `simulate_sequences()`, `fit_network_model()`, `extract_*()` |
+| Model comparison | `fit_network_model()` with different types |
+| Network metrics | `compare_networks()`, `compare_centralities()` |
+| Batch processing | `batch_fit_models()`, `batch_apply()` |
+| Grid simulation | `create_param_grid()`, `run_grid_simulation()` |
+| Summarizing | `summarize_simulation()`, `summarize_networks()` |

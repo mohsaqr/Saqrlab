@@ -1,0 +1,130 @@
+url: https://mohsaqr.github.io/Saqrlab/
+
+template:
+  bootstrap: 5
+  bootswatch: flatly
+  bslib:
+    primary: "#0054AD"
+    border-radius: 0.5rem
+    btn-border-radius: 0.25rem
+
+home:
+  title: Saqrlab - Simulation Tools for Temporal Network Analysis
+
+navbar:
+  structure:
+    left: [intro, reference, articles, news]
+    right: [search, github]
+  components:
+    intro:
+      text: Get Started
+      href: articles/introduction.html
+    reference:
+      text: Reference
+      href: reference/index.html
+    articles:
+      text: Tutorials
+      menu:
+        - text: Introduction
+          href: articles/introduction.html
+        - text: "---"
+        - text: "Simulation"
+        - text: Simulation Guide
+          href: articles/simulation-guide.html
+        - text: "---"
+        - text: "Analysis"
+        - text: TNA Workflow
+          href: articles/tna-workflow.html
+        - text: HTNA & MLNA
+          href: articles/htna-mlna.html
+        - text: Bootstrap Power Analysis
+          href: articles/bootstrap-power.html
+        - text: "---"
+        - text: "Reference"
+        - text: Learning States
+          href: articles/learning-states.html
+    news:
+      text: Changelog
+      href: news/index.html
+
+reference:
+  - title: "Data Simulation"
+    desc: "Functions for generating synthetic data"
+    contents:
+      - simulate_matrix
+      - simulate_htna
+      - simulate_sequences
+      - simulate_sequences_advanced
+      - simulate_long_data
+      - simulate_onehot_data
+      - simulate_edge_list
+
+  - title: "Network Generation"
+    desc: "Create complete TNA datasets and fitted networks"
+    contents:
+      - generate_tna_datasets
+      - generate_tna_networks
+      - generate_group_tna_networks
+      - generate_tna_matrix
+      - generate_probabilities
+
+  - title: "Model Fitting & Extraction"
+    desc: "Fit models and extract network components"
+    contents:
+      - fit_network_model
+      - extract_transition_matrix
+      - extract_initial_probs
+      - extract_edges
+
+  - title: "Network Comparison"
+    desc: "Compare and evaluate network models"
+    contents:
+      - compare_networks
+      - compare_centralities
+      - calculate_edge_recovery
+
+  - title: "Data Conversion"
+    desc: "Transform between data formats"
+    contents:
+      - wide_to_long
+      - long_to_wide
+      - prepare_for_tna
+      - action_to_onehot
+
+  - title: "Batch Processing"
+    desc: "Process multiple datasets efficiently"
+    contents:
+      - batch_fit_models
+      - batch_apply
+
+  - title: "Bootstrap & Simulation Studies"
+    desc: "Run comprehensive simulation experiments"
+    contents:
+      - run_bootstrap_simulation
+      - run_grid_simulation
+      - run_network_simulation
+      - evaluate_bootstrap
+      - analyze_grid_results
+
+  - title: "Learning States"
+    desc: "Educational research datasets and functions"
+    contents:
+      - LEARNING_STATES
+      - get_learning_states
+      - list_learning_categories
+      - smart_select_states
+      - GLOBAL_NAMES
+      - get_global_names
+
+  - title: "Utilities"
+    desc: "Helper functions for simulations"
+    contents:
+      - create_param_grid
+      - validate_sim_params
+      - summarize_simulation
+      - summarize_networks
+
+footer:
+  structure:
+    left: developed_by
+    right: built_with

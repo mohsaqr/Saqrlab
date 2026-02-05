@@ -1,0 +1,406 @@
+---
+title: "Hierarchical and Multilevel Network Analysis"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Hierarchical and Multilevel Network Analysis}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 6
+)
+```
+
+```{r setup}
+library(Saqrlab)
+```
+
+## Overview
+
+This vignette covers hierarchical (HTNA) and multilevel (MLNA) network analysis using Saqrlab. These approaches extend standard TNA by organizing nodes into types or levels:
+
+- **HTNA (Hierarchical TNA)**: Nodes grouped into distinct types/categories
+- **MLNA (Multilevel TNA)**: Nodes organized into hierarchical levels
+- **MTNA (Multi-Type TNA)**: General term for networks with typed nodes
+
+Saqrlab provides `simulate_htna()`, `simulate_mlna()`, and `simulate_mtna()` as aliases that produce identical output.
+
+## Understanding Multi-Type Networks
+
+### What Makes HTNA/MLNA Different?
+
+In standard TNA, all nodes are treated equally. In HTNA/MLNA:
+
+1. **Nodes have types**: Each node belongs to a category
+2. **Within-type patterns**: Transitions within the same type
+3. **Between-type patterns**: Transitions across different types
+4. **Structured visualization**: Layout reflects node groupings
+
+### Educational Research Applications
+
+Multi-type networks are useful for studying:
+
+- **Self-regulated learning**: Metacognitive, cognitive, behavioral dimensions
+- **Collaborative learning**: Individual vs. group regulation
+- **Multimodal data**: Different data sources (logs, surveys, observations)
+- **Hierarchical processes**: Macro, meso, micro levels of analysis
+
+## Simulating Multi-Type Networks
+
+### Basic Usage
+
+```{r basic-htna}
+# Default: 5 types x 5 nodes = 25-node network
+net <- simulate_htna(seed = 42)
+
+# Network dimensions
+dim(net$matrix)
+
+# Node types
+names(net$node_types)
+
+# Nodes per type
+net$n_nodes_per_type
+```
+
+### Understanding the Output
+
+The function returns a list with:
+
+```{r output-structure}
+# Transition matrix
+head(net$matrix[1:6, 1:6])
+
+# Node types (for visualization)
+net$node_types
+
+# Type names
+net$type_names
+```
+
+### Default Learning Categories
+
+By default, `simulate_htna()` uses five learning state categories:
+
+| Type | Learning States |
+|------|-----------------|
+| Metacognitive | Plan, Monitor, Evaluate, Reflect, ... |
+| Cognitive | Read, Study, Analyze, Summarize, ... |
+| Behavioral | Practice, Annotate, Research, Review, ... |
+| Social | Collaborate, Discuss, Explain, Share, ... |
+| Motivational | Focus, Persist, Explore, Create, ... |
+
+## Customizing Network Structure
+
+### Number of Types and Nodes
+
+```{r custom-structure}
+# 3 types with 4 nodes each
+net <- simulate_htna(
+  n_nodes = 4,
+  n_types = 3,
+  seed = 42
+)
+
+dim(net$matrix)
+names(net$node_types)
+```
+
+### Custom Type Names
+
+```{r custom-types}
+# Educational levels
+net <- simulate_htna(
+  n_nodes = 5,
+  type_names = c("Macro", "Meso", "Micro"),
+  seed = 42
+)
+
+names(net$node_types)
+```
+
+### Custom Learning Categories
+
+```{r custom-categories}
+# Use specific categories for each type
+net <- simulate_htna(
+  n_nodes = 4,
+  n_types = 3,
+  type_names = c("SelfReg", "Cognitive", "Social"),
+  categories = c("metacognitive", "cognitive", "social"),
+  seed = 42
+)
+
+# Check nodes in each type
+net$node_types
+```
+
+## Controlling Edge Probabilities
+
+### Within vs. Between Type Connectivity
+
+```{r edge-probs}
+# High within-type, low between-type connectivity
+clustered <- simulate_htna(
+  n_nodes = 4,
+  n_types = 3,
+  within_prob = 0.6,    # 60% within-type edges
+  between_prob = 0.1,   # 10% between-type edges
+  seed = 42
+)
+
+# More integrated network
+integrated <- simulate_htna(
+  n_nodes = 4,
+  n_types = 3,
+  within_prob = 0.3,    # 30% within-type
+  between_prob = 0.3,   # 30% between-type (equal)
+  seed = 42
+)
+```
+
+### Analyzing Connectivity Patterns
+
+```{r analyze-connectivity}
+# Function to analyze within/between type edge counts
+analyze_connectivity <- function(net) {
+  mat <- net$matrix
+  n_types <- length(net$node_types)
+  n_per_type <- net$n_nodes_per_type[1]
+
+  within_count <- 0
+  between_count <- 0
+
+  for (i in 1:nrow(mat)) {
+    for (j in 1:ncol(mat)) {
+      type_i <- ceiling(i / n_per_type)
+      type_j <- ceiling(j / n_per_type)
+
+      if (mat[i, j] > 0) {
+        if (type_i == type_j) {
+          within_count <- within_count + 1
+        } else {
+          between_count <- between_count + 1
+        }
+      }
+    }
+  }
+
+  list(
+    within = within_count,
+    between = between_count,
+    ratio = within_count / (within_count + between_count)
+  )
+}
+
+# Compare networks
+analyze_connectivity(clustered)
+analyze_connectivity(integrated)
+```
+
+## Using with tna Package
+
+### Visualization with plot_htna
+
+```{r plot-htna, eval = FALSE}
+library(tna)
+
+net <- simulate_htna(seed = 42)
+
+# Polygon layout (types arranged in circle)
+plot_htna(
+  weights = net$matrix,
+  node_groups = net$node_types,
+  layout = "polygon"
+)
+```
+
+### Visualization with plot_mlna
+
+```{r plot-mlna, eval = FALSE}
+# Layer layout (types as horizontal layers)
+plot_mlna(
+  weights = net$matrix,
+  layers = net$node_types
+)
+```
+
+### Fitting Models to Multi-Type Data
+
+```{r fit-htna, eval = FALSE}
+# Generate sequences from HTNA matrix
+net <- simulate_htna(seed = 42)
+
+# Create sequences using the transition matrix
+sequences <- simulate_sequences(
+  trans_matrix = net$matrix,
+  init_probs = rep(1/nrow(net$matrix), nrow(net$matrix)),
+  n_sequences = 200,
+  seq_length = 30
+)
+
+# Fit TNA model
+model <- fit_network_model(sequences, "tna")
+
+# The model can be visualized with type information
+plot_htna(
+  weights = extract_transition_matrix(model),
+  node_groups = net$node_types
+)
+```
+
+## Advanced Applications
+
+### Group TNA Networks
+
+For analyzing multiple groups with the same structure:
+
+```{r group-htna, eval = FALSE}
+# Generate group TNA networks
+group_networks <- generate_group_tna_networks(
+  n_groups = 5,
+  n_actors = 10,
+  n_states = 6,
+  use_learning_states = TRUE,
+  categories = c("metacognitive", "cognitive"),
+  seed = 42
+)
+```
+
+### Using generate_tna_matrix()
+
+An alternative function for generating HTNA/MLNA matrices:
+
+```{r generate-tna-matrix, eval = FALSE}
+# Generate matrix with node types
+mat_result <- generate_tna_matrix(
+  n_states = 15,
+  matrix_type = "htna",
+  n_types = 3,
+  type_names = c("Planning", "Execution", "Evaluation"),
+  seed = 42
+)
+```
+
+## Educational Research Examples
+
+### Example 1: Self-Regulated Learning Study
+
+```{r srl-example}
+# Three-phase SRL model
+srl_net <- simulate_htna(
+  n_nodes = 4,
+  type_names = c("Forethought", "Performance", "Reflection"),
+  categories = c("metacognitive", "behavioral", "metacognitive"),
+  within_prob = 0.5,
+  between_prob = 0.2,
+  seed = 42
+)
+
+names(srl_net$node_types)
+srl_net$node_types
+```
+
+### Example 2: Collaborative Learning Study
+
+```{r collab-example}
+# Individual vs. group regulation
+collab_net <- simulate_htna(
+  n_nodes = 5,
+  type_names = c("Individual", "Shared", "Social"),
+  categories = c("cognitive", "group_regulation", "social"),
+  within_prob = 0.4,
+  between_prob = 0.25,
+  seed = 42
+)
+
+collab_net$node_types
+```
+
+### Example 3: Multimodal Data Integration
+
+```{r multimodal-example}
+# Different data sources
+multimodal_net <- simulate_htna(
+  n_nodes = 4,
+  type_names = c("ClickStream", "Survey", "Observation"),
+  categories = c("lms", "affective", "behavioral"),
+  seed = 42
+)
+
+multimodal_net$node_types
+```
+
+## Comparing Multi-Type Networks
+
+### Comparing Two HTNA Networks
+
+```{r compare-htna, eval = FALSE}
+# Generate two networks with same structure
+net1 <- simulate_htna(n_nodes = 4, n_types = 3, seed = 42)
+net2 <- simulate_htna(n_nodes = 4, n_types = 3, seed = 123)
+
+# Compare matrices
+cor(as.vector(net1$matrix), as.vector(net2$matrix))
+```
+
+### Analyzing Type-Level Patterns
+
+```{r type-level}
+# Extract submatrices for each type pair
+extract_type_block <- function(net, type1, type2) {
+  nodes1 <- net$node_types[[type1]]
+  nodes2 <- net$node_types[[type2]]
+  net$matrix[nodes1, nodes2]
+}
+
+net <- simulate_htna(seed = 42)
+
+# Within Metacognitive
+meta_block <- extract_type_block(net, "Metacognitive", "Metacognitive")
+
+# Metacognitive to Cognitive
+meta_to_cog <- extract_type_block(net, "Metacognitive", "Cognitive")
+```
+
+## Summary
+
+### Key Functions
+
+| Function | Purpose |
+|----------|---------|
+| `simulate_htna()` | Generate multi-type transition matrix |
+| `simulate_mlna()` | Alias for simulate_htna |
+| `simulate_mtna()` | Alias for simulate_htna |
+| `generate_tna_matrix()` | Alternative matrix generator |
+
+### Key Parameters
+
+| Parameter | Description |
+|-----------|-------------|
+| `n_nodes` | Nodes per type |
+| `n_types` | Number of types |
+| `type_names` | Custom type labels |
+| `within_prob` | Edge probability within types |
+| `between_prob` | Edge probability between types |
+| `categories` | Learning state categories for each type |
+
+### Output Components
+
+| Component | Description |
+|-----------|-------------|
+| `matrix` | Transition matrix |
+| `node_types` | List mapping types to nodes |
+| `type_names` | Vector of type names |
+| `n_nodes_per_type` | Node counts per type |
+
+## Next Steps
+
+- Explore `vignette("tna-workflow")` for complete analysis workflows
+- See `vignette("bootstrap-power")` for power analysis with multi-type networks
+- Check `?plot_htna` and `?plot_mlna` in the tna package for visualization options
