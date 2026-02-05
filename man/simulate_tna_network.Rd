@@ -6,7 +6,7 @@
 \usage{
 simulate_tna_network(
   n_states = 9,
-  n_sequences = 200,
+  n_sequences = NULL,
   seq_length = 25,
   categories = c("metacognitive", "cognitive"),
   seed = NULL
@@ -15,7 +15,8 @@ simulate_tna_network(
 \arguments{
 \item{n_states}{Integer. Number of states (8-10 recommended). Default: 9.}
 
-\item{n_sequences}{Integer. Number of sequences to simulate. Default: 200.}
+\item{n_sequences}{Integer or NULL. Number of sequences to simulate.
+If NULL (default), randomly selects between 600-1200.}
 
 \item{seq_length}{Integer. Length of each sequence. Default: 25.}
 

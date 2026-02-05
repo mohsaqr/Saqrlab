@@ -5,7 +5,8 @@
 #' This is the simplest way to get a ready-to-use tna model object.
 #'
 #' @param n_states Integer. Number of states (8-10 recommended). Default: 9.
-#' @param n_sequences Integer. Number of sequences to simulate. Default: 200.
+#' @param n_sequences Integer or NULL. Number of sequences to simulate.
+#'   If NULL (default), randomly selects between 600-1200.
 #' @param seq_length Integer. Length of each sequence. Default: 25.
 #' @param categories Character vector. Learning state categories to use.
 #'   Options: "metacognitive", "cognitive", "behavioral", "social",
@@ -62,13 +63,17 @@
 #' @import tna
 #' @export
 simulate_tna_network <- function(n_states = 9,
-                                  n_sequences = 200,
+                                  n_sequences = NULL,
                                   seq_length = 25,
                                   categories = c("metacognitive", "cognitive"),
                                   seed = NULL) {
   # Set seed
-
   if (!is.null(seed)) set.seed(seed)
+
+ # Random n_sequences if not specified
+  if (is.null(n_sequences)) {
+    n_sequences <- sample(600:1200, 1)
+  }
 
 
   # Get learning state names
