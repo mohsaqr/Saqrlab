@@ -12,6 +12,8 @@ generate_tna_matrix(
   self_loops = FALSE,
   use_learning_states = TRUE,
   categories = NULL,
+  within_prob = 1,
+  between_prob = 1,
   node_prefix = "N",
   seed = NULL,
   verbose = TRUE,
@@ -41,6 +43,12 @@ Default: TRUE.}
 \item{categories}{Character vector or NULL. Categories for node names.
 If NULL with \code{use_learning_states = TRUE}, uses one random category per group.
 Can be single (same for all) or one per group. Default: NULL.}
+
+\item{within_prob}{Numeric. Probability of edges within each group.
+Default: 1 (all edges exist).}
+
+\item{between_prob}{Numeric. Probability of edges between groups.
+Default: 1 (all edges exist).}
 
 \item{node_prefix}{Character. Prefix for node names when not using learning
 states. Default: "N".}

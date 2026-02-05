@@ -759,6 +759,10 @@ generate_group_tna_networks <- function(n_groups = 5,
 #' @param categories Character vector or NULL. Categories for node names.
 #'   If NULL with `use_learning_states = TRUE`, uses one random category per group.
 #'   Can be single (same for all) or one per group. Default: NULL.
+#' @param within_prob Numeric. Probability of edges within each group.
+#'   Default: 1 (all edges exist).
+#' @param between_prob Numeric. Probability of edges between groups.
+#'   Default: 1 (all edges exist).
 #' @param node_prefix Character. Prefix for node names when not using learning
 #'   states. Default: "N".
 #' @param seed Integer or NULL. Random seed. Default: NULL.
@@ -834,6 +838,8 @@ generate_tna_matrix <- function(nodes_per_group = 5,
                                  self_loops = FALSE,
                                  use_learning_states = TRUE,
                                  categories = NULL,
+                                 within_prob = 1,
+                                 between_prob = 1,
                                  node_prefix = "N",
                                  seed = NULL,
                                  verbose = TRUE,
@@ -841,6 +847,8 @@ generate_tna_matrix <- function(nodes_per_group = 5,
                                  learning_categories = NULL) {
   # Backward compatibility
   if (!is.null(learning_categories)) categories <- learning_categories
+
+  # Handle seed for pre-processing
 
   if (!is.null(seed)) {
     set.seed(seed)
@@ -866,79 +874,54 @@ generate_tna_matrix <- function(nodes_per_group = 5,
     stop("nodes_per_group must be length 1, 2 (range), or match n_groups")
   }
 
-  total_nodes <- sum(nodes_per_group)
-
   # Generate group names if not provided
   if (is.null(group_names)) {
     group_names <- paste0("Group", 1:n_groups)
   }
 
-  # Determine learning categories per group
-  all_cats <- c("metacognitive", "cognitive", "behavioral",
-                "social", "motivational", "affective", "group_regulation")
-
-  if (use_learning_states) {
-    if (is.null(categories)) {
-      # Random category for each group
-      categories <- sample(all_cats, n_groups, replace = TRUE)
-    } else if (length(categories) == 1) {
-      categories <- rep(categories, n_groups)
-    } else if (length(categories) != n_groups) {
-      stop("categories must be length 1 or match number of groups")
-    }
+  # Generate custom node names if not using learning states
+  custom_names <- NULL
+  if (!use_learning_states) {
+    total_nodes <- sum(nodes_per_group)
+    custom_names <- paste0(node_prefix, 1:total_nodes)
   }
 
-  # Generate node names for each group
-  node_types <- list()
-  all_nodes <- character(0)
+  # Call simulate_matrix
+  result <- simulate_matrix(
+    n_nodes = nodes_per_group,
+    n_types = n_groups,
+    within_prob = within_prob,
+    between_prob = between_prob,
+    weighted = TRUE,
+    weight_range = edge_prob_range,
+    directed = TRUE,
+    allow_self_loops = self_loops,
+    use_learning_states = use_learning_states,
+    categories = if (is.null(categories)) "all" else categories,
+    names = custom_names,
+    type_names = group_names,
+    seed = seed
+  )
 
-  for (i in seq_len(n_groups)) {
-    n_nodes <- nodes_per_group[i]
-
-    if (use_learning_states) {
-      node_names <- get_learning_states(categories[i], n = n_nodes)
-      # Ensure unique names across groups by adding suffix if needed
-      while (any(node_names %in% all_nodes)) {
-        duplicates <- node_names %in% all_nodes
-        node_names[duplicates] <- paste0(node_names[duplicates], i)
-      }
-    } else {
-      start_idx <- length(all_nodes) + 1
-      end_idx <- start_idx + n_nodes - 1
-      node_names <- paste0(node_prefix, start_idx:end_idx)
-    }
-
-    node_types[[group_names[i]]] <- node_names
-    all_nodes <- c(all_nodes, node_names)
+  # Convert node_types from named vector to list format (for HTNA/MLNA compatibility)
+  node_types_list <- list()
+  for (group in group_names) {
+    node_types_list[[group]] <- names(result$node_types[result$node_types == group])
   }
 
   if (verbose) {
+    total_nodes <- sum(nodes_per_group)
     message(sprintf("Generating TNA matrix: %d groups, %d total nodes",
                     n_groups, total_nodes))
     for (i in seq_len(n_groups)) {
       message(sprintf("  %s: %s", group_names[i],
-                      paste(node_types[[group_names[i]]], collapse = ", ")))
+                      paste(node_types_list[[group_names[i]]], collapse = ", ")))
     }
-  }
-
-  # Generate transition matrix
-  m <- matrix(
-    runif(total_nodes^2, edge_prob_range[1], edge_prob_range[2]),
-    total_nodes, total_nodes
-  )
-
-  if (!self_loops) {
-    diag(m) <- 0
-  }
-
-  colnames(m) <- rownames(m) <- all_nodes
-
-  if (verbose) {
     message("TNA matrix generated successfully.")
   }
 
   return(list(
-    matrix = m,
-    node_types = node_types
+    matrix = result$matrix,
+    node_types = node_types_list
   ))
 }
