@@ -2,17 +2,19 @@
 % Please edit documentation in R/simulate_matrix.R
 \name{simulate_matrix}
 \alias{simulate_matrix}
-\title{Simulate Network Matrix with Node Types}
+\title{Simulate Network Matrix}
 \usage{
 simulate_matrix(
-  n_nodes = 20,
+  n_nodes = 9,
   n_types = 1,
+  matrix_type = c("transition", "frequency", "co-occurrence", "adjacency"),
   within_prob = 0.3,
   between_prob = 0.1,
   weighted = TRUE,
-  weight_range = c(0.1, 1),
-  directed = FALSE,
+  weight_range = NULL,
+  directed = NULL,
   allow_self_loops = FALSE,
+  normalize = TRUE,
   use_learning_states = TRUE,
   categories = "all",
   names = NULL,
@@ -22,10 +24,19 @@ simulate_matrix(
 }
 \arguments{
 \item{n_nodes}{Integer or integer vector. If single value, total number of nodes.
-If vector, number of nodes per type. Default: 20.}
+If vector, number of nodes per type. Default: 9.}
 
 \item{n_types}{Integer. Number of node types/groups. Ignored if \code{n_nodes} is a
 vector. Default: 1.}
+
+\item{matrix_type}{Character. Type of matrix to generate:
+\itemize{
+\item \code{"transition"}: Directed, row-normalized (rows sum to 1), like Markov/TNA
+\item \code{"frequency"}: Directed, integer counts of transitions
+\item \code{"co-occurrence"}: Symmetric, counts of co-occurrences
+\item \code{"adjacency"}: Binary or weighted edges (default behavior)
+}
+Default: "transition".}
 
 \item{within_prob}{Numeric or numeric vector. Probability of edges within each
 type. If single value, applies to all types. Default: 0.3.}
@@ -35,16 +46,21 @@ types. If single value, applies to all between-type pairs. If matrix, should
 be symmetric with dimensions n_types x n_types. Default: 0.1.}
 
 \item{weighted}{Logical. If TRUE, generates weighted edges. If FALSE, binary
-(0/1) matrix. Default: TRUE.}
+(0/1) matrix. Ignored for "transition" and "frequency" types. Default: TRUE.}
 
-\item{weight_range}{Numeric vector of length 2. Range for edge weights when
-\code{weighted = TRUE}. Default: c(0.1, 1.0).}
+\item{weight_range}{Numeric vector of length 2. Range for edge weights.
+For "transition": c(0, 1). For "frequency": c(1, 100). For others: c(0, 1).
+Default: NULL (auto-set based on matrix_type).}
 
 \item{directed}{Logical. If TRUE, generates directed (asymmetric) matrix.
-Default: FALSE.}
+Auto-set to TRUE for "transition"/"frequency", FALSE for "co-occurrence".
+Default: NULL (auto-set based on matrix_type).}
 
 \item{allow_self_loops}{Logical. If TRUE, allows diagonal entries (self-loops).
 Default: FALSE.}
+
+\item{normalize}{Logical. If TRUE for "transition" type, normalizes rows to
+sum to 1. Default: TRUE.}
 
 \item{use_learning_states}{Logical. If TRUE, uses learning action verbs as
 node names. Default: TRUE.}
@@ -70,12 +86,13 @@ A list containing:
 \item{node_types}{Named character vector mapping node names to their types.}
 \item{type_names}{Character vector of type names.}
 \item{n_nodes_per_type}{Integer vector of node counts per type.}
+\item{matrix_type}{The type of matrix generated.}
 }
 }
 \description{
-Generate a simulated adjacency or weight matrix for network analysis.
-Supports single or multiple node types (communities/groups) with configurable
-within-group and between-group connection probabilities.
+Generate a simulated matrix for network analysis. Supports different matrix
+types (transition, frequency, co-occurrence, adjacency) and multiple node
+types (communities/groups) with configurable connection probabilities.
 }
 \details{
 The function implements a stochastic block model approach:
@@ -83,64 +100,60 @@ The function implements a stochastic block model approach:
 \item Nodes are assigned to types/groups
 \item Edges within the same type occur with probability \code{within_prob}
 \item Edges between different types occur with probability \code{between_prob}
-\item Edge weights (if enabled) are uniformly distributed in \code{weight_range}
+\item Edge weights depend on \code{matrix_type}
 }
 
-For undirected networks, the matrix is symmetric. For directed networks,
-each potential edge is sampled independently.
+\strong{Matrix Types}:
+\itemize{
+\item \strong{transition}: Rows sum to 1 (Markov chain style). Suitable for
+TNA, sequence analysis, and state transition modeling.
+\item \strong{frequency}: Integer counts representing transition frequencies.
+Useful for raw count data before normalization.
+\item \strong{co-occurrence}: Symmetric matrix of co-occurrence counts.
+Useful for undirected association networks.
+\item \strong{adjacency}: Standard adjacency matrix (binary or weighted).
+}
 }
 \examples{
-# Simple matrix with learning states (default)
-result <- simulate_matrix(n_nodes = 10, seed = 42)
+# Default: 9-node transition matrix (TNA style)
+result <- simulate_matrix(seed = 42)
 result$matrix
+rowSums(result$matrix)  # Rows sum to ~1
 
-# Matrix with specific learning categories
+# Frequency matrix (integer counts)
+result <- simulate_matrix(
+  n_nodes = 5,
+  matrix_type = "frequency",
+  seed = 42
+)
+result$matrix  # Integer values
+
+# Co-occurrence matrix (symmetric)
+result <- simulate_matrix(
+  n_nodes = 6,
+  matrix_type = "co-occurrence",
+  seed = 42
+)
+isSymmetric(result$matrix)  # TRUE
+
+# Adjacency matrix (binary)
 result <- simulate_matrix(
   n_nodes = 8,
-  categories = c("metacognitive", "cognitive"),
-  seed = 42
-)
-colnames(result$matrix)
-
-# Two-type network with learning states
-result <- simulate_matrix(
-  n_nodes = c(6, 4),
-  type_names = c("Regulation", "Cognition"),
-  within_prob = c(0.5, 0.6),
-  between_prob = 0.2,
-  categories = "group_regulation",
-  seed = 42
-)
-result$matrix
-table(result$node_types)
-
-# Three communities with different densities
-result <- simulate_matrix(
-  n_nodes = c(5, 5, 5),
-  type_names = c("Group_A", "Group_B", "Group_C"),
-  within_prob = c(0.5, 0.4, 0.3),
-  between_prob = 0.05,
+  matrix_type = "adjacency",
   weighted = FALSE,
-  seed = 123
-)
-
-# Using global names instead of learning states
-result <- simulate_matrix(
-  n_nodes = 10,
-  use_learning_states = FALSE,
   seed = 42
 )
-colnames(result$matrix)  # Will show names like "Emma", "Liam", etc.
 
-# Directed network
+# Multi-type network
 result <- simulate_matrix(
-  n_nodes = 12,
-  n_types = 2,
-  directed = TRUE,
+  n_nodes = c(3, 3, 3),
+  type_names = c("Meta", "Cog", "Behav"),
+  within_prob = 0.5,
+  between_prob = 0.2,
   seed = 42
 )
 
 }
 \seealso{
-\code{\link{simulate_edge_list}}, \code{\link{GLOBAL_NAMES}}
+\code{\link{simulate_htna}}, \code{\link{simulate_edge_list}}
 }

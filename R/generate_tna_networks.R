@@ -741,28 +741,25 @@ generate_group_tna_networks <- function(n_groups = 5,
 #' @description
 #' Generate a transition matrix with node groupings, compatible with
 #' `tna::plot_htna()` (hierarchical) and `tna::plot_mlna()` (multilevel)
-#' visualizations.
+#' visualizations. By default creates a 25-node matrix (5 nodes x 5 types)
+#' using learning category names.
 #'
-#' @param nodes_per_group Integer or integer vector. Number of nodes per group.
-#'   Accepts: single integer (same for all), vector matching n_groups,
-#'   or range like `4:7` (random per group). Default: 5.
-#' @param group_names Character vector. Names for each group (e.g.,
-#'   `c("Teacher", "Student", "System")` or `c("Macro", "Meso", "Micro")`).
-#'   If NULL, generates default names. Default: NULL.
-#' @param n_groups Integer. Number of groups. Only used if `group_names` is NULL
-#'   and `nodes_per_group` is a single integer. Default: 3.
+#' This is a convenience wrapper around \code{\link{simulate_htna}}.
+#'
+#' @param nodes_per_group Integer. Number of nodes per group. Default: 5.
+#' @param group_names Character vector. Names for each group. Default uses
+#'   learning categories: "Metacognitive", "Cognitive", "Behavioral",
+#'   "Social", "Motivational".
+#' @param n_groups Integer. Number of groups. Default: 5.
 #' @param edge_prob_range Numeric vector of length 2. Range for edge weights
-#'   `c(min, max)`. Default: c(0, 0.3).
+#'   `c(min, max)`. Default: c(0, 1).
 #' @param self_loops Logical. Allow self-loops (diagonal elements). Default: FALSE.
 #' @param use_learning_states Logical. Use learning state verbs as node names.
 #'   Default: TRUE.
-#' @param categories Character vector or NULL. Categories for node names.
-#'   If NULL with `use_learning_states = TRUE`, uses one random category per group.
-#'   Can be single (same for all) or one per group. Default: NULL.
-#' @param within_prob Numeric. Probability of edges within each group.
-#'   Default: 1 (all edges exist).
-#' @param between_prob Numeric. Probability of edges between groups.
-#'   Default: 1 (all edges exist).
+#' @param categories Character vector. Categories for node names, one per group.
+#'   Default: c("metacognitive", "cognitive", "behavioral", "social", "motivational").
+#' @param within_prob Numeric. Probability of edges within each group. Default: 0.4.
+#' @param between_prob Numeric. Probability of edges between groups. Default: 0.15.
 #' @param node_prefix Character. Prefix for node names when not using learning
 #'   states. Default: "N".
 #' @param seed Integer or NULL. Random seed. Default: NULL.
@@ -772,7 +769,7 @@ generate_group_tna_networks <- function(n_groups = 5,
 #'
 #' @return A list with two elements:
 #' \describe{
-#'   \item{matrix}{Square transition matrix with named rows/columns}
+#'   \item{matrix}{Square transition matrix (rows sum to 1) with named rows/columns.}
 #'   \item{node_types}{Named list mapping group names to node names.
 #'     Use as `node_types` for `plot_htna()` or as `layers` for `plot_mlna()`.}
 #' }
@@ -788,58 +785,50 @@ generate_group_tna_networks <- function(n_groups = 5,
 #'
 #' @examples
 #' \dontrun{
-#' # Basic: 3 groups, 5 nodes each
-#' net <- generate_tna_matrix(nodes_per_group = 5, n_groups = 3, seed = 42)
+#' # Default: 5 groups x 5 nodes = 25 node matrix
+#' net <- generate_tna_matrix(seed = 42)
+#' net$matrix
+#' net$node_types  # Metacognitive, Cognitive, Behavioral, Social, Motivational
 #'
 #' # Use with plot_htna
 #' plot_htna(net$matrix, net$node_types, layout = "polygon")
-#' plot_htna(net$matrix, net$node_types, layout = "circular")
 #'
-#' # Use with plot_mlna (layers = node_types)
-#' plot_mlna(net$matrix, layers = net$node_types, layout = "spring")
+#' # Use with plot_mlna
+#' plot_mlna(net$matrix, layers = net$node_types)
 #'
-#' # Custom group names
+#' # Custom group names (3 groups)
 #' net <- generate_tna_matrix(
-#'   nodes_per_group = c(5, 5, 5),
-#'   group_names = c("Teacher", "Student", "System"),
+#'   nodes_per_group = 6,
+#'   group_names = c("Macro", "Meso", "Micro"),
 #'   seed = 42
 #' )
 #'
-#' # For multilevel with layer names
+#' # Custom categories per group
 #' net <- generate_tna_matrix(
-#'   nodes_per_group = 7,
-#'   group_names = c("Macro", "Meso", "Micro"),
+#'   nodes_per_group = 4,
+#'   group_names = c("Teacher", "Student", "System"),
 #'   categories = c("metacognitive", "cognitive", "behavioral"),
 #'   seed = 123
 #' )
-#' plot_mlna(net$matrix, layers = net$node_types, minimum = 0.18)
-#'
-#' # 4 groups for rectangle layout
-#' net <- generate_tna_matrix(
-#'   nodes_per_group = c(3, 2, 3, 3),
-#'   group_names = c("Input", "Process", "Output", "Storage"),
-#'   seed = 456
-#' )
-#' plot_htna(net$matrix, net$node_types)  # Auto-detects rectangle
-#'
-#' # Variable group sizes with range
-#' net <- generate_tna_matrix(nodes_per_group = 4:8, n_groups = 3, seed = 789)
 #' }
 #'
 #' @seealso
-#' \code{\link{generate_tna_networks}} for TNA model objects,
-#' \code{\link{generate_group_tna_networks}} for group TNA models.
+#' \code{\link{simulate_htna}} for the underlying function,
+#' \code{\link{simulate_matrix}} for basic matrix simulation,
+#' \code{\link{generate_tna_networks}} for TNA model objects.
 #'
 #' @export
 generate_tna_matrix <- function(nodes_per_group = 5,
-                                 group_names = NULL,
-                                 n_groups = 3,
-                                 edge_prob_range = c(0, 0.3),
+                                 group_names = c("Metacognitive", "Cognitive",
+                                                 "Behavioral", "Social", "Motivational"),
+                                 n_groups = 5,
+                                 edge_prob_range = c(0, 1),
                                  self_loops = FALSE,
                                  use_learning_states = TRUE,
-                                 categories = NULL,
-                                 within_prob = 1,
-                                 between_prob = 1,
+                                 categories = c("metacognitive", "cognitive",
+                                                "behavioral", "social", "motivational"),
+                                 within_prob = 0.4,
+                                 between_prob = 0.15,
                                  node_prefix = "N",
                                  seed = NULL,
                                  verbose = TRUE,
@@ -848,80 +837,60 @@ generate_tna_matrix <- function(nodes_per_group = 5,
   # Backward compatibility
   if (!is.null(learning_categories)) categories <- learning_categories
 
-  # Handle seed for pre-processing
-
-  if (!is.null(seed)) {
-    set.seed(seed)
-  }
-
-  # Determine number of groups
-  if (!is.null(group_names)) {
+  # Determine number of groups from group_names if custom names provided
+  if (!identical(group_names, c("Metacognitive", "Cognitive",
+                                "Behavioral", "Social", "Motivational"))) {
     n_groups <- length(group_names)
   }
 
-  # Handle nodes_per_group: single value, vector matching n_groups, or range
-  if (length(nodes_per_group) == 1) {
-    nodes_per_group <- rep(nodes_per_group, n_groups)
-  } else if (length(nodes_per_group) == 2 && nodes_per_group[1] != nodes_per_group[2]) {
-    # Treat as range c(min, max)
-    nodes_per_group <- sample(nodes_per_group[1]:nodes_per_group[2], n_groups, replace = TRUE)
-  } else if (length(nodes_per_group) > 2 && length(nodes_per_group) != n_groups) {
-    # Treat as range, sample for each group
-    nodes_per_group <- sample(nodes_per_group, n_groups, replace = TRUE)
+  # Adjust categories to match n_groups
+  if (length(categories) != n_groups) {
+    default_cats <- c("metacognitive", "cognitive", "behavioral",
+                      "social", "motivational", "affective", "group_regulation")
+    if (n_groups <= length(default_cats)) {
+      categories <- default_cats[1:n_groups]
+    } else {
+      categories <- c(default_cats, rep("all", n_groups - length(default_cats)))
+    }
   }
 
-  if (length(nodes_per_group) != n_groups) {
-    stop("nodes_per_group must be length 1, 2 (range), or match n_groups")
+  # Adjust group_names if n_groups changed but group_names wasn't custom
+  if (n_groups != 5 && identical(group_names, c("Metacognitive", "Cognitive",
+                                                 "Behavioral", "Social", "Motivational"))) {
+    default_names <- c("Metacognitive", "Cognitive", "Behavioral",
+                       "Social", "Motivational", "Affective", "GroupRegulation")
+    if (n_groups <= length(default_names)) {
+      group_names <- default_names[1:n_groups]
+    } else {
+      group_names <- c(default_names, paste0("Type", (length(default_names) + 1):n_groups))
+    }
   }
 
-  # Generate group names if not provided
-  if (is.null(group_names)) {
-    group_names <- paste0("Group", 1:n_groups)
-  }
-
-  # Generate custom node names if not using learning states
-  custom_names <- NULL
-  if (!use_learning_states) {
-    total_nodes <- sum(nodes_per_group)
-    custom_names <- paste0(node_prefix, 1:total_nodes)
-  }
-
-  # Call simulate_matrix
-  result <- simulate_matrix(
+  # Call simulate_htna
+  result <- simulate_htna(
     n_nodes = nodes_per_group,
     n_types = n_groups,
+    type_names = group_names,
     within_prob = within_prob,
     between_prob = between_prob,
-    weighted = TRUE,
     weight_range = edge_prob_range,
-    directed = TRUE,
     allow_self_loops = self_loops,
-    use_learning_states = use_learning_states,
-    categories = if (is.null(categories)) "all" else categories,
-    names = custom_names,
-    type_names = group_names,
+    categories = categories,
     seed = seed
   )
 
-  # Convert node_types from named vector to list format (for HTNA/MLNA compatibility)
-  node_types_list <- list()
-  for (group in group_names) {
-    node_types_list[[group]] <- names(result$node_types[result$node_types == group])
-  }
-
   if (verbose) {
-    total_nodes <- sum(nodes_per_group)
-    message(sprintf("Generating TNA matrix: %d groups, %d total nodes",
+    total_nodes <- nodes_per_group * n_groups
+    message(sprintf("Generated TNA matrix: %d groups, %d total nodes",
                     n_groups, total_nodes))
     for (i in seq_len(n_groups)) {
       message(sprintf("  %s: %s", group_names[i],
-                      paste(node_types_list[[group_names[i]]], collapse = ", ")))
+                      paste(result$node_types[[group_names[i]]], collapse = ", ")))
     }
-    message("TNA matrix generated successfully.")
   }
 
   return(list(
     matrix = result$matrix,
-    node_types = node_types_list
+    node_types = result$node_types
   ))
 }

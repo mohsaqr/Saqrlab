@@ -6,14 +6,14 @@
 \usage{
 generate_tna_matrix(
   nodes_per_group = 5,
-  group_names = NULL,
-  n_groups = 3,
-  edge_prob_range = c(0, 0.3),
+  group_names = c("Metacognitive", "Cognitive", "Behavioral", "Social", "Motivational"),
+  n_groups = 5,
+  edge_prob_range = c(0, 1),
   self_loops = FALSE,
   use_learning_states = TRUE,
-  categories = NULL,
-  within_prob = 1,
-  between_prob = 1,
+  categories = c("metacognitive", "cognitive", "behavioral", "social", "motivational"),
+  within_prob = 0.4,
+  between_prob = 0.15,
   node_prefix = "N",
   seed = NULL,
   verbose = TRUE,
@@ -21,34 +21,28 @@ generate_tna_matrix(
 )
 }
 \arguments{
-\item{nodes_per_group}{Integer or integer vector. Number of nodes per group.
-Accepts: single integer (same for all), vector matching n_groups,
-or range like \code{4:7} (random per group). Default: 5.}
+\item{nodes_per_group}{Integer. Number of nodes per group. Default: 5.}
 
-\item{group_names}{Character vector. Names for each group (e.g.,
-\code{c("Teacher", "Student", "System")} or \code{c("Macro", "Meso", "Micro")}).
-If NULL, generates default names. Default: NULL.}
+\item{group_names}{Character vector. Names for each group. Default uses
+learning categories: "Metacognitive", "Cognitive", "Behavioral",
+"Social", "Motivational".}
 
-\item{n_groups}{Integer. Number of groups. Only used if \code{group_names} is NULL
-and \code{nodes_per_group} is a single integer. Default: 3.}
+\item{n_groups}{Integer. Number of groups. Default: 5.}
 
 \item{edge_prob_range}{Numeric vector of length 2. Range for edge weights
-\code{c(min, max)}. Default: c(0, 0.3).}
+\code{c(min, max)}. Default: c(0, 1).}
 
 \item{self_loops}{Logical. Allow self-loops (diagonal elements). Default: FALSE.}
 
 \item{use_learning_states}{Logical. Use learning state verbs as node names.
 Default: TRUE.}
 
-\item{categories}{Character vector or NULL. Categories for node names.
-If NULL with \code{use_learning_states = TRUE}, uses one random category per group.
-Can be single (same for all) or one per group. Default: NULL.}
+\item{categories}{Character vector. Categories for node names, one per group.
+Default: c("metacognitive", "cognitive", "behavioral", "social", "motivational").}
 
-\item{within_prob}{Numeric. Probability of edges within each group.
-Default: 1 (all edges exist).}
+\item{within_prob}{Numeric. Probability of edges within each group. Default: 0.4.}
 
-\item{between_prob}{Numeric. Probability of edges between groups.
-Default: 1 (all edges exist).}
+\item{between_prob}{Numeric. Probability of edges between groups. Default: 0.15.}
 
 \item{node_prefix}{Character. Prefix for node names when not using learning
 states. Default: "N".}
@@ -62,7 +56,7 @@ states. Default: "N".}
 \value{
 A list with two elements:
 \describe{
-\item{matrix}{Square transition matrix with named rows/columns}
+\item{matrix}{Square transition matrix (rows sum to 1) with named rows/columns.}
 \item{node_types}{Named list mapping group names to node names.
 Use as \code{node_types} for \code{plot_htna()} or as \code{layers} for \code{plot_mlna()}.}
 }
@@ -70,7 +64,10 @@ Use as \code{node_types} for \code{plot_htna()} or as \code{layers} for \code{pl
 \description{
 Generate a transition matrix with node groupings, compatible with
 \code{tna::plot_htna()} (hierarchical) and \code{tna::plot_mlna()} (multilevel)
-visualizations.
+visualizations. By default creates a 25-node matrix (5 nodes x 5 types)
+using learning category names.
+
+This is a convenience wrapper around \code{\link{simulate_htna}}.
 }
 \details{
 This function generates a random transition matrix and node groupings.
@@ -83,46 +80,36 @@ The output can be used with both hierarchical and multilevel TNA plots:
 }
 \examples{
 \dontrun{
-# Basic: 3 groups, 5 nodes each
-net <- generate_tna_matrix(nodes_per_group = 5, n_groups = 3, seed = 42)
+# Default: 5 groups x 5 nodes = 25 node matrix
+net <- generate_tna_matrix(seed = 42)
+net$matrix
+net$node_types  # Metacognitive, Cognitive, Behavioral, Social, Motivational
 
 # Use with plot_htna
 plot_htna(net$matrix, net$node_types, layout = "polygon")
-plot_htna(net$matrix, net$node_types, layout = "circular")
 
-# Use with plot_mlna (layers = node_types)
-plot_mlna(net$matrix, layers = net$node_types, layout = "spring")
+# Use with plot_mlna
+plot_mlna(net$matrix, layers = net$node_types)
 
-# Custom group names
+# Custom group names (3 groups)
 net <- generate_tna_matrix(
-  nodes_per_group = c(5, 5, 5),
-  group_names = c("Teacher", "Student", "System"),
+  nodes_per_group = 6,
+  group_names = c("Macro", "Meso", "Micro"),
   seed = 42
 )
 
-# For multilevel with layer names
+# Custom categories per group
 net <- generate_tna_matrix(
-  nodes_per_group = 7,
-  group_names = c("Macro", "Meso", "Micro"),
+  nodes_per_group = 4,
+  group_names = c("Teacher", "Student", "System"),
   categories = c("metacognitive", "cognitive", "behavioral"),
   seed = 123
 )
-plot_mlna(net$matrix, layers = net$node_types, minimum = 0.18)
-
-# 4 groups for rectangle layout
-net <- generate_tna_matrix(
-  nodes_per_group = c(3, 2, 3, 3),
-  group_names = c("Input", "Process", "Output", "Storage"),
-  seed = 456
-)
-plot_htna(net$matrix, net$node_types)  # Auto-detects rectangle
-
-# Variable group sizes with range
-net <- generate_tna_matrix(nodes_per_group = 4:8, n_groups = 3, seed = 789)
 }
 
 }
 \seealso{
-\code{\link{generate_tna_networks}} for TNA model objects,
-\code{\link{generate_group_tna_networks}} for group TNA models.
+\code{\link{simulate_htna}} for the underlying function,
+\code{\link{simulate_matrix}} for basic matrix simulation,
+\code{\link{generate_tna_networks}} for TNA model objects.
 }
