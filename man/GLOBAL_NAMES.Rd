@@ -5,13 +5,13 @@
 \alias{GLOBAL_NAMES}
 \title{Global Names Dataset}
 \format{
-A character vector of 100 names from various cultures and regions.
+A character vector of 300 names from various cultures and regions.
 }
 \usage{
 GLOBAL_NAMES
 }
 \description{
-A collection of 100 short, diverse names from around the world for use in
+A collection of 300 short, diverse names from around the world for use in
 social network simulations.
 }
 \details{
@@ -19,7 +19,8 @@ Names are selected to be short (typically 3-7 characters) and represent
 diverse cultural backgrounds including:
 \itemize{
 \item European (Western, Eastern, Nordic)
-\item Asian (East Asian, South Asian, Southeast Asian, Middle Eastern)
+\item Arab / Middle Eastern
+\item Asian (East Asian, South Asian, Southeast Asian)
 \item African
 \item Latin American
 \item Oceanian

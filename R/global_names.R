@@ -1,17 +1,18 @@
 #' Global Names Dataset
 #'
 #' @description
-#' A collection of 100 short, diverse names from around the world for use in
+#' A collection of 300 short, diverse names from around the world for use in
 #' social network simulations.
 #'
-#' @format A character vector of 100 names from various cultures and regions.
+#' @format A character vector of 300 names from various cultures and regions.
 #'
 #' @details
 #' Names are selected to be short (typically 3-7 characters) and represent
 #' diverse cultural backgrounds including:
 #' \itemize{
 #'   \item European (Western, Eastern, Nordic)
-#'   \item Asian (East Asian, South Asian, Southeast Asian, Middle Eastern)
+#'   \item Arab / Middle Eastern
+#'   \item Asian (East Asian, South Asian, Southeast Asian)
 #'   \item African
 #'   \item Latin American
 #'   \item Oceanian
@@ -30,26 +31,62 @@
 #' @export
 GLOBAL_NAMES <- c(
 
-# European - Western
+# European - Western (30)
 "Emma", "Liam", "Mia", "Noah", "Lea", "Max", "Zoe", "Leo", "Eva", "Tom",
-# European - Eastern
-"Ivan", "Olga", "Yuri", "Nina", "Igor", "Mila", "Sasha", "Daria", "Pavel", "Anya",
-# Nordic
+"Ella", "Jack", "Lily", "Hugo", "Sara", "Finn", "Ruby", "Adam", "Lucy", "Jake",
+"Chloe", "Luke", "Grace", "Ethan", "Clara", "Oscar", "Julia", "Felix", "Marie", "Paul",
+
+# European - Eastern (25)
+"Ivan", "Yuri", "Nina", "Igor", "Mila", "Sasha", "Daria", "Pavel", "Anya", "Katya",
+"Boris", "Tanya", "Dmitri", "Vera", "Alexei", "Irina", "Oleg", "Lena", "Vlad", "Nadia",
+"Petra", "Milan", "Jiri", "Hana", "Marek",
+
+# Nordic (25)
 "Erik", "Freya", "Lars", "Astrid", "Sven", "Ingrid", "Odin", "Sigrid", "Bjorn", "Liv",
-# East Asian
+"Olaf", "Elsa", "Axel", "Ida", "Nils", "Saga", "Leif", "Maja", "Knut", "Elin",
+"Tor", "Hedda", "Arne", "Greta", "Rune",
+
+# Arab (40)
+"Ali", "Layla", "Omar", "Noor", "Amir", "Zara", "Karim", "Leila", "Tariq", "Mariam",
+"Yusuf", "Fatima", "Khalid", "Amira", "Samir", "Rania", "Hassan", "Dina", "Walid", "Salma",
+"Faris", "Yasmin", "Rashid", "Mona", "Nabil", "Lina", "Jamal", "Huda", "Ziad", "Rana",
+"Sami", "Reem", "Adel", "Noura", "Mazen", "Asma", "Faisal", "Dalal", "Bassam", "Aisha",
+
+# Persian / Turkish (20)
+"Cyrus", "Shirin", "Dara", "Parisa", "Reza", "Leyla", "Arman", "Soraya", "Babak", "Mina",
+"Emre", "Elif", "Kaan", "Defne", "Cem", "Zeynep", "Deniz", "Aylin", "Burak", "Selin",
+
+# East Asian (30)
 "Yuki", "Hiro", "Mei", "Jin", "Suki", "Kai", "Lin", "Wei", "Rin", "Chen",
-# South Asian
+"Akira", "Sakura", "Kenji", "Yuna", "Taro", "Haruki", "Koji", "Miki", "Ryu", "Emi",
+"Jing", "Xiao", "Ming", "Hua", "Feng", "Yan", "Jun", "Lei", "Bo", "Lan",
+
+# Korean (10)
+"Minho", "Jisoo", "Joon", "Seo", "Tae", "Sora", "Woo", "Minji", "Dae", "Eunji",
+
+# South Asian (25)
 "Arun", "Priya", "Raj", "Devi", "Amit", "Sita", "Ravi", "Maya", "Ajay", "Lata",
-# Southeast Asian
-"Linh", "Minh", "Anh", "Bao", "Mai", "Duc", "Lan", "Tuan", "Hoa", "Nam",
-# Middle Eastern
-"Ali", "Layla", "Omar", "Noor", "Amir", "Zara", "Karim", "Leila", "Tariq", "Hana",
-# African
+"Vijay", "Anita", "Sanjay", "Neha", "Rohit", "Pooja", "Arjun", "Kavita", "Rahul", "Sunita",
+"Kiran", "Aditi", "Nikhil", "Shreya", "Vikram",
+
+# Southeast Asian (25)
+"Linh", "Minh", "Anh", "Bao", "Mai", "Duc", "Thao", "Tuan", "Hoa", "Nam",
+"Ting", "Somchai", "Ploy", "Arya", "Dewi", "Rizal", "Putri", "Bagus", "Sari", "Wayan",
+"Ayu", "Gede", "Nisa", "Fajar", "Indah",
+
+# African (30)
 "Kofi", "Amara", "Kwame", "Zuri", "Juma", "Nia", "Tendai", "Amina", "Sekou", "Fatou",
-# Latin American
+"Chidi", "Adaora", "Emeka", "Ngozi", "Obi", "Zainab", "Ayana", "Malik", "Imani", "Jelani",
+"Asha", "Omari", "Khadija", "Bakari", "Eshe", "Jabari", "Sanaa", "Dayo", "Amani", "Kwesi",
+
+# Latin American (25)
 "Juan", "Rosa", "Diego", "Luz", "Pablo", "Sol", "Luis", "Ana", "Carlos", "Lucia",
-# Oceanian
-"Koa", "Manu", "Tane", "Moana", "Ariki", "Kaia", "Tui", "Hemi", "Aroha", "Wiremu"
+"Miguel", "Elena", "Andres", "Maria", "Jose", "Sofia", "Pedro", "Camila", "Mateo", "Valentina",
+"Rafael", "Isabel", "Sergio", "Carmen", "Alvaro",
+
+# Oceanian / Pacific (15)
+"Koa", "Manu", "Tane", "Moana", "Ariki", "Kaia", "Tui", "Hemi", "Aroha", "Wiremu",
+"Leilani", "Keanu", "Mahina", "Malia", "Sina"
 )
 
 #' Get Global Names
