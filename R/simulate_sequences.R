@@ -12,7 +12,7 @@
 #'   probabilities. Must sum to 1. If NULL, random probabilities are generated.
 #'   Default: NULL.
 #' @param max_seq_length Integer. Maximum length of each sequence. Default: 20.
-#' @param num_rows Integer. Number of sequences (rows) to generate. Default: 100.
+#' @param num_rows Integer. Number of sequences (rows) to generate. Default: 1000.
 #' @param n_states Integer. Number of states when auto-generating probabilities.
 #'   Ignored if `transition_matrix` is provided. Default: 5.
 #' @param state_names Character vector. Names for states when auto-generating.
@@ -74,7 +74,7 @@
 #'
 #' @examples
 #' \dontrun{
-#' # Simplest usage: all defaults (100 sequences, 20 length, 5 states)
+#' # Simplest usage: all defaults (1000 sequences, 20 length, 5 states)
 #' sequences <- simulate_sequences(seed = 42)
 #'
 #' # With learning states
@@ -149,7 +149,7 @@
 simulate_sequences <- function(transition_matrix = NULL,
                                 initial_probabilities = NULL,
                                 max_seq_length = 20,
-                                num_rows = 100,
+                                num_rows = 1000,
                                 n_states = 5,
                                 state_names = NULL,
                                 use_learning_states = FALSE,
