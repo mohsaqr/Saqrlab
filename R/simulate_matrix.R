@@ -1,309 +1,141 @@
 #' Simulate Network Matrix
 #'
 #' @description
-#' Generate a simulated matrix for network analysis. Supports different matrix
-#' types (transition, frequency, co-occurrence, adjacency) and multiple node
-#' types (communities/groups) with configurable connection probabilities.
+#' Generate a simple transition matrix for TNA/Markov network analysis.
+#' Each call randomly selects a learning category for node names.
 #'
-#' @param n_nodes Integer or integer vector. If single value, total number of nodes.
-#'   If vector, number of nodes per type. Default: 9.
-#' @param n_types Integer. Number of node types/groups. Ignored if `n_nodes` is a
-#'   vector. Default: 1.
+#' @param n_nodes Integer. Number of nodes. Default: 9.
 #' @param matrix_type Character. Type of matrix to generate:
 #'   \itemize{
-#'     \item \code{"transition"}: Directed, row-normalized (rows sum to 1), like Markov/TNA
-#'     \item \code{"frequency"}: Directed, integer counts of transitions
-#'     \item \code{"co-occurrence"}: Symmetric, counts of co-occurrences
-#'     \item \code{"adjacency"}: Binary or weighted edges (default behavior)
+#'     \item \code{"transition"}: Directed, row-normalized (rows sum to 1)
+#'     \item \code{"frequency"}: Directed, integer counts
+#'     \item \code{"co-occurrence"}: Symmetric
+#'     \item \code{"adjacency"}: Binary or weighted edges
 #'   }
 #'   Default: "transition".
-#' @param within_prob Numeric or numeric vector. Probability of edges within each
-#'   type. If single value, applies to all types. Default: 0.3.
-#' @param between_prob Numeric or matrix. Probability of edges between different
-#'   types. If single value, applies to all between-type pairs. If matrix, should
-#'   be symmetric with dimensions n_types x n_types. Default: 0.1.
-#' @param weighted Logical. If TRUE, generates weighted edges. If FALSE, binary
-#'   (0/1) matrix. Ignored for "transition" and "frequency" types. Default: TRUE.
+#' @param edge_prob Numeric. Probability of edges existing. Default: 0.3.
+#' @param weighted Logical. If TRUE, generates weighted edges. Default: TRUE.
 #' @param weight_range Numeric vector of length 2. Range for edge weights.
-#'   For "transition": c(0, 1). For "frequency": c(1, 100). For others: c(0, 1).
-#'   Default: NULL (auto-set based on matrix_type).
-#' @param directed Logical. If TRUE, generates directed (asymmetric) matrix.
-#'   Auto-set to TRUE for "transition"/"frequency", FALSE for "co-occurrence".
-#'   Default: NULL (auto-set based on matrix_type).
-#' @param allow_self_loops Logical. If TRUE, allows diagonal entries (self-loops).
-#'   Default: FALSE.
-#' @param normalize Logical. If TRUE for "transition" type, normalizes rows to
-#'   sum to 1. Default: TRUE.
-#' @param use_learning_states Logical. If TRUE, uses learning action verbs as
-#'   node names. Default: TRUE.
-#' @param categories Character vector. Learning state categories to use when
-#'   `use_learning_states = TRUE`. Options: "metacognitive", "cognitive",
-#'   "behavioral", "social", "motivational", "affective", "group_regulation",
-#'   or "all". Default: "all".
-#' @param names Character vector or NULL. Custom node names. Overrides
-#'   `use_learning_states` if provided. If NULL and `use_learning_states = FALSE`,
-#'   uses names from `GLOBAL_NAMES`. Default: NULL.
-#' @param type_names Character vector or NULL. Names for node types. If NULL,
-#'   uses "Type1", "Type2", etc. Default: NULL.
+#'   Default: c(0, 1).
+#' @param directed Logical. If TRUE, generates directed matrix. Default: TRUE.
+#' @param allow_self_loops Logical. If TRUE, allows diagonal entries. Default: FALSE.
+#' @param names Character vector or NULL. Custom node names. If NULL, randomly
+#'   selects learning states from a random category. Default: NULL.
 #' @param seed Integer or NULL. Random seed for reproducibility. Default: NULL.
 #'
-#' @return A list containing:
-#' \describe{
-#'   \item{matrix}{Numeric matrix with row and column names set to node names.}
-#'   \item{node_types}{Named character vector mapping node names to their types.}
-#'   \item{type_names}{Character vector of type names.}
-#'   \item{n_nodes_per_type}{Integer vector of node counts per type.}
-#'   \item{matrix_type}{The type of matrix generated.}
-#' }
+#' @return A numeric matrix with row and column names set to learning states.
 #'
 #' @details
-#' The function implements a stochastic block model approach:
-#' \itemize{
-#'   \item Nodes are assigned to types/groups
-#'   \item Edges within the same type occur with probability `within_prob`
-#'   \item Edges between different types occur with probability `between_prob`
-#'   \item Edge weights depend on `matrix_type`
-#' }
+#' This function generates a simple network matrix. Each call randomly picks
+#' one learning category (metacognitive, cognitive, behavioral, social,
+#' motivational, affective, or group_regulation) and uses verbs from that
+#' category as node names.
 #'
-#' **Matrix Types**:
-#' \itemize{
-#'   \item \strong{transition}: Rows sum to 1 (Markov chain style). Suitable for
-#'     TNA, sequence analysis, and state transition modeling.
-#'   \item \strong{frequency}: Integer counts representing transition frequencies.
-#'     Useful for raw count data before normalization.
-#'   \item \strong{co-occurrence}: Symmetric matrix of co-occurrence counts.
-#'     Useful for undirected association networks.
-#'   \item \strong{adjacency}: Standard adjacency matrix (binary or weighted).
-#' }
+#' For matrices with multiple node types, use \code{\link{simulate_htna}}.
 #'
 #' @examples
-#' # Default: 9-node transition matrix (TNA style)
-#' result <- simulate_matrix(seed = 42)
-#' result$matrix
-#' rowSums(result$matrix)  # Rows sum to ~1
+#' # Simple 9-node transition matrix
+#' mat <- simulate_matrix(seed = 42)
+#' mat
+#' rowSums(mat)  # Rows sum to 1
 #'
-#' # Frequency matrix (integer counts)
-#' result <- simulate_matrix(
-#'   n_nodes = 5,
-#'   matrix_type = "frequency",
-#'   seed = 42
-#' )
-#' result$matrix  # Integer values
+#' # Frequency matrix
+#' mat <- simulate_matrix(n_nodes = 5, matrix_type = "frequency", seed = 42)
 #'
 #' # Co-occurrence matrix (symmetric)
-#' result <- simulate_matrix(
-#'   n_nodes = 6,
-#'   matrix_type = "co-occurrence",
-#'   seed = 42
-#' )
-#' isSymmetric(result$matrix)  # TRUE
+#' mat <- simulate_matrix(n_nodes = 6, matrix_type = "co-occurrence", seed = 42)
+#' isSymmetric(mat)  # TRUE
 #'
-#' # Adjacency matrix (binary)
-#' result <- simulate_matrix(
-#'   n_nodes = 8,
-#'   matrix_type = "adjacency",
-#'   weighted = FALSE,
-#'   seed = 42
-#' )
+#' # Custom names
+#' mat <- simulate_matrix(n_nodes = 4, names = c("A", "B", "C", "D"), seed = 42)
 #'
-#' # Multi-type network
-#' result <- simulate_matrix(
-#'   n_nodes = c(3, 3, 3),
-#'   type_names = c("Meta", "Cog", "Behav"),
-#'   within_prob = 0.5,
-#'   between_prob = 0.2,
-#'   seed = 42
-#' )
+#' @seealso \code{\link{simulate_htna}} for multi-type matrices
 #'
-#' @seealso \code{\link{simulate_htna}}, \code{\link{simulate_edge_list}}
-#'
-#' @importFrom stats setNames
 #' @export
 simulate_matrix <- function(n_nodes = 9,
-                            n_types = 1,
                             matrix_type = c("transition", "frequency",
                                             "co-occurrence", "adjacency"),
-                            within_prob = 0.3,
-                            between_prob = 0.1,
+                            edge_prob = 0.3,
                             weighted = TRUE,
-                            weight_range = NULL,
-                            directed = NULL,
+                            weight_range = c(0, 1),
+                            directed = TRUE,
                             allow_self_loops = FALSE,
-                            normalize = TRUE,
-                            use_learning_states = TRUE,
-                            categories = "all",
                             names = NULL,
-                            type_names = NULL,
                             seed = NULL) {
   # Match matrix_type argument
- matrix_type <- match.arg(matrix_type)
+  matrix_type <- match.arg(matrix_type)
 
-  # Set defaults based on matrix_type
-  if (is.null(directed)) {
-    directed <- matrix_type %in% c("transition", "frequency", "adjacency")
-  }
-  if (is.null(weight_range)) {
-    weight_range <- switch(matrix_type,
-      "transition" = c(0, 1),
-      "frequency" = c(1, 100),
-      "co-occurrence" = c(1, 50),
-      "adjacency" = c(0, 1)
-    )
-  }
   # Set seed if provided
   if (!is.null(seed)) set.seed(seed)
 
-  # --- Determine node counts per type ---
-
-if (length(n_nodes) > 1) {
-    # n_nodes is a vector specifying nodes per type
-    n_nodes_per_type <- as.integer(n_nodes)
-    n_types <- length(n_nodes_per_type)
-    total_nodes <- sum(n_nodes_per_type)
-  } else {
-    # Single n_nodes value, distribute across types
-    total_nodes <- as.integer(n_nodes)
-    if (n_types == 1) {
-      n_nodes_per_type <- total_nodes
-    } else {
-      # Distribute nodes as evenly as possible
-      base_count <- total_nodes %/% n_types
-      remainder <- total_nodes %% n_types
-      n_nodes_per_type <- rep(base_count, n_types)
-      if (remainder > 0) {
-        n_nodes_per_type[1:remainder] <- n_nodes_per_type[1:remainder] + 1
-      }
-    }
+  # Auto-adjust directed based on matrix_type
+  if (matrix_type == "co-occurrence") {
+    directed <- FALSE
   }
 
-  # --- Input Validation ---
-  stopifnot(
-    all(n_nodes_per_type >= 1),
-    is.numeric(within_prob), all(within_prob >= 0), all(within_prob <= 1),
-    is.numeric(between_prob), all(between_prob >= 0), all(between_prob <= 1),
-    is.logical(weighted), length(weighted) == 1,
-    is.numeric(weight_range), length(weight_range) == 2,
-    weight_range[1] < weight_range[2],
-    is.logical(directed), length(directed) == 1,
-    is.logical(allow_self_loops), length(allow_self_loops) == 1
-  )
-
-  # --- Expand within_prob if needed ---
-  if (length(within_prob) == 1) {
-    within_prob <- rep(within_prob, n_types)
-  } else if (length(within_prob) != n_types) {
-    stop("within_prob must be length 1 or equal to number of types.")
-  }
-
-  # --- Build probability matrix ---
-  if (is.matrix(between_prob)) {
-    if (nrow(between_prob) != n_types || ncol(between_prob) != n_types) {
-      stop("between_prob matrix must have dimensions n_types x n_types.")
-    }
-    prob_matrix <- between_prob
-    # Override diagonal with within_prob
-    diag(prob_matrix) <- within_prob
-  } else {
-    # Single between_prob value
-    prob_matrix <- matrix(between_prob, nrow = n_types, ncol = n_types)
-    diag(prob_matrix) <- within_prob
-  }
-
-  # --- Generate type names ---
-  if (is.null(type_names)) {
-    type_names <- paste0("Type", 1:n_types)
-  } else if (length(type_names) != n_types) {
-    stop("type_names must have length equal to number of types.")
+  # Auto-adjust weight_range for frequency
+  if (matrix_type == "frequency" && identical(weight_range, c(0, 1))) {
+    weight_range <- c(1, 100)
   }
 
   # --- Generate node names ---
   if (!is.null(names)) {
-    # Custom names provided
-    if (length(names) < total_nodes) {
-      stop("Provided names vector must have at least total_nodes elements.")
+    if (length(names) < n_nodes) {
+      stop("names must have at least n_nodes elements.")
     }
-    node_names <- names[1:total_nodes]
-  } else if (use_learning_states) {
-    # Use learning states
-    available_states <- get_learning_states(categories = categories)
-    if (total_nodes > length(available_states)) {
-      # Need more names than available states
-      extra_needed <- total_nodes - length(available_states)
+    node_names <- names[1:n_nodes]
+  } else {
+    # Randomly pick one learning category
+    all_cats <- c("metacognitive", "cognitive", "behavioral",
+                  "social", "motivational", "affective", "group_regulation")
+    category <- sample(all_cats, 1)
+    available_states <- get_learning_states(categories = category)
+    if (n_nodes > length(available_states)) {
+      extra_needed <- n_nodes - length(available_states)
       extra_names <- paste0("State", seq_len(extra_needed))
       node_names <- c(sample(available_states), extra_names)
     } else {
-      node_names <- sample(available_states, total_nodes)
-    }
-  } else {
-    # Use global names
-    if (total_nodes > length(GLOBAL_NAMES)) {
-      base_names <- GLOBAL_NAMES
-      extra_needed <- total_nodes - length(GLOBAL_NAMES)
-      extra_names <- paste0("Node", seq_len(extra_needed))
-      node_names <- c(sample(base_names), extra_names)
-    } else {
-      node_names <- sample(GLOBAL_NAMES, total_nodes)
+      node_names <- sample(available_states, n_nodes)
     }
   }
 
-  # --- Assign nodes to types ---
-  node_type_indices <- rep(1:n_types, times = n_nodes_per_type)
-  node_types <- setNames(type_names[node_type_indices], node_names)
-
   # --- Initialize matrix ---
-  adj_matrix <- matrix(0, nrow = total_nodes, ncol = total_nodes)
-  rownames(adj_matrix) <- node_names
-  colnames(adj_matrix) <- node_names
+  mat <- matrix(0, nrow = n_nodes, ncol = n_nodes)
+  rownames(mat) <- node_names
+  colnames(mat) <- node_names
 
   # --- Generate edges ---
-  for (i in 1:total_nodes) {
+  for (i in 1:n_nodes) {
     j_start <- if (directed) 1 else i
-    for (j in j_start:total_nodes) {
-      # Skip self-loops if not allowed
+    for (j in j_start:n_nodes) {
       if (!allow_self_loops && i == j) next
 
-      # Get types
-      type_i <- node_type_indices[i]
-      type_j <- node_type_indices[j]
-
-      # Get probability for this pair
-      edge_prob <- prob_matrix[type_i, type_j]
-
-      # Sample edge
       if (runif(1) < edge_prob) {
         if (weighted) {
           weight <- runif(1, min = weight_range[1], max = weight_range[2])
-          adj_matrix[i, j] <- round(weight, 4)
+          mat[i, j] <- round(weight, 4)
           if (!directed && i != j) {
-            adj_matrix[j, i] <- adj_matrix[i, j]
+            mat[j, i] <- mat[i, j]
           }
         } else {
-          adj_matrix[i, j] <- 1
+          mat[i, j] <- 1
           if (!directed && i != j) {
-            adj_matrix[j, i] <- 1
+            mat[j, i] <- 1
           }
         }
       }
     }
   }
 
-  # --- For directed networks, also sample j->i edges ---
+  # For directed, also sample reverse edges
   if (directed) {
-    for (i in 1:total_nodes) {
-      for (j in 1:total_nodes) {
-        if (i == j && !allow_self_loops) next
-        if (i >= j) next  # Already processed in the loop above for i->j
-
-        type_i <- node_type_indices[i]
-        type_j <- node_type_indices[j]
-        edge_prob <- prob_matrix[type_j, type_i]  # Note: reversed for j->i
-
+    for (i in 1:(n_nodes - 1)) {
+      for (j in (i + 1):n_nodes) {
         if (runif(1) < edge_prob) {
           if (weighted) {
-            weight <- runif(1, min = weight_range[1], max = weight_range[2])
-            adj_matrix[j, i] <- round(weight, 4)
+            mat[j, i] <- round(runif(1, weight_range[1], weight_range[2]), 4)
           } else {
-            adj_matrix[j, i] <- 1
+            mat[j, i] <- 1
           }
         }
       }
@@ -312,30 +144,20 @@ if (length(n_nodes) > 1) {
 
   # --- Post-process based on matrix_type ---
   if (matrix_type == "frequency") {
-    # Convert to integers
-    adj_matrix <- round(adj_matrix * 100)
-    adj_matrix <- matrix(as.integer(adj_matrix), nrow = total_nodes,
-                         dimnames = list(node_names, node_names))
-  } else if (matrix_type == "transition" && normalize) {
-    # Normalize rows to sum to 1
-    row_sums <- rowSums(adj_matrix)
-    row_sums[row_sums == 0] <- 1  # Avoid division by zero
-    adj_matrix <- adj_matrix / row_sums
-    adj_matrix <- round(adj_matrix, 4)
+    mat <- round(mat * 100)
+    mat <- matrix(as.integer(mat), nrow = n_nodes,
+                  dimnames = list(node_names, node_names))
+  } else if (matrix_type == "transition") {
+    row_sums <- rowSums(mat)
+    row_sums[row_sums == 0] <- 1
+    mat <- mat / row_sums
+    mat <- round(mat, 4)
   } else if (matrix_type == "co-occurrence") {
-    # Ensure symmetric
-    adj_matrix <- (adj_matrix + t(adj_matrix)) / 2
-    adj_matrix <- round(adj_matrix, 4)
+    mat <- (mat + t(mat)) / 2
+    mat <- round(mat, 4)
   }
 
-  # --- Return results ---
-  return(list(
-    matrix = adj_matrix,
-    node_types = node_types,
-    type_names = type_names,
-    n_nodes_per_type = setNames(n_nodes_per_type, type_names),
-    matrix_type = matrix_type
-  ))
+  return(mat)
 }
 
 
@@ -395,6 +217,7 @@ if (length(n_nodes) > 1) {
 #'
 #' @name simulate_htna
 #' @rdname simulate_htna
+#' @importFrom stats setNames
 #' @export
 simulate_htna <- function(n_nodes = 5,
                           n_types = 5,
@@ -407,18 +230,21 @@ simulate_htna <- function(n_nodes = 5,
                           categories = c("metacognitive", "cognitive",
                                          "behavioral", "social", "motivational"),
                           seed = NULL) {
-  # Default type/category names for reference
+  # Set seed if provided
+  if (!is.null(seed)) set.seed(seed)
+
+  # Default references
   default_type_names <- c("Metacognitive", "Cognitive", "Behavioral",
                           "Social", "Motivational")
   default_cats <- c("metacognitive", "cognitive", "behavioral",
                     "social", "motivational")
 
-  # If custom type_names provided, infer n_types from it
+  # Infer n_types from custom type_names
   if (!identical(type_names, default_type_names)) {
     n_types <- length(type_names)
   }
 
-  # Adjust type_names if n_types differs from default but type_names wasn't customized
+  # Adjust type_names if n_types changed
   if (n_types != 5 && identical(type_names, default_type_names)) {
     all_types <- c("Metacognitive", "Cognitive", "Behavioral",
                    "Social", "Motivational", "Affective", "GroupRegulation")
@@ -428,7 +254,7 @@ simulate_htna <- function(n_nodes = 5,
     }
   }
 
-  # Adjust categories if n_types differs and categories wasn't customized
+  # Adjust categories to match n_types
   if (n_types != 5 && identical(categories, default_cats)) {
     all_cats <- c("metacognitive", "cognitive", "behavioral",
                   "social", "motivational", "affective", "group_regulation")
@@ -437,46 +263,66 @@ simulate_htna <- function(n_nodes = 5,
       categories <- c(categories, rep("all", n_types - length(all_cats)))
     }
   } else if (length(categories) != n_types) {
-    # If categories provided but wrong length, recycle or truncate
-    if (length(categories) == 1) {
-      categories <- rep(categories, n_types)
+    categories <- rep_len(categories, n_types)
+  }
+
+  # Total nodes
+  total_nodes <- n_nodes * n_types
+  n_nodes_per_type <- rep(n_nodes, n_types)
+
+  # Generate node names from each category
+  node_names <- character(0)
+  node_types_list <- list()
+
+  for (i in seq_len(n_types)) {
+    states <- get_learning_states(categories = categories[i])
+    if (n_nodes > length(states)) {
+      extra <- paste0(type_names[i], "_", seq_len(n_nodes - length(states)))
+      type_nodes <- c(sample(states), extra)
     } else {
-      categories <- rep_len(categories, n_types)
+      type_nodes <- sample(states, n_nodes)
+    }
+    node_names <- c(node_names, type_nodes)
+    node_types_list[[type_names[i]]] <- type_nodes
+  }
+
+  # Build type indices for edge probability
+  node_type_idx <- rep(seq_len(n_types), each = n_nodes)
+
+  # Initialize matrix
+  mat <- matrix(0, nrow = total_nodes, ncol = total_nodes)
+  rownames(mat) <- node_names
+  colnames(mat) <- node_names
+
+  # Generate edges with within/between probabilities
+  for (i in 1:total_nodes) {
+    for (j in 1:total_nodes) {
+      if (!allow_self_loops && i == j) next
+
+      # Determine edge probability
+      if (node_type_idx[i] == node_type_idx[j]) {
+        prob <- within_prob
+      } else {
+        prob <- between_prob
+      }
+
+      if (runif(1) < prob) {
+        mat[i, j] <- round(runif(1, weight_range[1], weight_range[2]), 4)
+      }
     }
   }
 
-  # Build n_nodes vector (one per type)
-  n_nodes_vec <- rep(n_nodes, n_types)
-
-  # Call simulate_matrix
-  result <- simulate_matrix(
-    n_nodes = n_nodes_vec,
-    n_types = n_types,
-    matrix_type = "transition",
-    within_prob = within_prob,
-    between_prob = between_prob,
-    weighted = TRUE,
-    weight_range = weight_range,
-    directed = TRUE,
-    allow_self_loops = allow_self_loops,
-    normalize = TRUE,
-    use_learning_states = TRUE,
-    categories = categories,
-    type_names = type_names,
-    seed = seed
-  )
-
-  # Convert node_types from named vector to list format (for HTNA/MLNA compatibility)
-  node_types_list <- list()
-  for (type in result$type_names) {
-    node_types_list[[type]] <- names(result$node_types[result$node_types == type])
-  }
+  # Normalize rows to sum to 1 (transition matrix)
+  row_sums <- rowSums(mat)
+  row_sums[row_sums == 0] <- 1
+  mat <- mat / row_sums
+  mat <- round(mat, 4)
 
   return(list(
-    matrix = result$matrix,
+    matrix = mat,
     node_types = node_types_list,
-    type_names = result$type_names,
-    n_nodes_per_type = result$n_nodes_per_type
+    type_names = type_names,
+    n_nodes_per_type = setNames(n_nodes_per_type, type_names)
   ))
 }
 
