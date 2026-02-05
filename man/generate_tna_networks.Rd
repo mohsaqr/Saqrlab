@@ -2,197 +2,99 @@
 % Please edit documentation in R/generate_tna_networks.R
 \name{generate_tna_networks}
 \alias{generate_tna_networks}
-\title{Generate TNA Networks from Simulated Sequences}
+\title{Generate TNA Network Objects}
 \usage{
 generate_tna_networks(
   n_networks = 10,
-  n_states = 4,
-  state_names = NULL,
-  use_learning_states = FALSE,
-  learning_categories = "all",
-  smart_select = TRUE,
-  num_rows = 100,
-  max_seq_length = 30,
-  min_na = 0,
-  max_na = 0,
   model_type = "tna",
-  use_advanced = FALSE,
-  stable_transitions = NULL,
-  stability_prob = 0.95,
-  unstable_mode = "random_jump",
-  unstable_random_transition_prob = 0.5,
+  n_states = 5,
+  use_learning_states = TRUE,
+  learning_categories = NULL,
+  num_sequences = 100,
+  max_seq_length = 30,
   seed = NULL,
-  include_probabilities = TRUE,
-  verbose = TRUE
+  verbose = TRUE,
+  ...
 )
 }
 \arguments{
 \item{n_networks}{Integer. Number of networks to generate. Default: 10.}
 
-\item{n_states}{Integer. Number of states in each network. Default: 4.}
+\item{model_type}{Character. Type of TNA model to fit:
+"tna", "ftna", "ctna", "atna". Default: "tna".}
 
-\item{state_names}{Character vector. Names for the states. If NULL and
-\code{use_learning_states = FALSE}, uses letters (A, B, C, ...).
-Ignored if \code{use_learning_states = TRUE}. Default: NULL.}
+\item{n_states}{Integer. Number of states/actions in each network. Default: 5.}
 
 \item{use_learning_states}{Logical. If TRUE, uses learning action verbs
-as state names (e.g., "Plan", "Monitor", "Read"). Default: FALSE.}
+as state names. Default: TRUE.}
 
-\item{learning_categories}{Character vector. Which categories of learning
-verbs to use. Options: "metacognitive", "cognitive", "behavioral",
-"social", "motivational", "affective", or "all".
-Only used if \code{use_learning_states = TRUE}. Default: "all".}
+\item{learning_categories}{Character vector or NULL. Which categories of
+learning verbs to use. Options: "metacognitive", "cognitive", "behavioral",
+"social", "motivational", "affective", "group_regulation", or "all".
+If NULL (default), randomly selects one category.}
 
-\item{smart_select}{Logical. If TRUE, intelligently selects learning states
-based on n_states (small networks use fewer categories).
-Only used if \code{use_learning_states = TRUE}. Default: TRUE.}
-
-\item{num_rows}{Integer. Number of sequences to simulate per network.
+\item{num_sequences}{Integer. Number of sequences to simulate per network.
 Default: 100.}
 
 \item{max_seq_length}{Integer. Maximum length of each sequence. Default: 30.}
 
-\item{min_na}{Integer. Minimum NAs per sequence. Default: 0.}
-
-\item{max_na}{Integer. Maximum NAs per sequence. Default: 0.}
-
-\item{model_type}{Character. Type of TNA model to fit. One of:
-"tna", "ftna", "ctna", "atna". Default: "tna".}
-
-\item{use_advanced}{Logical. If TRUE, uses \code{simulate_sequences_advanced()}
-with stability modes. If FALSE, uses basic \code{simulate_sequences()}.
-Default: FALSE.}
-
-\item{stable_transitions}{List of character vectors defining stable
-transitions (only used if \code{use_advanced = TRUE}). Default: NULL.}
-
-\item{stability_prob}{Numeric (0 to 1). Probability of following stable
-transitions (only used if \code{use_advanced = TRUE}). Default: 0.95.}
-
-\item{unstable_mode}{Character. Mode for unstable transitions:
-"random_jump", "perturb_prob", or "unlikely_jump".
-(Only used if \code{use_advanced = TRUE}). Default: "random_jump".}
-
-\item{unstable_random_transition_prob}{Numeric (0 to 1). Probability of
-unstable action (only used if \code{use_advanced = TRUE}). Default: 0.5.}
-
-\item{seed}{Integer or NULL. Random seed for reproducibility. If NULL,
-no seed is set. Default: NULL.}
-
-\item{include_probabilities}{Logical. If TRUE, includes the generating
-transition matrix and initial probabilities in the output. Default: TRUE.}
+\item{seed}{Integer or NULL. Random seed for reproducibility. Default: NULL.}
 
 \item{verbose}{Logical. If TRUE, prints progress messages. Default: TRUE.}
+
+\item{...}{Additional parameters passed to \code{\link{generate_sequence_data}}.}
 }
 \value{
-A list of length \code{n_networks}. Each element is a list containing:
-\describe{
-\item{model}{The fitted TNA model object.}
-\item{transition_probs}{The generating transition matrix
-(if \code{include_probabilities = TRUE}).}
-\item{initial_probs}{The generating initial probabilities
-(if \code{include_probabilities = TRUE}).}
-\item{sequences}{The simulated sequence data frame
-(if \code{include_probabilities = TRUE}).}
-\item{params}{List of parameters used for this network.}
-}
+A list of length \code{n_networks} containing fitted TNA model objects.
+Each element is a tna model object (class "tna").
 }
 \description{
-Generate multiple TNA network objects by simulating Markov chain sequences
-and fitting TNA models. This function combines the simulation workflow:
-probability generation -> sequence simulation -> model fitting.
-
-Supports using realistic learning action verbs as state names for
-educational research simulations.
+Generate multiple TNA network objects (fitted models) for simulation studies.
+This function creates TNA model objects by simulating sequence data and
+fitting models. For generating raw sequence data with associated probabilities,
+use \code{\link{generate_sequence_data}}. For group TNA models, use
+\code{\link{generate_group_tna_networks}}.
 }
 \details{
-The function generates networks by:
-\enumerate{
-\item Generating random transition and initial probabilities using
-\code{seqHMM::simulate_transition_probs()} and \code{seqHMM::simulate_initial_probs()}.
-\item Simulating sequences from those probabilities using either
-\code{simulate_sequences()} or \code{simulate_sequences_advanced()}.
-\item Fitting a TNA model to the sequences using \code{fit_network_model()}.
-}
+This function differs from \code{\link{generate_sequence_data}} in that it
+returns only the fitted model objects, not the underlying sequence data or
+generating probabilities. Use this when you need TNA network objects for
+simulation studies or method comparisons.
 
-\strong{Learning States}: When \code{use_learning_states = TRUE}, state names are
-drawn from a curated collection of 180 student learning action verbs
-organized into 6 categories:
-\itemize{
-\item \strong{metacognitive}: Plan, Monitor, Evaluate, Reflect, Regulate, ...
-\item \strong{cognitive}: Read, Study, Analyze, Summarize, Memorize, ...
-\item \strong{behavioral}: Practice, Annotate, Research, Review, Write, ...
-\item \strong{social}: Collaborate, Discuss, Explain, Share, Teach, ...
-\item \strong{motivational}: Focus, Persist, Explore, Strive, Commit, ...
-\item \strong{affective}: Enjoy, Appreciate, Cope, Manage, Curious, ...
-}
+\strong{Random Category Selection}: When \code{learning_categories = NULL} and
+\code{use_learning_states = TRUE}, a random learning category is selected.
+Available categories: metacognitive, cognitive, behavioral, social,
+motivational, affective, group_regulation.
 }
 \examples{
 \dontrun{
-# Generate 5 simple TNA networks with letter names
-networks <- generate_tna_networks(
-  n_networks = 5,
-  n_states = 4,
-  seed = 42
-)
+# Generate 5 TNA networks with random learning category
+nets <- generate_tna_networks(n_networks = 5, seed = 42)
 
-# Generate networks with learning action verbs
-learning_nets <- generate_tna_networks(
-  n_networks = 5,
+# Generate networks with specific category
+meta_nets <- generate_tna_networks(
+  n_networks = 3,
   n_states = 6,
-  use_learning_states = TRUE,
-  seed = 42
-)
-
-# View the state names
-learning_nets[[1]]$params$state_names
-# e.g., c("Plan", "Monitor", "Read", "Practice", "Discuss", "Focus")
-
-# Focus on metacognitive and cognitive states only
-srl_networks <- generate_tna_networks(
-  n_networks = 5,
-  n_states = 8,
-  use_learning_states = TRUE,
-  learning_categories = c("metacognitive", "cognitive"),
+  learning_categories = "metacognitive",
   seed = 123
 )
 
-# Social learning focus
-social_nets <- generate_tna_networks(
-  n_networks = 3,
-  n_states = 6,
-  use_learning_states = TRUE,
-  learning_categories = c("social", "behavioral"),
+# Generate filtered TNA networks
+ftna_nets <- generate_tna_networks(
+  n_networks = 5,
+  model_type = "ftna",
   seed = 456
 )
 
-# Large network with all categories
-big_network <- generate_tna_networks(
-  n_networks = 1,
-  n_states = 20,
-  use_learning_states = TRUE,
-  learning_categories = "all",
-  seed = 789
-)
-
-# Advanced simulation with stability modes
-networks_adv <- generate_tna_networks(
-  n_networks = 3,
-  n_states = 5,
-  use_learning_states = TRUE,
-  learning_categories = "metacognitive",
-  use_advanced = TRUE,
-  stability_prob = 0.9,
-  unstable_mode = "unlikely_jump",
-  seed = 123
-)
+# Use the networks
+plot(nets[[1]])
+tna::centralities(nets[[1]])
 }
 
 }
 \seealso{
-\code{\link{get_learning_states}} for retrieving learning state verbs,
-\code{\link{smart_select_states}} for intelligent state selection,
-\code{\link{list_learning_categories}} for viewing available categories,
-\code{\link{simulate_sequences}} for basic sequence simulation,
-\code{\link{fit_network_model}} for model fitting.
+\code{\link{generate_group_tna_networks}} for group TNA models,
+\code{\link{generate_sequence_data}} for generating sequence data with
+probabilities, \code{\link{fit_network_model}} for model fitting,
+\code{\link{get_learning_states}} for learning state verbs.
 }

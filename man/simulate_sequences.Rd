@@ -7,9 +7,9 @@
 simulate_sequences(
   transition_matrix = NULL,
   initial_probabilities = NULL,
-  max_seq_length,
-  num_rows,
-  n_states = 4,
+  max_seq_length = 20,
+  num_rows = 100,
+  n_states = 5,
   state_names = NULL,
   use_learning_states = FALSE,
   learning_categories = "all",
@@ -30,12 +30,12 @@ probabilities are generated based on \code{n_states}. Default: NULL.}
 probabilities. Must sum to 1. If NULL, random probabilities are generated.
 Default: NULL.}
 
-\item{max_seq_length}{Integer. Maximum length of each sequence.}
+\item{max_seq_length}{Integer. Maximum length of each sequence. Default: 20.}
 
-\item{num_rows}{Integer. Number of sequences (rows) to generate.}
+\item{num_rows}{Integer. Number of sequences (rows) to generate. Default: 100.}
 
 \item{n_states}{Integer. Number of states when auto-generating probabilities.
-Ignored if \code{transition_matrix} is provided. Default: 4.}
+Ignored if \code{transition_matrix} is provided. Default: 5.}
 
 \item{state_names}{Character vector. Names for states when auto-generating.
 If NULL, uses letters (A, B, C, ...) or learning states if enabled.
@@ -110,6 +110,12 @@ drawn from a curated collection of 180+ student learning action verbs:
 }
 \examples{
 \dontrun{
+# Simplest usage: all defaults (100 sequences, 20 length, 5 states)
+sequences <- simulate_sequences(seed = 42)
+
+# With learning states
+sequences <- simulate_sequences(use_learning_states = TRUE, seed = 42)
+
 # Method 1: Provide your own transition matrix
 trans_mat <- matrix(c(
   0.7, 0.2, 0.1,

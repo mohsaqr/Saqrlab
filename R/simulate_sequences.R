@@ -11,10 +11,10 @@
 #' @param initial_probabilities Named numeric vector of initial state
 #'   probabilities. Must sum to 1. If NULL, random probabilities are generated.
 #'   Default: NULL.
-#' @param max_seq_length Integer. Maximum length of each sequence.
-#' @param num_rows Integer. Number of sequences (rows) to generate.
+#' @param max_seq_length Integer. Maximum length of each sequence. Default: 20.
+#' @param num_rows Integer. Number of sequences (rows) to generate. Default: 100.
 #' @param n_states Integer. Number of states when auto-generating probabilities.
-#'   Ignored if `transition_matrix` is provided. Default: 4.
+#'   Ignored if `transition_matrix` is provided. Default: 5.
 #' @param state_names Character vector. Names for states when auto-generating.
 #'   If NULL, uses letters (A, B, C, ...) or learning states if enabled.
 #'   Ignored if `transition_matrix` is provided. Default: NULL.
@@ -74,6 +74,12 @@
 #'
 #' @examples
 #' \dontrun{
+#' # Simplest usage: all defaults (100 sequences, 20 length, 5 states)
+#' sequences <- simulate_sequences(seed = 42)
+#'
+#' # With learning states
+#' sequences <- simulate_sequences(use_learning_states = TRUE, seed = 42)
+#'
 #' # Method 1: Provide your own transition matrix
 #' trans_mat <- matrix(c(
 #'   0.7, 0.2, 0.1,
@@ -142,9 +148,9 @@
 #' @export
 simulate_sequences <- function(transition_matrix = NULL,
                                 initial_probabilities = NULL,
-                                max_seq_length,
-                                num_rows,
-                                n_states = 4,
+                                max_seq_length = 20,
+                                num_rows = 100,
+                                n_states = 5,
                                 state_names = NULL,
                                 use_learning_states = FALSE,
                                 learning_categories = "all",

@@ -4,11 +4,11 @@
 \alias{fit_network_model}
 \title{Fit a Temporal Network Analysis Model}
 \usage{
-fit_network_model(sequences, model_type)
+fit_network_model(sequences, model_type, group = NULL)
 }
 \arguments{
 \item{sequences}{Data frame of sequences. Each row is a sequence, each
-column is a time point.}
+column is a time point. For group models, should include a grouping column.}
 
 \item{model_type}{Character. Type of model to fit. One of:
 \describe{
@@ -16,7 +16,11 @@ column is a time point.}
 \item{"ftna"}{Filtered TNA model.}
 \item{"ctna"}{Conditional TNA model.}
 \item{"atna"}{Aggregated TNA model.}
+\item{"group_tna"}{Group TNA model for multi-group analysis.}
 }}
+
+\item{group}{Character or NULL. Name of the grouping column for group_tna
+models. Required when \code{model_type = "group_tna"}. Default: NULL.}
 }
 \value{
 A fitted TNA model object of the appropriate class.
@@ -28,6 +32,10 @@ several available model types.
 \details{
 This function is a wrapper around the tna package's model fitting functions.
 It provides a unified interface for fitting different types of TNA models.
+
+For group_tna models, the \code{sequences} data frame must contain a column
+identifying the group membership of each sequence, specified by the \code{group}
+parameter.
 }
 \examples{
 \dontrun{
@@ -50,6 +58,14 @@ sequences <- simulate_sequences(
 # Fit different model types
 model_tna <- fit_network_model(sequences, "tna")
 model_ftna <- fit_network_model(sequences, "ftna")
+
+# Fit group model
+long_data <- simulate_long_data(n_groups = 5, actors_per_group = 10)
+wide_data <- long_to_wide(long_data, id_col = "Actor")
+# Add group column back
+actor_groups <- unique(long_data[, c("Actor", "Group")])
+wide_data <- merge(wide_data, actor_groups, by = "Actor")
+model_group <- fit_network_model(wide_data, "group_tna", group = "Group")
 }
 
 }

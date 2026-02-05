@@ -203,12 +203,17 @@ long_to_wide <- function(data,
   data[[".time_name"]] <- paste0(time_prefix, data[[".time_idx"]])
 
   # Pivot to wide format
+  fill_value <- if (fill_na) {
+    stats::setNames(list(NA_character_), action_col)
+  } else {
+    NULL
+  }
   result <- tidyr::pivot_wider(
     data,
     id_cols = dplyr::all_of(id_col),
     names_from = ".time_name",
     values_from = dplyr::all_of(action_col),
-    values_fill = if (fill_na) list(NA_character_) else NULL
+    values_fill = fill_value
   )
 
   # Reorder columns to ensure V1, V2, V3... order
