@@ -116,6 +116,7 @@ reference:
       - smart_select_states
       - GLOBAL_NAMES
       - get_global_names
+      - GROUP_REGULATION_ACTIONS
 
   - title: "Utilities"
     desc: "Helper functions for simulations"
