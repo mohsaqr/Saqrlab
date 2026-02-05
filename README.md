@@ -37,20 +37,13 @@ install.packages(c("tna", "seqHMM", "dplyr", "tidyr", "parallel",
 library(Saqrlab)
 library(tna)
 
-# 1. Simulate sequences with learning state names
-sequences <- simulate_sequences(
-  n_sequences = 100,
-  seq_length = 20,
-  n_states = 5,
-  seed = 42
-)
+# Generate a TNA network in one line
+model <- simulate_tna_network(seed = 42)
 
-# 2. Fit TNA model
-model <- fit_network_model(sequences, "tna")
-
-# 3. Visualize
+# Use with all tna functions
 plot(model)
 centralities(model)
+communities(model)
 ```
 
 ## Function Reference
@@ -59,6 +52,7 @@ centralities(model)
 
 | Function | Description | Example |
 |----------|-------------|---------|
+| `simulate_tna_network()` | **Single fitted TNA model** | `simulate_tna_network(seed = 42)` |
 | `simulate_matrix()` | Simple transition matrix | `simulate_matrix(n_nodes = 5, seed = 42)` |
 | `simulate_htna()` | Multi-type HTNA/MLNA matrix | `simulate_htna(n_nodes = 5, n_types = 3)` |
 | `simulate_sequences()` | Markov chain sequences | `simulate_sequences(n_sequences = 100)` |

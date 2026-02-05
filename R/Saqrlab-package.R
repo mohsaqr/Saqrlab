@@ -12,6 +12,7 @@
 #' @section Data Simulation:
 #' Functions for generating synthetic TNA data:
 #' \itemize{
+#'   \item \code{\link{simulate_tna_network}} - Single fitted TNA network (simplest)
 #'   \item \code{\link{simulate_matrix}} - Simple transition matrices
 #'   \item \code{\link{simulate_htna}} - Multi-type matrices (HTNA/MLNA/MTNA)
 #'   \item \code{\link{simulate_sequences}} - Markov chain sequences
@@ -95,24 +96,18 @@
 #' }
 #'
 #' @section Getting Started:
-#' Start with a simple workflow:
+#' Start with the simplest workflow:
 #' \preformatted{
 #' library(Saqrlab)
 #' library(tna)
 #'
-#' # Generate sequences with learning state names
-#' sequences <- simulate_sequences(
-#'   n_sequences = 100,
-#'   seq_length = 20,
-#'   n_states = 5,
-#'   seed = 42
-#' )
+#' # Generate a TNA network in one line
+#' model <- simulate_tna_network(seed = 42)
 #'
-#' # Fit a TNA model
-#' model <- fit_network_model(sequences, "tna")
-#'
-#' # Visualize
+#' # Use with tna functions
 #' plot(model)
+#' centralities(model)
+#' communities(model)
 #' }
 #'
 #' @seealso

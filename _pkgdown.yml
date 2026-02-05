@@ -51,6 +51,7 @@ reference:
   - title: "Data Simulation"
     desc: "Functions for generating synthetic data"
     contents:
+      - simulate_tna_network
       - simulate_matrix
       - simulate_htna
       - simulate_sequences
