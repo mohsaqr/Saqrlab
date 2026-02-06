@@ -362,10 +362,10 @@ table(long_data$Achiever)
 
 For machine learning applications that require one-hot encoding:
 
-```{r simulate-onehot}
+```{r simulate-onehot, eval = FALSE}
 onehot_data <- simulate_onehot_data(
-  n_sequences = 50,
-  seq_length = 15,
+  n_groups = 3,
+  n_actors = 10,
   n_states = 4,
   seed = 42
 )
