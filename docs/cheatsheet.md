@@ -115,6 +115,46 @@ edges <- extract_edges(model, threshold = 0.05)
 
 ---
 
+## Estimation Comparison
+
+```r
+# Compare models on YOUR data (sample vs remaining)
+results <- compare_network_estimation(data)
+results <- compare_network_estimation(
+  data,
+  model_types = c("tna", "atna", "ctna", "ftna"),
+  iterations = 100,
+  sampling_percent = 0.3
+)
+print(results)
+plot(results)                              # Histogram (default)
+plot(results, metric_name = "Spearman")    # Different metric
+plot(results, plot_type = "boxplot")       # Different plot type
+
+# Compare models on SIMULATED data (vs ground truth)
+results <- compare_estimation(n_simulations = 100)
+results <- compare_estimation(
+  models = c("tna", "ftna", "ctna", "atna"),
+  n_simulations = 500,
+  n_sequences = 200,
+  seq_length = 25,
+  n_states = 6
+)
+results$ranking   # Best to worst
+results$winner    # Top performer
+```
+
+| Function | Input | Method | Purpose |
+|----------|-------|--------|---------|
+| `compare_network_estimation()` | Your data | Sample vs Remaining | Test stability |
+| `compare_estimation()` | Simulated | Sample vs Ground Truth | Test accuracy |
+
+**Model Types:** `"tna"`, `"ftna"`, `"ctna"`, `"atna"`
+
+**Plot Types:** `"histogram"` (default), `"boxplot"`, `"density"`, `"bar"`, `"ridgeline"`
+
+---
+
 ## Names
 
 ```r
