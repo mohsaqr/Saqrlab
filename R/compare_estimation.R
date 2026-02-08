@@ -1,9 +1,12 @@
-#' Compare TNA vs FTNA Estimation Across Simulations
+#' Compare Model Estimation Across Simulations
 #'
 #' @description
-#' Run multiple simulations comparing how well TNA and FTNA recover the true
-#' transition structure, using `tna::compare()` for each comparison.
+#' Run multiple simulations comparing how well different TNA model types
+#' (tna, ftna, ctna, atna) recover the true transition structure,
+#' using `tna::compare()` for each comparison.
 #'
+#' @param models Character vector. Model types to compare.
+#'   Options: "tna", "ftna", "ctna", "atna". Default: c("tna", "ftna").
 #' @param n_simulations Integer. Number of simulations to run. Default: 1000.
 #' @param n_sequences Integer. Number of sequences per simulation. Default: 200.
 #' @param seq_length Integer. Maximum sequence length. Default: 25.
@@ -18,9 +21,11 @@
 #'
 #' @return A list containing:
 #' \describe{
-#'   \item{summary}{Data frame with mean/sd of metrics by model type.}
+#'   \item{comparison}{Side-by-side comparison of key metrics across models.}
+#'   \item{summary}{Data frame with mean/sd of all metrics by model type.}
 #'   \item{raw_results}{Data frame with all simulation results.}
-#'   \item{winner}{Which model performed better on average.}
+#'   \item{ranking}{Models ranked by Pearson correlation (best to worst).}
+#'   \item{winner}{Model with highest Pearson correlation.}
 #'   \item{params}{Parameters used for the simulation.}
 #' }
 #'
@@ -28,26 +33,42 @@
 #' For each simulation:
 #' 1. Generate random transition probabilities (ground truth)
 #' 2. Simulate sequences with optional NAs (varying lengths)
-#' 3. Fit both TNA and FTNA models
+#' 3. Fit all specified model types
 #' 4. Compare each to ground truth using `tna::compare()`
-#' 5. Collect metrics (correlation, RMSE, cosine similarity, etc.)
+#' 5. Collect metrics (Pearson, Spearman, Kendall, Euclidean, etc.)
+#'
+#' Available model types:
+#' \itemize{
+#'   \item \code{tna}: Standard transition network analysis (probabilities)
+#'   \item \code{ftna}: Frequency-based TNA (raw counts)
+#'   \item \code{ctna}: Concurrent TNA
+#'   \item \code{atna}: Absorbing TNA
+#' }
 #'
 #' @examples
 #' \dontrun{
-#' # Quick test with 100 simulations
+#' # Compare 2 models (default: tna vs ftna)
 #' results <- compare_estimation(n_simulations = 100, seed = 42)
-#' results$summary
-#' results$winner
 #'
-#' # Full study with 1000 simulations
+#' # Compare 3 models
 #' results <- compare_estimation(
-#'   n_simulations = 1000,
-#'   n_sequences = 300,
-#'   seq_length = 30,
-#'   na_range = c(0, 10),
+#'   models = c("tna", "ftna", "ctna"),
+#'   n_simulations = 100,
+#'   seed = 42
+#' )
+#'
+#' # Compare all 4 models
+#' results <- compare_estimation(
+#'   models = c("tna", "ftna", "ctna", "atna"),
+#'   n_simulations = 500,
 #'   parallel = TRUE,
 #'   seed = 42
 #' )
+#'
+#' # View results
+#' results$comparison  # Side-by-side metrics
+#' results$ranking     # Best to worst
+#' results$winner      # Top performer
 #' }
 #'
 #' @importFrom parallel detectCores mclapply
@@ -55,7 +76,8 @@
 #' @import tna
 #' @import dplyr
 #' @export
-compare_estimation <- function(n_simulations = 1000,
+compare_estimation <- function(models = c("tna", "ftna"),
+                                n_simulations = 1000,
                                 n_sequences = 200,
                                 seq_length = 25,
                                 n_states = 6,
@@ -66,10 +88,30 @@ compare_estimation <- function(n_simulations = 1000,
                                 parallel = FALSE,
                                 cores = parallel::detectCores() - 1) {
 
+  # Validate models
+ valid_models <- c("tna", "ftna", "ctna", "atna")
+  models <- match.arg(models, valid_models, several.ok = TRUE)
+  if (length(models) < 2) {
+    stop("At least 2 models required for comparison.")
+  }
+
   if (!is.null(seed)) set.seed(seed)
 
   # Normalize na_range
- if (length(na_range) == 1) na_range <- c(na_range, na_range)
+  if (length(na_range) == 1) na_range <- c(na_range, na_range)
+
+  # Model fitting functions
+  fit_model <- function(sequences, model_type) {
+    tryCatch(
+      switch(model_type,
+        "tna" = tna::tna(sequences),
+        "ftna" = tna::ftna(sequences),
+        "ctna" = tna::ctna(sequences),
+        "atna" = tna::atna(sequences)
+      ),
+      error = function(e) NULL
+    )
+  }
 
   # Function to run single simulation
   run_single_sim <- function(sim_id) {
@@ -87,66 +129,57 @@ compare_estimation <- function(n_simulations = 1000,
       na_range = na_range
     )
 
-    # Fit models
-    model_tna <- tryCatch(tna::tna(sequences), error = function(e) NULL)
-    model_ftna <- tryCatch(tna::ftna(sequences), error = function(e) NULL)
-
-    if (is.null(model_tna) || is.null(model_ftna)) {
-      return(NULL)
-    }
-
     # Create ground truth "model" for comparison
-    true_model <- list(weights = true_trans, class = "tna")
+    true_model <- list(weights = true_trans)
     class(true_model) <- "tna"
 
-    # Compare using tna::compare()
-    tna_comp <- tryCatch(
-      tna::compare(model_tna, true_model, scaling = scaling),
-      error = function(e) NULL
-    )
+    # Fit and compare each model
+    all_metrics <- list()
 
-    ftna_comp <- tryCatch(
-      tna::compare(model_ftna, true_model, scaling = scaling),
-      error = function(e) NULL
-    )
+    for (model_type in models) {
+      fitted_model <- fit_model(sequences, model_type)
 
-    if (is.null(tna_comp) || is.null(ftna_comp)) {
-      return(NULL)
-    }
+      if (is.null(fitted_model)) next
 
-    # Extract metrics from tna::compare() output
-    extract_metrics <- function(comp, model_type) {
-      if (!is.null(comp$summary_metrics)) {
+      # Compare using tna::compare()
+      comp <- tryCatch(
+        tna::compare(fitted_model, true_model, scaling = scaling),
+        error = function(e) NULL
+      )
+
+      if (!is.null(comp) && !is.null(comp$summary_metrics)) {
         df <- comp$summary_metrics
         df$model_type <- model_type
         df$sim_id <- sim_id
-        return(df)
+        all_metrics[[model_type]] <- df
+      } else {
+        # Fallback: calculate basic correlation
+        model_weights <- fitted_model$weights
+        if (model_type == "ftna") {
+          model_weights <- model_weights / rowSums(model_weights)
+          model_weights[is.nan(model_weights)] <- 0
+        }
+        cor_val <- tryCatch(
+          cor(as.vector(true_trans), as.vector(model_weights)),
+          error = function(e) NA
+        )
+        all_metrics[[model_type]] <- data.frame(
+          sim_id = sim_id,
+          model_type = model_type,
+          category = "Correlations",
+          metric = "Pearson",
+          value = cor_val
+        )
       }
-      return(NULL)
     }
 
-    tna_metrics <- extract_metrics(tna_comp, "tna")
-    ftna_metrics <- extract_metrics(ftna_comp, "ftna")
-
-    if (is.null(tna_metrics) && is.null(ftna_metrics)) {
-      # Fallback: calculate basic metrics manually
-      tna_cor <- cor(as.vector(true_trans), as.vector(model_tna$weights))
-      ftna_norm <- model_ftna$weights / rowSums(model_ftna$weights)
-      ftna_norm[is.nan(ftna_norm)] <- 0
-      ftna_cor <- cor(as.vector(true_trans), as.vector(ftna_norm))
-
-      return(data.frame(
-        sim_id = sim_id,
-        model_type = c("tna", "ftna"),
-        correlation = c(tna_cor, ftna_cor)
-      ))
-    }
-
-    rbind(tna_metrics, ftna_metrics)
+    if (length(all_metrics) == 0) return(NULL)
+    dplyr::bind_rows(all_metrics)
   }
 
   # Run simulations
   if (verbose) {
+    cat(sprintf("Comparing %d models: %s\n", length(models), paste(toupper(models), collapse = " vs ")))
     cat(sprintf("Running %d simulations (n=%d, len=%d, states=%d, NA=%d-%d)...\n",
                 n_simulations, n_sequences, seq_length, n_states, na_range[1], na_range[2]))
   }
@@ -172,84 +205,63 @@ compare_estimation <- function(n_simulations = 1000,
   raw_results <- dplyr::bind_rows(results_list)
 
   # Summarize by model type
-  if ("value" %in% names(raw_results)) {
-    # tna::compare() format
-    summary_df <- raw_results %>%
-      dplyr::group_by(model_type, category, metric) %>%
-      dplyr::summarise(
-        mean = mean(value, na.rm = TRUE),
-        sd = sd(value, na.rm = TRUE),
-        median = median(value, na.rm = TRUE),
-        n = dplyr::n(),
-        .groups = "drop"
-      )
-  } else {
-    # Fallback format
-    summary_df <- raw_results %>%
-      dplyr::group_by(model_type) %>%
-      dplyr::summarise(
-        correlation_mean = mean(correlation, na.rm = TRUE),
-        correlation_sd = sd(correlation, na.rm = TRUE),
-        n = dplyr::n(),
-        .groups = "drop"
-      )
-  }
+  summary_df <- raw_results %>%
+    dplyr::group_by(model_type, category, metric) %>%
+    dplyr::summarise(
+      mean = mean(value, na.rm = TRUE),
+      sd = sd(value, na.rm = TRUE),
+      median = median(value, na.rm = TRUE),
+      n = dplyr::n(),
+      .groups = "drop"
+    )
 
-  # Create comparison summary (TNA vs FTNA side by side)
-  if ("metric" %in% names(summary_df)) {
-    comparison <- summary_df %>%
-      dplyr::filter(metric == "Pearson") %>%
-      dplyr::select(model_type, mean, sd)
+  # Create ranking based on Pearson correlation
+  pearson_summary <- summary_df %>%
+    dplyr::filter(metric == "Pearson") %>%
+    dplyr::arrange(dplyr::desc(mean)) %>%
+    dplyr::select(model_type, mean, sd)
 
-    tna_cor <- comparison$mean[comparison$model_type == "tna"]
-    ftna_cor <- comparison$mean[comparison$model_type == "ftna"]
-  } else if ("correlation_mean" %in% names(summary_df)) {
-    tna_cor <- summary_df$correlation_mean[summary_df$model_type == "tna"]
-    ftna_cor <- summary_df$correlation_mean[summary_df$model_type == "ftna"]
-  } else {
-    tna_cor <- ftna_cor <- NA
- }
-
-  winner <- if (length(tna_cor) > 0 && length(ftna_cor) > 0 && !is.na(tna_cor) && !is.na(ftna_cor)) {
-    if (abs(tna_cor - ftna_cor) < 0.001) "TIE" else if (tna_cor > ftna_cor) "TNA" else "FTNA"
-  } else {
-    "TIE"
-  }
+  ranking <- pearson_summary$model_type
+  winner <- ranking[1]
 
   # Create side-by-side comparison for key metrics
-  if ("metric" %in% names(summary_df)) {
-    key_metrics <- c("Pearson", "Spearman", "Kendall", "Euclidean", "Frobenius")
-    comparison_df <- summary_df %>%
-      dplyr::filter(metric %in% key_metrics) %>%
-      tidyr::pivot_wider(
-        id_cols = c(category, metric),
-        names_from = model_type,
-        values_from = c(mean, sd)
-      ) %>%
-      dplyr::select(category, metric, mean_tna, sd_tna, mean_ftna, sd_ftna) %>%
-      dplyr::rename(
-        TNA_mean = mean_tna, TNA_sd = sd_tna,
-        FTNA_mean = mean_ftna, FTNA_sd = sd_ftna
-      )
-  } else {
-    comparison_df <- summary_df
-  }
+  key_metrics <- c("Pearson", "Spearman", "Kendall", "Euclidean", "Frobenius")
+
+  comparison_df <- summary_df %>%
+    dplyr::filter(metric %in% key_metrics) %>%
+    tidyr::pivot_wider(
+      id_cols = c(category, metric),
+      names_from = model_type,
+      values_from = c(mean, sd),
+      names_glue = "{model_type}_{.value}"
+    )
+
+  # Reorder columns for readability
+  model_cols <- unlist(lapply(models, function(m) c(paste0(m, "_mean"), paste0(m, "_sd"))))
+  existing_cols <- intersect(model_cols, names(comparison_df))
+  comparison_df <- comparison_df %>%
+    dplyr::select(category, metric, dplyr::all_of(existing_cols))
 
   if (verbose) {
     cat(sprintf("\nCompleted %d/%d simulations successfully.\n",
                 length(results_list), n_simulations))
-    cat(sprintf("Pearson correlation: TNA=%.3f, FTNA=%.3f\n",
-                ifelse(length(tna_cor) > 0, tna_cor, NA),
-                ifelse(length(ftna_cor) > 0, ftna_cor, NA)))
-    cat(sprintf("Winner: %s\n", winner))
+    cat("\nPearson correlation by model:\n")
+    for (i in seq_along(ranking)) {
+      m <- ranking[i]
+      vals <- pearson_summary[pearson_summary$model_type == m, ]
+      cat(sprintf("  %d. %s: %.3f (sd=%.3f)\n", i, toupper(m), vals$mean, vals$sd))
+    }
+    cat(sprintf("\nWinner: %s\n", toupper(winner)))
   }
 
   list(
     comparison = comparison_df,
     summary = summary_df,
     raw_results = raw_results,
+    ranking = ranking,
     winner = winner,
     params = list(
+      models = models,
       n_simulations = n_simulations,
       n_sequences = n_sequences,
       seq_length = seq_length,

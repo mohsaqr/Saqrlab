@@ -2,9 +2,10 @@
 % Please edit documentation in R/compare_estimation.R
 \name{compare_estimation}
 \alias{compare_estimation}
-\title{Compare TNA vs FTNA Estimation Across Simulations}
+\title{Compare Model Estimation Across Simulations}
 \usage{
 compare_estimation(
+  models = c("tna", "ftna"),
   n_simulations = 1000,
   n_sequences = 200,
   seq_length = 25,
@@ -18,6 +19,9 @@ compare_estimation(
 )
 }
 \arguments{
+\item{models}{Character vector. Model types to compare.
+Options: "tna", "ftna", "ctna", "atna". Default: c("tna", "ftna").}
+
 \item{n_simulations}{Integer. Number of simulations to run. Default: 1000.}
 
 \item{n_sequences}{Integer. Number of sequences per simulation. Default: 200.}
@@ -42,42 +46,61 @@ varying lengths. Default: c(0, 5).}
 \value{
 A list containing:
 \describe{
-\item{summary}{Data frame with mean/sd of metrics by model type.}
+\item{comparison}{Side-by-side comparison of key metrics across models.}
+\item{summary}{Data frame with mean/sd of all metrics by model type.}
 \item{raw_results}{Data frame with all simulation results.}
-\item{winner}{Which model performed better on average.}
+\item{ranking}{Models ranked by Pearson correlation (best to worst).}
+\item{winner}{Model with highest Pearson correlation.}
 \item{params}{Parameters used for the simulation.}
 }
 }
 \description{
-Run multiple simulations comparing how well TNA and FTNA recover the true
-transition structure, using \code{tna::compare()} for each comparison.
+Run multiple simulations comparing how well different TNA model types
+(tna, ftna, ctna, atna) recover the true transition structure,
+using \code{tna::compare()} for each comparison.
 }
 \details{
 For each simulation:
 \enumerate{
 \item Generate random transition probabilities (ground truth)
 \item Simulate sequences with optional NAs (varying lengths)
-\item Fit both TNA and FTNA models
+\item Fit all specified model types
 \item Compare each to ground truth using \code{tna::compare()}
-\item Collect metrics (correlation, RMSE, cosine similarity, etc.)
+\item Collect metrics (Pearson, Spearman, Kendall, Euclidean, etc.)
+}
+
+Available model types:
+\itemize{
+\item \code{tna}: Standard transition network analysis (probabilities)
+\item \code{ftna}: Frequency-based TNA (raw counts)
+\item \code{ctna}: Concurrent TNA
+\item \code{atna}: Absorbing TNA
 }
 }
 \examples{
 \dontrun{
-# Quick test with 100 simulations
+# Compare 2 models (default: tna vs ftna)
 results <- compare_estimation(n_simulations = 100, seed = 42)
-results$summary
-results$winner
 
-# Full study with 1000 simulations
+# Compare 3 models
 results <- compare_estimation(
-  n_simulations = 1000,
-  n_sequences = 300,
-  seq_length = 30,
-  na_range = c(0, 10),
+  models = c("tna", "ftna", "ctna"),
+  n_simulations = 100,
+  seed = 42
+)
+
+# Compare all 4 models
+results <- compare_estimation(
+  models = c("tna", "ftna", "ctna", "atna"),
+  n_simulations = 500,
   parallel = TRUE,
   seed = 42
 )
+
+# View results
+results$comparison  # Side-by-side metrics
+results$ranking     # Best to worst
+results$winner      # Top performer
 }
 
 }
