@@ -114,15 +114,7 @@ if (!is.null(class_probs)) {
 
 # --- Determine node names ---
 if (is.null(names)) {
-    if (n_nodes > length(GLOBAL_NAMES)) {
-    # Generate additional names if needed
-    base_names <- GLOBAL_NAMES
-    extra_needed <- n_nodes - length(GLOBAL_NAMES)
-    extra_names <- paste0("Node", seq_len(extra_needed))
-    node_names <- c(sample(base_names), extra_names)
-    } else {
-    node_names <- sample(GLOBAL_NAMES, n_nodes)
-    }
+    node_names <- get_global_names(n_nodes)
 } else {
     if (length(names) < n_nodes) {
     stop("Provided names vector must have at least n_nodes elements.")
