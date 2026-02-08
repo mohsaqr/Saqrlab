@@ -2,6 +2,7 @@
 % Please edit documentation in R/network_comparison.R
 \name{compare_edge_recovery}
 \alias{compare_edge_recovery}
+\alias{calculate_edge_recovery}
 \title{Calculate Edge Recovery Metrics}
 \usage{
 compare_edge_recovery(
@@ -10,6 +11,8 @@ compare_edge_recovery(
   threshold = 0.01,
   return_edges = FALSE
 )
+
+calculate_edge_recovery(...)
 }
 \arguments{
 \item{original}{A TNA model object (the original/ground truth model).}

@@ -2,6 +2,8 @@
 % Please edit documentation in R/simulate_tna_networks.R
 \name{simulate_tna_datasets}
 \alias{simulate_tna_datasets}
+\alias{generate_tna_datasets}
+\alias{generate_sequence_data}
 \title{Simulate TNA Datasets (Sequences + Models + Probabilities)}
 \usage{
 simulate_tna_datasets(
@@ -32,6 +34,10 @@ simulate_tna_datasets(
   max_na = NULL,
   include_probabilities = NULL
 )
+
+generate_tna_datasets(...)
+
+generate_sequence_data(...)
 }
 \arguments{
 \item{n_datasets}{Integer. Number of datasets to generate. Default: 1.}

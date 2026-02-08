@@ -277,3 +277,10 @@ run_bootstrap_iteration <- function(trans_matrix = NULL,
     TP_matrix = TP, TN_matrix = TN, FP_matrix = FP, FN_matrix = FN
   ))
 }
+
+
+# Backward compatibility alias (silent - no warning)
+
+#' @rdname run_bootstrap_iteration
+#' @export
+evaluate_bootstrap <- function(...) run_bootstrap_iteration(...)

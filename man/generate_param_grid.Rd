@@ -2,9 +2,12 @@
 % Please edit documentation in R/generate_param_grid.R
 \name{generate_param_grid}
 \alias{generate_param_grid}
+\alias{create_param_grid}
 \title{Generate Parameter Grid for Simulations}
 \usage{
 generate_param_grid(param_ranges, n = 10, method = "random")
+
+create_param_grid(...)
 }
 \arguments{
 \item{param_ranges}{Named list of parameter ranges. Each element can be:

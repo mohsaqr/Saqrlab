@@ -464,3 +464,10 @@ compare_edge_recovery <- function(original,
   class(result) <- c("edge_recovery", "list")
   return(result)
 }
+
+
+# Backward compatibility alias (silent - no warning)
+
+#' @rdname compare_edge_recovery
+#' @export
+calculate_edge_recovery <- function(...) compare_edge_recovery(...)

@@ -650,3 +650,10 @@ summarize_grid_results <- function(grid_results_list,
     compiled_individual_runs = compiled_data_output
   )))
 }
+
+
+# Backward compatibility alias (silent - no warning)
+
+#' @rdname summarize_grid_results
+#' @export
+analyze_grid_results <- function(...) summarize_grid_results(...)

@@ -2,6 +2,7 @@
 % Please edit documentation in R/simulate_tna_networks.R
 \name{simulate_tna_matrix}
 \alias{simulate_tna_matrix}
+\alias{generate_tna_matrix}
 \title{Simulate TNA Transition Matrix with Node Groupings}
 \usage{
 simulate_tna_matrix(
@@ -19,6 +20,8 @@ simulate_tna_matrix(
   verbose = TRUE,
   learning_categories = NULL
 )
+
+generate_tna_matrix(...)
 }
 \arguments{
 \item{nodes_per_group}{Integer. Number of nodes per group. Default: 5.}

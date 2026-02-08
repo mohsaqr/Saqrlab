@@ -2,6 +2,7 @@
 % Please edit documentation in R/summarize_grid_results.R
 \name{summarize_grid_results}
 \alias{summarize_grid_results}
+\alias{analyze_grid_results}
 \title{Summarize Grid Simulation Results}
 \usage{
 summarize_grid_results(
@@ -18,6 +19,8 @@ summarize_grid_results(
   num_rows_range = NULL,
   max_seq_length_range = NULL
 )
+
+analyze_grid_results(...)
 }
 \arguments{
 \item{grid_results_list}{List output from \code{run_grid_simulation()}.}

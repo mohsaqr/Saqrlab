@@ -2,6 +2,7 @@
 % Please edit documentation in R/learning_states.R
 \name{select_states}
 \alias{select_states}
+\alias{smart_select_states}
 \title{Select States for Networks}
 \usage{
 select_states(
@@ -11,6 +12,8 @@ select_states(
   primary_ratio = 0.6,
   seed = NULL
 )
+
+smart_select_states(...)
 }
 \arguments{
 \item{n_states}{Integer. Number of states needed.}

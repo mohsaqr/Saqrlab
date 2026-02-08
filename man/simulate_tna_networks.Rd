@@ -2,6 +2,7 @@
 % Please edit documentation in R/simulate_tna_networks.R
 \name{simulate_tna_networks}
 \alias{simulate_tna_networks}
+\alias{generate_tna_networks}
 \title{Simulate TNA Network Objects}
 \usage{
 simulate_tna_networks(
@@ -19,6 +20,8 @@ simulate_tna_networks(
   learning_categories = NULL,
   ...
 )
+
+generate_tna_networks(...)
 }
 \arguments{
 \item{n_networks}{Integer. Number of networks to generate. Default: 1.}

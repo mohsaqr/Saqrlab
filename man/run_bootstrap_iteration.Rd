@@ -2,6 +2,7 @@
 % Please edit documentation in R/run_bootstrap_iteration.R
 \name{run_bootstrap_iteration}
 \alias{run_bootstrap_iteration}
+\alias{evaluate_bootstrap}
 \title{Run Bootstrap Iteration for a Single Simulation Run}
 \usage{
 run_bootstrap_iteration(
@@ -26,6 +27,8 @@ run_bootstrap_iteration(
   min_na = NULL,
   max_na = NULL
 )
+
+evaluate_bootstrap(...)
 }
 \arguments{
 \item{trans_matrix}{Square numeric matrix of transition probabilities.

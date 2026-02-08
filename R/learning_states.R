@@ -511,3 +511,10 @@ select_states <- function(n_states,
 
   return(selected[1:min(n_states, length(selected))])
 }
+
+
+# Backward compatibility alias (silent - no warning)
+
+#' @rdname select_states
+#' @export
+smart_select_states <- function(...) select_states(...)

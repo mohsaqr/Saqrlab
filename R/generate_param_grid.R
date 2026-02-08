@@ -150,3 +150,10 @@ generate_param_grid <- function(param_ranges, n = 10, method = "random") {
 
   return(param_grid)
 }
+
+
+# Backward compatibility alias (silent - no warning)
+
+#' @rdname generate_param_grid
+#' @export
+create_param_grid <- function(...) generate_param_grid(...)

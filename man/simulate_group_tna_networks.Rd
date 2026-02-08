@@ -2,6 +2,7 @@
 % Please edit documentation in R/simulate_tna_networks.R
 \name{simulate_group_tna_networks}
 \alias{simulate_group_tna_networks}
+\alias{generate_group_tna_networks}
 \title{Simulate Group TNA Network Objects}
 \usage{
 simulate_group_tna_networks(
@@ -19,6 +20,8 @@ simulate_group_tna_networks(
   learning_categories = NULL,
   ...
 )
+
+generate_group_tna_networks(...)
 }
 \arguments{
 \item{n_groups}{Integer. Number of groups in the network. Default: 5.}
