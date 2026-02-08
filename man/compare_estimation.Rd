@@ -19,8 +19,9 @@ compare_estimation(
 )
 }
 \arguments{
-\item{models}{Character vector. Model types to compare.
-Options: "tna", "ftna", "ctna", "atna". Default: c("tna", "ftna").}
+\item{models}{Character vector. Model types to compare. Any model function
+exported by tna package works: "tna", "ftna", "ctna", "atna", "sna", "tsn".
+Default: c("tna", "ftna").}
 
 \item{n_simulations}{Integer. Number of simulations to run. Default: 1000.}
 
@@ -56,8 +57,8 @@ A list containing:
 }
 \description{
 Run multiple simulations comparing how well different TNA model types
-(tna, ftna, ctna, atna) recover the true transition structure,
-using \code{tna::compare()} for each comparison.
+recover the true transition structure, using \code{tna::compare()} for each
+comparison. Supports any model type available in the tna package.
 }
 \details{
 For each simulation:
@@ -69,12 +70,15 @@ For each simulation:
 \item Collect metrics (Pearson, Spearman, Kendall, Euclidean, etc.)
 }
 
-Available model types:
+Available model types (any tna package model):
 \itemize{
 \item \code{tna}: Standard transition network analysis (probabilities)
 \item \code{ftna}: Frequency-based TNA (raw counts)
 \item \code{ctna}: Concurrent TNA
 \item \code{atna}: Absorbing TNA
+\item \code{sna}: Sequential network analysis
+\item \code{tsn}: Time-series network
+\item Any other model function exported by tna package
 }
 }
 \examples{

@@ -2,11 +2,12 @@
 #'
 #' @description
 #' Run multiple simulations comparing how well different TNA model types
-#' (tna, ftna, ctna, atna) recover the true transition structure,
-#' using `tna::compare()` for each comparison.
+#' recover the true transition structure, using `tna::compare()` for each
+#' comparison. Supports any model type available in the tna package.
 #'
-#' @param models Character vector. Model types to compare.
-#'   Options: "tna", "ftna", "ctna", "atna". Default: c("tna", "ftna").
+#' @param models Character vector. Model types to compare. Any model function
+#'   exported by tna package works: "tna", "ftna", "ctna", "atna", "sna", "tsn".
+#'   Default: c("tna", "ftna").
 #' @param n_simulations Integer. Number of simulations to run. Default: 1000.
 #' @param n_sequences Integer. Number of sequences per simulation. Default: 200.
 #' @param seq_length Integer. Maximum sequence length. Default: 25.
@@ -37,12 +38,15 @@
 #' 4. Compare each to ground truth using `tna::compare()`
 #' 5. Collect metrics (Pearson, Spearman, Kendall, Euclidean, etc.)
 #'
-#' Available model types:
+#' Available model types (any tna package model):
 #' \itemize{
 #'   \item \code{tna}: Standard transition network analysis (probabilities)
 #'   \item \code{ftna}: Frequency-based TNA (raw counts)
 #'   \item \code{ctna}: Concurrent TNA
 #'   \item \code{atna}: Absorbing TNA
+#'   \item \code{sna}: Sequential network analysis
+#'   \item \code{tsn}: Time-series network
+#'   \item Any other model function exported by tna package
 #' }
 #'
 #' @examples
@@ -88,11 +92,16 @@ compare_estimation <- function(models = c("tna", "ftna"),
                                 parallel = FALSE,
                                 cores = parallel::detectCores() - 1) {
 
-  # Validate models
- valid_models <- c("tna", "ftna", "ctna", "atna")
-  models <- match.arg(models, valid_models, several.ok = TRUE)
+  # Validate models - check they exist in tna package
   if (length(models) < 2) {
     stop("At least 2 models required for comparison.")
+  }
+
+  # Check each model exists as a function in tna
+  for (m in models) {
+    if (!exists(m, where = asNamespace("tna"), mode = "function")) {
+      stop(sprintf("Model '%s' not found in tna package. Available: tna, ftna, ctna, atna, sna, tsn", m))
+    }
   }
 
   if (!is.null(seed)) set.seed(seed)
@@ -100,17 +109,12 @@ compare_estimation <- function(models = c("tna", "ftna"),
   # Normalize na_range
   if (length(na_range) == 1) na_range <- c(na_range, na_range)
 
-  # Model fitting functions
+  # Model fitting function - dynamically calls any tna model
   fit_model <- function(sequences, model_type) {
-    tryCatch(
-      switch(model_type,
-        "tna" = tna::tna(sequences),
-        "ftna" = tna::ftna(sequences),
-        "ctna" = tna::ctna(sequences),
-        "atna" = tna::atna(sequences)
-      ),
-      error = function(e) NULL
-    )
+    tryCatch({
+      model_fn <- get(model_type, envir = asNamespace("tna"))
+      model_fn(sequences)
+    }, error = function(e) NULL)
   }
 
   # Function to run single simulation
