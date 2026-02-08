@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Saqrlab - R Package Documentation</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1a1a2e;
+    --muted: #6b7280;
+    --accent: #2563eb;
+    --accent-light: #eff6ff;
+    --border: #e5e7eb;
+    --code-bg: #f8fafc;
+    --code-border: #e2e8f0;
+    --table-stripe: #f9fafb;
+    --header-bg: #0f172a;
+    --success: #059669;
+    --warn: #d97706;
+    --sidebar-w: 280px;
+    --output-bg: #f0fdf4;
+    --output-border: #86efac;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    color: var(--fg);
+    line-height: 1.7;
+    background: var(--bg);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0;
+    width: var(--sidebar-w);
+    height: 100vh;
+    overflow-y: auto;
+    background: var(--header-bg);
+    color: #cbd5e1;
+    padding: 1.5rem 0;
+    font-size: 0.85rem;
+    z-index: 100;
+    scrollbar-width: thin;
+    scrollbar-color: #334155 transparent;
+  }
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+
+  .sidebar .logo {
+    padding: 0 1.5rem 1.2rem;
+    border-bottom: 1px solid #1e293b;
+    margin-bottom: 1rem;
+  }
+  .sidebar .logo h1 {
+    font-size: 1.3rem;
+    color: #f1f5f9;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .sidebar .logo p {
+    font-size: 0.75rem;
+    color: #64748b;
+    margin-top: 0.2rem;
+  }
+
+  .sidebar nav ul { list-style: none; }
+  .sidebar nav > ul > li > a {
+    display: block;
+    padding: 0.5rem 1.5rem;
+    color: #94a3b8;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    transition: color 0.15s;
+  }
+  .sidebar nav > ul > li > a:hover { color: #e2e8f0; }
+
+  .sidebar nav > ul > li > ul { margin-bottom: 0.5rem; }
+  .sidebar nav > ul > li > ul > li > a {
+    display: block;
+    padding: 0.3rem 1.5rem 0.3rem 2.2rem;
+    color: #94a3b8;
+    text-decoration: none;
+    font-size: 0.82rem;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    transition: all 0.15s;
+    border-left: 2px solid transparent;
+  }
+  .sidebar nav > ul > li > ul > li > a:hover {
+    color: #e2e8f0;
+    background: rgba(255,255,255,0.04);
+    border-left-color: var(--accent);
+  }
+
+  .main {
+    margin-left: var(--sidebar-w);
+    max-width: 900px;
+    padding: 2.5rem 3rem 5rem;
+  }
+
+  h2 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin: 3rem 0 0.5rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid var(--border);
+    color: var(--fg);
+    letter-spacing: -0.02em;
+  }
+  h2:first-of-type { border-top: none; margin-top: 0; padding-top: 0; }
+
+  h3 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin: 2rem 0 0.5rem;
+    color: var(--fg);
+  }
+  h3 code {
+    font-size: 1.1rem;
+    color: var(--accent);
+    background: var(--accent-light);
+    padding: 0.15em 0.4em;
+    border-radius: 4px;
+  }
+
+  h4 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 1.5rem 0 0.4rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  p { margin: 0.5rem 0; color: #374151; }
+
+  .hero {
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+    color: white;
+    padding: 2.5rem 2rem;
+    border-radius: 12px;
+    margin-bottom: 2.5rem;
+  }
+  .hero h1 { font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; }
+  .hero p { color: #94a3b8; font-size: 1.05rem; margin-top: 0.5rem; }
+  .hero .badges { margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .hero .badge {
+    display: inline-block;
+    padding: 0.25rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .badge-blue { background: #1d4ed8; color: #dbeafe; }
+  .badge-green { background: #065f46; color: #d1fae5; }
+  .badge-purple { background: #5b21b6; color: #ede9fe; }
+  .badge-amber { background: #92400e; color: #fef3c7; }
+  .badge-teal { background: #115e59; color: #ccfbf1; }
+  .badge-rose { background: #9f1239; color: #ffe4e6; }
+
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--code-border);
+    border-radius: 8px;
+    padding: 1rem 1.2rem;
+    overflow-x: auto;
+    font-size: 0.84rem;
+    line-height: 1.6;
+    margin: 0.8rem 0;
+  }
+  code {
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.88em;
+  }
+  p code, li code, td code {
+    background: var(--code-bg);
+    border: 1px solid var(--code-border);
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+    color: #be185d;
+    font-size: 0.85em;
+  }
+
+  .signature {
+    background: #f8fafc;
+    border-left: 3px solid var(--accent);
+    padding: 0.8rem 1rem;
+    border-radius: 0 8px 8px 0;
+    margin: 0.8rem 0;
+    overflow-x: auto;
+  }
+  .signature code { color: var(--fg); font-size: 0.82rem; }
+
+  .output {
+    background: var(--output-bg);
+    border: 1px solid var(--output-border);
+    border-radius: 8px;
+    padding: 1rem 1.2rem;
+    font-size: 0.82rem;
+    overflow-x: auto;
+    margin: 0.5rem 0 1rem;
+    position: relative;
+  }
+  .output::before {
+    content: 'Output';
+    position: absolute;
+    top: -0.6rem;
+    left: 0.8rem;
+    background: var(--output-bg);
+    padding: 0 0.4rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--success);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .output code { color: #166534; background: none; border: none; padding: 0; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.8rem 0 1.2rem;
+    font-size: 0.88rem;
+  }
+  th {
+    text-align: left;
+    padding: 0.6rem 0.8rem;
+    border-bottom: 2px solid var(--fg);
+    font-weight: 600;
+    font-size: 0.82rem;
+    white-space: nowrap;
+  }
+  td {
+    padding: 0.45rem 0.8rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tr:nth-child(even) { background: var(--table-stripe); }
+
+  details {
+    margin: 0.8rem 0;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  summary {
+    padding: 0.7rem 1rem;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    background: #f9fafb;
+    user-select: none;
+    transition: background 0.15s;
+  }
+  summary:hover { background: #f3f4f6; }
+  details[open] summary { border-bottom: 1px solid var(--border); }
+  details .detail-content { padding: 1rem; }
+
+  ul, ol { padding-left: 1.5rem; margin: 0.4rem 0; }
+  li { margin: 0.25rem 0; color: #374151; }
+
+  .install-box {
+    background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+    border: 1px solid #bfdbfe;
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin: 1rem 0 2rem;
+  }
+
+  .quick-ref {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.8rem;
+    margin: 1rem 0 2rem;
+  }
+  .quick-ref-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.2rem;
+    transition: box-shadow 0.15s;
+  }
+  .quick-ref-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .quick-ref-card h4 {
+    margin: 0 0 0.4rem;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--fg);
+    font-size: 0.92rem;
+  }
+  .quick-ref-card .funcs {
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.8rem;
+    color: var(--accent);
+  }
+
+  .note {
+    background: #fffbeb;
+    border-left: 3px solid #f59e0b;
+    padding: 0.6rem 1rem;
+    border-radius: 0 6px 6px 0;
+    margin: 0.8rem 0;
+    font-size: 0.88rem;
+  }
+
+  .returns {
+    background: #f0f9ff;
+    border-left: 3px solid #0ea5e9;
+    padding: 0.6rem 1rem;
+    border-radius: 0 6px 6px 0;
+    margin: 0.8rem 0;
+    font-size: 0.88rem;
+  }
+
+  @media (max-width: 900px) {
+    .sidebar { display: none; }
+    .main { margin-left: 0; padding: 1.5rem; }
+    .quick-ref { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="logo">
+    <h1>Saqrlab</h1>
+    <p>v0.1.0 &middot; R Package</p>
+  </div>
+  <nav>
+    <ul>
+      <li><a href="#getting-started">Getting Started</a></li>
+      <li><a href="#sequences">Sequences</a>
+        <ul>
+          <li><a href="#simulate_sequences">simulate_sequences()</a></li>
+          <li><a href="#simulate_sequences_advanced">simulate_sequences_advanced()</a></li>
+        </ul>
+      </li>
+      <li><a href="#datasets">Datasets &amp; Networks</a>
+        <ul>
+          <li><a href="#simulate_tna_datasets">simulate_tna_datasets()</a></li>
+          <li><a href="#simulate_tna_networks">simulate_tna_networks()</a></li>
+          <li><a href="#simulate_tna_network">simulate_tna_network()</a></li>
+          <li><a href="#simulate_group_tna_networks">simulate_group_tna_networks()</a></li>
+        </ul>
+      </li>
+      <li><a href="#matrices">Matrices</a>
+        <ul>
+          <li><a href="#simulate_matrix">simulate_matrix()</a></li>
+          <li><a href="#simulate_htna">simulate_htna()</a></li>
+          <li><a href="#simulate_tna_matrix">simulate_tna_matrix()</a></li>
+        </ul>
+      </li>
+      <li><a href="#hierarchical">Hierarchical Data</a>
+        <ul>
+          <li><a href="#simulate_long_data">simulate_long_data()</a></li>
+          <li><a href="#simulate_onehot_data">simulate_onehot_data()</a></li>
+          <li><a href="#simulate_edge_list">simulate_edge_list()</a></li>
+        </ul>
+      </li>
+      <li><a href="#network-objects">Network Objects</a>
+        <ul>
+          <li><a href="#simulate_igraph">simulate_igraph()</a></li>
+          <li><a href="#simulate_network">simulate_network()</a></li>
+        </ul>
+      </li>
+      <li><a href="#comparison">Network Comparison</a>
+        <ul>
+          <li><a href="#compare_networks">compare_networks()</a></li>
+          <li><a href="#compare_centralities">compare_centralities()</a></li>
+          <li><a href="#compare_edge_recovery">compare_edge_recovery()</a></li>
+        </ul>
+      </li>
+      <li><a href="#bootstrap">Bootstrap &amp; Power</a>
+        <ul>
+          <li><a href="#run_bootstrap_simulation">run_bootstrap_simulation()</a></li>
+          <li><a href="#run_bootstrap_iteration">run_bootstrap_iteration()</a></li>
+          <li><a href="#run_grid_simulation">run_grid_simulation()</a></li>
+          <li><a href="#summarize_grid_results">summarize_grid_results()</a></li>
+        </ul>
+      </li>
+      <li><a href="#utilities">Utilities</a>
+        <ul>
+          <li><a href="#generate_probabilities">generate_probabilities()</a></li>
+          <li><a href="#generate_param_grid">generate_param_grid()</a></li>
+          <li><a href="#fit_network_model">fit_network_model()</a></li>
+        </ul>
+      </li>
+      <li><a href="#learning-states">Learning States</a>
+        <ul>
+          <li><a href="#get_learning_states">get_learning_states()</a></li>
+          <li><a href="#select_states">select_states()</a></li>
+          <li><a href="#list_learning_categories">list_learning_categories()</a></li>
+        </ul>
+      </li>
+      <li><a href="#global-names">Global Names</a>
+        <ul>
+          <li><a href="#get_global_names">get_global_names()</a></li>
+          <li><a href="#list_name_regions">list_name_regions()</a></li>
+        </ul>
+      </li>
+      <li><a href="#conversion">Data Conversion</a>
+        <ul>
+          <li><a href="#wide_to_long">wide_to_long()</a></li>
+          <li><a href="#long_to_wide">long_to_wide()</a></li>
+          <li><a href="#prepare_for_tna">prepare_for_tna()</a></li>
+        </ul>
+      </li>
+    </ul>
+  </nav>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+
+<!-- Hero -->
+<div class="hero" id="getting-started">
+  <h1>Saqrlab</h1>
+  <p>Simulation and Analysis Tools for Temporal Network Analysis &mdash; generate synthetic TNA data, run power analyses, and compare networks.</p>
+  <div class="badges">
+    <span class="badge badge-blue">v0.1.0</span>
+    <span class="badge badge-green">180+ Learning Verbs</span>
+    <span class="badge badge-purple">8 Categories</span>
+    <span class="badge badge-teal">tna Compatible</span>
+    <span class="badge badge-amber">Parallel Processing</span>
+    <span class="badge badge-rose">300 Global Names</span>
+  </div>
+</div>
+
+<!-- Quick ref -->
+<div class="quick-ref">
+  <div class="quick-ref-card">
+    <h4>Sequences</h4>
+    <div class="funcs">simulate_sequences() &middot; simulate_sequences_advanced()</div>
+  </div>
+  <div class="quick-ref-card">
+    <h4>Datasets &amp; Networks</h4>
+    <div class="funcs">simulate_tna_datasets() &middot; simulate_tna_networks() &middot; simulate_group_tna_networks()</div>
+  </div>
+  <div class="quick-ref-card">
+    <h4>Matrices</h4>
+    <div class="funcs">simulate_matrix() &middot; simulate_htna() &middot; simulate_tna_matrix()</div>
+  </div>
+  <div class="quick-ref-card">
+    <h4>Hierarchical Data</h4>
+    <div class="funcs">simulate_long_data() &middot; simulate_onehot_data() &middot; simulate_edge_list()</div>
+  </div>
+  <div class="quick-ref-card">
+    <h4>Network Objects</h4>
+    <div class="funcs">simulate_igraph() &middot; simulate_network()</div>
+  </div>
+  <div class="quick-ref-card">
+    <h4>Comparison</h4>
+    <div class="funcs">compare_networks() &middot; compare_centralities() &middot; compare_edge_recovery()</div>
+  </div>
+  <div class="quick-ref-card">
+    <h4>Bootstrap &amp; Power</h4>
+    <div class="funcs">run_bootstrap_simulation() &middot; run_grid_simulation() &middot; summarize_grid_results()</div>
+  </div>
+  <div class="quick-ref-card">
+    <h4>Learning States</h4>
+    <div class="funcs">get_learning_states() &middot; select_states() &middot; LEARNING_STATES</div>
+  </div>
+</div>
+
+<!-- Installation -->
+<div class="install-box">
+  <h4 style="margin-top:0">Installation</h4>
+<pre><code># From GitHub
+devtools::install_github("mohsaqr/Saqrlab")
+library(Saqrlab)</code></pre>
+  <p style="font-size:0.85rem; color: var(--muted)">Requires R &ge; 4.1.0. Core imports: tna, seqHMM, dplyr, tidyr. Optional: igraph, network, parallel, future, lhs.</p>
+</div>
+
+<p>Saqrlab provides tools for <strong>simulating TNA data</strong>, <strong>running power analyses</strong>, and <strong>comparing networks</strong>. All simulation functions support <strong>learning state names</strong> from educational research and <strong>reproducible results</strong> via seed parameters.</p>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="sequences">Sequence Generation</h2>
+
+<!-- simulate_sequences -->
+<h3 id="simulate_sequences"><code>simulate_sequences()</code></h3>
+<p>Generate Markov chain sequences from transition probabilities. Auto-generates probabilities if not provided.</p>
+
+<div class="signature"><code>simulate_sequences(n_sequences = 1000, seq_length = 20, n_states = 8, states = NULL, use_learning_states = TRUE, categories = "all", trans_matrix = NULL, init_probs = NULL, na_range = c(0, 0), include_params = FALSE, seed = NULL)</code></div>
+
+<table>
+  <tr><th>Parameter</th><th>Description</th><th>Default</th></tr>
+  <tr><td><code>n_sequences</code></td><td>Number of sequences to generate</td><td><code>1000</code></td></tr>
+  <tr><td><code>seq_length</code></td><td>Maximum length of each sequence</td><td><code>20</code></td></tr>
+  <tr><td><code>n_states</code></td><td>Number of states</td><td><code>8</code></td></tr>
+  <tr><td><code>use_learning_states</code></td><td>Use learning verb names</td><td><code>TRUE</code></td></tr>
+  <tr><td><code>categories</code></td><td>Learning categories: "metacognitive", "cognitive", "behavioral", "social", "motivational", "affective", "group_regulation", "lms", or "all"</td><td><code>"all"</code></td></tr>
+  <tr><td><code>trans_matrix</code></td><td>Custom transition matrix (rows sum to 1)</td><td><code>NULL</code></td></tr>
+  <tr><td><code>init_probs</code></td><td>Custom initial probabilities</td><td><code>NULL</code></td></tr>
+  <tr><td><code>na_range</code></td><td>Range of NAs per sequence, e.g., <code>c(2, 5)</code></td><td><code>c(0, 0)</code></td></tr>
+  <tr><td><code>include_params</code></td><td>Return generating parameters</td><td><code>FALSE</code></td></tr>
+  <tr><td><code>seed</code></td><td>Random seed for reproducibility</td><td><code>NULL</code></td></tr>
+</table>
+
+<div class="returns"><strong>Returns:</strong> A <code>data.frame</code> with sequences (rows) x time points (columns). If <code>include_params = TRUE</code>, returns a list with <code>sequences</code>, <code>trans_matrix</code>, and <code>initial_probs</code>.</div>
+
+<details>
+  <summary>Examples</summary>
+  <div class="detail-content">
+<pre><code># Basic usage - auto-generates probabilities
+seqs <- simulate_sequences(n_sequences = 100, seq_length = 20, n_states = 6, seed = 42)
+
+# With specific learning category
+seqs <- simulate_sequences(
+  n_sequences = 100,
+  n_states = 5,
+  categories = "metacognitive",
+  seed = 42
+)
+
+# With custom transition matrix
+trans_mat <- matrix(c(0.7, 0.2, 0.1, 0.1, 0.7, 0.2, 0.2, 0.1, 0.7), nrow = 3, byrow = TRUE)
+rownames(trans_mat) <- colnames(trans_mat) <- c("A", "B", "C")
+init_probs <- c(A = 0.5, B = 0.3, C = 0.2)
+
+seqs <- simulate_sequences(trans_matrix = trans_mat, init_probs = init_probs, n_sequences = 100)
+
+# Get generating parameters back
+result <- simulate_sequences(n_sequences = 100, n_states = 5, include_params = TRUE, seed = 42)
+result$sequences      # data.frame
+result$trans_matrix   # generating transition matrix</code></pre>
+  </div>
+</details>
+
+<!-- simulate_sequences_advanced -->
+<h3 id="simulate_sequences_advanced"><code>simulate_sequences_advanced()</code></h3>
+<p>Generate sequences with stable transition patterns &mdash; useful for testing edge detection in bootstrap analyses.</p>
+
+<div class="signature"><code>simulate_sequences_advanced(trans_matrix, init_probs, seq_length, n_sequences, stable_transitions, stability_prob = 0.95, unstable_mode = "random_jump", ...)</code></div>
+
+<table>
+  <tr><th>Parameter</th><th>Description</th><th>Default</th></tr>
+  <tr><td><code>trans_matrix</code></td><td>Square transition matrix (rows sum to 1)</td><td>&mdash;</td></tr>
+  <tr><td><code>init_probs</code></td><td>Initial state probabilities</td><td>&mdash;</td></tr>
+  <tr><td><code>stable_transitions</code></td><td>List of character vectors defining stable edges, e.g., <code>list(c("Plan", "Monitor"))</code></td><td>&mdash;</td></tr>
+  <tr><td><code>stability_prob</code></td><td>Probability of following stable transitions (0-1)</td><td><code>0.95</code></td></tr>
+  <tr><td><code>unstable_mode</code></td><td><code>"random_jump"</code>, <code>"perturb_prob"</code>, or <code>"unlikely_jump"</code></td><td><code>"random_jump"</code></td></tr>
+</table>
+
+<div class="returns"><strong>Returns:</strong> A <code>data.frame</code> with sequences that follow the stable transition patterns.</div>
+
+<details>
+  <summary>Examples</summary>
+  <div class="detail-content">
+<pre><code># Define stable transitions (ground truth edges)
+stable_transitions <- list(
+  c("Plan", "Monitor"),
+  c("Monitor", "Evaluate"),
+  c("Evaluate", "Reflect")
+)
+
+seqs <- simulate_sequences_advanced(
+  trans_matrix = trans_mat,
+  init_probs = init_probs,
+  seq_length = 30,
+  n_sequences = 200,
+  stable_transitions = stable_transitions,
+  stability_prob = 0.95,
+  unstable_mode = "random_jump"
+)</code></pre>
+  </div>
+</details>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="datasets">Datasets &amp; Networks</h2>
+
+<!-- simulate_tna_datasets -->
+<h3 id="simulate_tna_datasets"><code>simulate_tna_datasets()</code></h3>
+<p>Generate complete TNA datasets including sequences, fitted models, and generating probabilities.</p>
+
+<div class="signature"><code>simulate_tna_datasets(n_datasets = 1, n_states = 8, n_sequences = 100, seq_length = 30, model_type = "tna", use_learning_states = TRUE, categories = NULL, include_data = TRUE, include_probs = TRUE, seed = NULL, verbose = TRUE)</code></div>
+
+<table>
+  <tr><th>Parameter</th><th>Description</th><th>Default</th></tr>
+  <tr><td><code>n_datasets</code></td><td>Number of datasets to generate</td><td><code>1</code></td></tr>
+  <tr><td><code>n_states</code></td><td>Number of states per network</td><td><code>8</code></td></tr>
+  <tr><td><code>n_sequences</code></td><td>Sequences per dataset</td><td><code>100</code></td></tr>
+  <tr><td><code>seq_length</code></td><td>Maximum sequence length</td><td><code>30</code></td></tr>
+  <tr><td><code>model_type</code></td><td><code>"tna"</code>, <code>"ftna"</code>, <code>"ctna"</code>, or <code>"atna"</code></td><td><code>"tna"</code></td></tr>
+  <tr><td><code>use_learning_states</code></td><td>Use learning verb names</td><td><code>TRUE</code></td></tr>
+  <tr><td><code>include_data</code></td><td>Include sequences in output</td><td><code>TRUE</code></td></tr>
+  <tr><td><code>include_probs</code></td><td>Include generating probabilities</td><td><code>TRUE</code></td></tr>
+</table>
+
+<div class="returns"><strong>Returns:</strong> A named list of <code>n_datasets</code> elements. Each contains: <code>model</code> (fitted tna), <code>sequences</code> (data.frame), <code>transition_probs</code> (matrix), <code>initial_probs</code> (vector), <code>params</code> (list).</div>
+
+<details>
+  <summary>Examples</summary>
+  <div class="detail-content">
+<pre><code># Generate 5 complete datasets
+datasets <- simulate_tna_datasets(
+  n_datasets = 5,
+  n_states = 6,
+  n_sequences = 100,
+  seed = 42
+)
+
+# Access components
+datasets$dataset_1$sequences        # sequence data
+datasets$dataset_1$model            # fitted TNA model
+datasets$dataset_1$transition_probs # generating matrix
+datasets$dataset_1$initial_probs    # initial probabilities
+datasets$dataset_1$params$state_names  # state names used
+
+# Generate fTNA datasets
+ftna_datasets <- simulate_tna_datasets(
+  n_datasets = 3,
+  model_type = "ftna",
+  seed = 42
+)</code></pre>
+  </div>
+</details>
+
+<!-- simulate_tna_networks -->
+<h3 id="simulate_tna_networks"><code>simulate_tna_networks()</code></h3>
+<p>Generate multiple fitted TNA model objects (without raw sequences or probabilities).</p>
+
+<div class="signature"><code>simulate_tna_networks(n_networks = 1, n_states = 8, n_sequences = 100, seq_length = 30, model_type = "tna", use_learning_states = TRUE, categories = NULL, seed = NULL, verbose = TRUE)</code></div>
+
+<table>
+  <tr><th>Parameter</th><th>Description</th><th>Default</th></tr>
+  <tr><td><code>n_networks</code></td><td>Number of networks to generate</td><td><code>1</code></td></tr>
+  <tr><td><code>model_type</code></td><td><code>"tna"</code>, <code>"ftna"</code>, <code>"ctna"</code>, or <code>"atna"</code></td><td><code>"tna"</code></td></tr>
+</table>
+
+<div class="returns"><strong>Returns:</strong> A named list of <code>n_networks</code> fitted tna model objects.</div>
+
+<details>
+  <summary>Examples</summary>
+  <div class="detail-content">
+<pre><code># 10 TNA models
+tna_nets <- simulate_tna_networks(n_networks = 10, n_states = 6, seed = 42)
+tna_nets$network_1$weights
+
+# 5 fTNA models
+ftna_nets <- simulate_tna_networks(n_networks = 5, model_type = "ftna", seed = 42)
+
+# 5 cTNA models
+ctna_nets <- simulate_tna_networks(n_networks = 5, model_type = "ctna", seed = 42)</code></pre>
+  </div>
+</details>
+
+<!-- simulate_tna_network -->
+<h3 id="simulate_tna_network"><code>simulate_tna_network()</code></h3>
+<p>Generate a single fitted TNA model (convenience function).</p>
+
+<div class="signature"><code>simulate_tna_network(n_states = 9, n_sequences = NULL, seq_length = 25, seed = NULL)</code></div>
+
+<div class="returns"><strong>Returns:</strong> A fitted <code>tna</code> model object.</div>
+
+<details>
+  <summary>Examples</summary>
+  <div class="detail-content">
+<pre><code>model <- simulate_tna_network(n_states = 6, seed = 42)
+model$weights
+plot(model)
+tna::centralities(model)</code></pre>
+  </div>
+</details>
+
+<!-- simulate_group_tna_networks -->
+<h3 id="simulate_group_tna_networks"><code>simulate_group_tna_networks()</code></h3>
+<p>Generate group TNA models for multi-group analysis (e.g., classrooms, teams).</p>
+
+<div class="signature"><code>simulate_group_tna_networks(n_groups = 5, n_actors = 10, n_states = 8, seq_length_range = c(10, 30), use_learning_states = TRUE, categories = NULL, seed = NULL)</code></div>
+
+<table>
+  <tr><th>Parameter</th><th>Description</th><th>Default</th></tr>
+  <tr><td><code>n_groups</code></td><td>Number of groups</td><td><code>5</code></td></tr>
+  <tr><td><code>n_actors</code></td><td>Actors per group. Single value or <code>c(min, max)</code></td><td><code>10</code></td></tr>
+  <tr><td><code>seq_length_range</code></td><td>Range for sequence lengths</td><td><code>c(10, 30)</code></td></tr>
+</table>
+
+<div class="returns"><strong>Returns:</strong> A <code>group_tna</code> model object with networks for each group.</div>
+
+<details>
+  <summary>Examples</summary>
+  <div class="detail-content">
+<pre><code># 5 groups, 10-15 actors each
+group_model <- simulate_group_tna_networks(
+  n_groups = 5,
+  n_actors = c(10, 15),
+  n_states = 6,
+  categories = "group_regulation",
+  seed = 42
+)
+
+names(group_model)
+group_model$Group_1$weights</code></pre>
+  </div>
+</details>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="matrices">Matrix Generation</h2>
+
+<!-- simulate_matrix -->
+<h3 id="simulate_matrix"><code>simulate_matrix()</code></h3>
+<p>Generate transition, frequency, adjacency, or co-occurrence matrices.</p>
+
+<div class="signature"><code>simulate_matrix(n_nodes = 9, matrix_type = "transition", use_learning_states = TRUE, categories = "all", edge_prob = NULL, weight_range = c(0, 1), allow_self_loops = TRUE, seed = NULL)</code></div>
+
+<table>
+  <tr><th>Parameter</th><th>Description</th><th>Default</th></tr>
+  <tr><td><code>n_nodes</code></td><td>Number of nodes (matrix dimension)</td><td><code>9</code></td></tr>
+  <tr><td><code>matrix_type</code></td><td><code>"transition"</code>, <code>"frequency"</code>, <code>"adjacency"</code>, <code>"co-occurrence"</code></td><td><code>"transition"</code></td></tr>
+  <tr><td><code>use_learning_states</code></td><td>Use learning verb names</td><td><code>TRUE</code></td></tr>
+  <tr><td><code>edge_prob</code></td><td>Probability of edge presence (adjacency only)</td><td><code>NULL</code></td></tr>
+</table>
+
+<div class="returns"><strong>Returns:</strong> A square matrix with named rows and columns.</div>
+
+<details>
+  <summary>Examples</summary>
+  <div class="detail-content">
+<pre><code># Transition matrix (rows sum to 1)
+trans_mat <- simulate_matrix(n_nodes = 6, matrix_type = "transition", seed = 42)
+
+# Frequency matrix
+freq_mat <- simulate_matrix(n_nodes = 8, matrix_type = "frequency", seed = 42)
+
+# Binary adjacency matrix
+adj_mat <- simulate_matrix(n_nodes = 10, matrix_type = "adjacency", edge_prob = 0.3, seed = 42)</code></pre>
+  </div>
+</details>
+
+<!-- simulate_htna -->
+<h3 id="simulate_htna"><code>simulate_htna()</code></h3>
+<p>Generate multi-type matrices for hierarchical/multilevel TNA (HTNA/MLNA) visualizations.</p>
+
+<div class="signature"><code>simulate_htna(n_nodes = 5, n_types = 5, type_names = c("Metacognitive", "Cognitive", "Behavioral", "Social", "Motivational"), within_prob = 0.4, between_prob = 0.15, categories = NULL, seed = NULL)</code></div>
+
+<table>
+  <tr><th>Parameter</th><th>Description</th><th>Default</th></tr>
+  <tr><td><code>n_nodes</code></td><td>Nodes per type</td><td><code>5</code></td></tr>
+  <tr><td><code>n_types</code></td><td>Number of node types</td><td><code>5</code></td></tr>
+  <tr><td><code>type_names</code></td><td>Names for each type</td><td>Learning categories</td></tr>
+  <tr><td><code>within_prob</code></td><td>Edge probability within types</td><td><code>0.4</code></td></tr>
+  <tr><td><code>between_prob</code></td><td>Edge probability between types</td><td><code>0.15</code></td></tr>
+</table>
+
+<div class="returns"><strong>Returns:</strong> A list with <code>matrix</code> (transition matrix) and <code>node_types</code> (named list mapping types to nodes).</div>
+
+<details>
+  <summary>Examples</summary>
+  <div class="detail-content">
+<pre><code># 3 types, 5 nodes each = 15 total nodes
+htna <- simulate_htna(
+  n_nodes = 5,
+  n_types = 3,
+  type_names = c("Planning", "Execution", "Evaluation"),
+  categories = c("metacognitive", "behavioral", "metacognitive"),
+  seed = 42
+)
+
+htna$matrix      # 15x15 transition matrix
+htna$node_types  # list of nodes per type
+
+# Use with tna package
+# tna::plot_htna(htna$matrix, htna$node_types)</code></pre>
+  </div>
+</details>
+
+<!-- simulate_tna_matrix -->
+<h3 id="simulate_tna_matrix"><code>simulate_tna_matrix()</code></h3>
+<p>Convenience wrapper for HTNA/MLNA matrices with learning categories (defaults to 5 groups x 5 nodes).</p>
+
+<div class="signature"><code>simulate_tna_matrix(nodes_per_group = 5, group_names = c("Metacognitive", "Cognitive", "Behavioral", "Social", "Motivational"), seed = NULL)</code></div>
+
+<div class="returns"><strong>Returns:</strong> A list with <code>matrix</code> and <code>node_types</code>.</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="hierarchical">Hierarchical Data</h2>
+
+<!-- simulate_long_data -->
+<h3 id="simulate_long_data"><code>simulate_long_data()</code></h3>
+<p>Generate long-format hierarchical data with Actors, Groups, and Courses.</p>
+
+<div class="signature"><code>simulate_long_data(n_groups = 5, n_actors = 10, n_courses = 3, n_states = 9, seq_length_range = c(10, 30), use_learning_states = TRUE, seed = NULL)</code></div>
+
+<table>
+  <tr><th>Parameter</th><th>Description</th><th>Default</th></tr>
+  <tr><td><code>n_groups</code></td><td>Number of groups</td><td><code>5</code></td></tr>
+  <tr><td><code>n_actors</code></td><td>Actors per group (single value or <code>c(min, max)</code>)</td><td><code>10</code></td></tr>
+  <tr><td><code>n_courses</code></td><td>Number of courses</td><td><code>3</code></td></tr>
+</table>
+
+<div class="returns"><strong>Returns:</strong> A tibble with columns: <code>Actor</code>, <code>Group</code>, <code>Course</code>, <code>Time</code>, <code>Action</code>.</div>
+
+<details>
+  <summary>Examples</summary>
+  <div class="detail-content">
+<pre><code>long_data <- simulate_long_data(
+  n_groups = 5,
+  n_actors = c(8, 12),
+  n_courses = 3,
+  seed = 42
+)
+
+head(long_data)
+# Actor  Group   Course  Time  Action
+# A1_G1  Group_1 Course_1  1   Plan
+# A1_G1  Group_1 Course_1  2   Monitor</code></pre>
+  </div>
+</details>
+
+<!-- simulate_onehot_data -->
+<h3 id="simulate_onehot_data"><code>simulate_onehot_data()</code></h3>
+<p>Generate one-hot encoded sequence data.</p>
+
+<div class="signature"><code>simulate_onehot_data(n_groups = 3, n_actors = 10, n_states = 5, seed = NULL)</code></div>
+
+<div class="returns"><strong>Returns:</strong> A tibble with <code>Actor</code>, <code>Group</code>, <code>Time</code>, and binary columns for each state.</div>
+
+<!-- simulate_edge_list -->
+<h3 id="simulate_edge_list"><code>simulate_edge_list()</code></h3>
+<p>Generate social network edge lists.</p>
+
+<div class="signature"><code>simulate_edge_list(n_nodes = 20, n_edges = 50, directed = TRUE, weighted = TRUE, name_source = "human", regions = NULL, seed = NULL)</code></div>
+
+<div class="returns"><strong>Returns:</strong> A data.frame with columns: <code>from</code>, <code>to</code>, and optionally <code>weight</code>.</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="network-objects">Network Objects</h2>
+
+<!-- simulate_igraph -->
+<h3 id="simulate_igraph"><code>simulate_igraph()</code></h3>
+<p>Generate igraph network objects with various graph models.</p>
+
+<div class="signature"><code>simulate_igraph(n = NULL, model = "ba", directed = TRUE, weighted = TRUE, name_source = "human", regions = NULL, categories = NULL, seed = NULL)</code></div>
+
+<table>
+  <tr><th>Parameter</th><th>Description</th><th>Default</th></tr>
+  <tr><td><code>n</code></td><td>Number of nodes (random 20-50 if NULL)</td><td><code>NULL</code></td></tr>
+  <tr><td><code>model</code></td><td><code>"er"</code>, <code>"ba"</code>, <code>"ws"</code>, <code>"sbm"</code>, <code>"reg"</code>, <code>"grg"</code>, <code>"ff"</code></td><td><code>"ba"</code></td></tr>
+  <tr><td><code>name_source</code></td><td><code>"human"</code> (names) or <code>"states"</code> (learning verbs)</td><td><code>"human"</code></td></tr>
+  <tr><td><code>regions</code></td><td>Name regions: "arab", "europe", "asia", etc.</td><td><code>NULL</code></td></tr>
+</table>
+
+<div class="returns"><strong>Returns:</strong> An <code>igraph</code> object.</div>
+
+<details>
+  <summary>Examples</summary>
+  <div class="detail-content">
+<pre><code># Barabasi-Albert with Arab names
+g <- simulate_igraph(n = 30, model = "ba", regions = "arab", seed = 42)
+
+# Watts-Strogatz small world
+g <- simulate_igraph(n = 50, model = "ws", seed = 42)
+
+# Stochastic block model
+g <- simulate_igraph(n = 40, model = "sbm", seed = 42)</code></pre>
+  </div>
+</details>
+
+<div class="note"><strong>Graph models:</strong> <code>"er"</code> (Erdos-Renyi), <code>"ba"</code> (Barabasi-Albert), <code>"ws"</code> (Watts-Strogatz), <code>"sbm"</code> (Stochastic Block), <code>"reg"</code> (Regular), <code>"grg"</code> (Geometric), <code>"ff"</code> (Forest Fire).</div>
+
+<!-- simulate_network -->
+<h3 id="simulate_network"><code>simulate_network()</code></h3>
+<p>Generate statnet network objects.</p>
+
+<div class="signature"><code>simulate_network(n = NULL, model = "ba", directed = TRUE, name_source = "human", regions = NULL, seed = NULL)</code></div>
+
+<div class="returns"><strong>Returns:</strong> A <code>network</code> object (statnet).</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="comparison">Network Comparison</h2>
+
+<!-- compare_networks -->
+<h3 id="compare_networks"><code>compare_networks()</code></h3>
+<p>Compare two TNA networks using correlation, RMSE, MAE, and other metrics.</p>
+
+<div class="signature"><code>compare_networks(model1, model2, metrics = c("correlation", "rmse", "edge_diff"), scaling = "none", include_self = TRUE, threshold = 0.05)</code></div>
+
+<table>
+  <tr><th>Parameter</th><th>Description</th><th>Default</th></tr>
+  <tr><td><code>model1</code></td><td>Reference TNA model</td><td>&mdash;</td></tr>
+  <tr><td><code>model2</code></td><td>Comparison TNA model</td><td>&mdash;</td></tr>
+  <tr><td><code>metrics</code></td><td><code>"correlation"</code>, <code>"rmse"</code>, <code>"mae"</code>, <code>"edge_diff"</code>, <code>"cosine"</code>, or <code>"all"</code></td><td>cor, rmse, edge_diff</td></tr>
+  <tr><td><code>scaling</code></td><td><code>"none"</code>, <code>"minmax"</code>, or <code>"zscore"</code></td><td><code>"none"</code></td></tr>
+</table>
+
+<div class="returns"><strong>Returns:</strong> A list with <code>metrics</code>, <code>edge_comparison</code> (data.frame), and <code>summary</code> (text).</div>
+
+<!-- compare_centralities -->
+<h3 id="compare_centralities"><code>compare_centralities()</code></h3>
+<p>Compare centrality profiles between two networks.</p>
+
+<div class="signature"><code>compare_centralities(model1, model2, measures = c("OutStrength", "InStrength", "Betweenness"), method = "both")</code></div>
+
+<div class="returns"><strong>Returns:</strong> A list with <code>correlations</code> and <code>centrality_comparison</code> (data.frame).</div>
+
+<!-- compare_edge_recovery -->
+<h3 id="compare_edge_recovery"><code>compare_edge_recovery()</code></h3>
+<p>Calculate edge recovery metrics (precision, recall, F1, accuracy).</p>
+
+<div class="signature"><code>compare_edge_recovery(original, simulated, threshold = 0.01, return_edges = FALSE)</code></div>
+
+<div class="returns"><strong>Returns:</strong> A list with <code>true_positives</code>, <code>false_positives</code>, <code>false_negatives</code>, <code>true_negatives</code>, <code>precision</code>, <code>recall</code>, <code>f1_score</code>, <code>accuracy</code>, <code>jaccard</code>.</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="bootstrap">Bootstrap &amp; Power Analysis</h2>
+
+<!-- run_bootstrap_simulation -->
+<h3 id="run_bootstrap_simulation"><code>run_bootstrap_simulation()</code></h3>
+<p>Run bootstrap analysis for stability testing with multiple replications.</p>
+
+<div class="signature"><code>run_bootstrap_simulation(trans_matrix, init_probs, stable_transitions, n_runs = 100, n_sequences = 100, seq_length = 20, level = 0.05, num_cores = 1, seed = NULL)</code></div>
+
+<div class="returns"><strong>Returns:</strong> A list with <code>aggregated_summary</code>, <code>individual_runs</code>, and <code>successful_runs</code>.</div>
+
+<!-- run_bootstrap_iteration -->
+<h3 id="run_bootstrap_iteration"><code>run_bootstrap_iteration()</code></h3>
+<p>Evaluate a single bootstrap run. Called internally by <code>run_bootstrap_simulation()</code>.</p>
+
+<div class="signature"><code>run_bootstrap_iteration(trans_matrix, init_probs, stable_transitions, seq_length, n_sequences, stability_prob = 0.95, level = 0.05)</code></div>
+
+<div class="returns"><strong>Returns:</strong> A list with <code>per_edge</code> results and confusion matrices.</div>
+
+<!-- run_grid_simulation -->
+<h3 id="run_grid_simulation"><code>run_grid_simulation()</code></h3>
+<p>Run parameter grid search simulations for power analysis.</p>
+
+<div class="signature"><code>run_grid_simulation(Model, stable_transitions, n_runs = 50, n_sequences_vec, seq_length_vec, min_na_vec = 0, max_na_vec = 0, num_cores = 1, seed = NULL)</code></div>
+
+<div class="returns"><strong>Returns:</strong> A list of results for each parameter combination.</div>
+
+<!-- summarize_grid_results -->
+<h3 id="summarize_grid_results"><code>summarize_grid_results()</code></h3>
+<p>Summarize results from <code>run_grid_simulation()</code>.</p>
+
+<div class="signature"><code>summarize_grid_results(grid_results_list, n_sequences_range = NULL, seq_length_range = NULL, print_output = TRUE)</code></div>
+
+<div class="returns"><strong>Returns:</strong> A list with <code>n_selected</code>, <code>aggregated_summary</code>, <code>selected_settings_summary_df</code>, and <code>compiled_individual_runs</code>.</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="utilities">Utilities</h2>
+
+<!-- generate_probabilities -->
+<h3 id="generate_probabilities"><code>generate_probabilities()</code></h3>
+<p>Generate random transition matrices and initial probabilities.</p>
+
+<div class="signature"><code>generate_probabilities(n_states = 5, seed = NULL)</code></div>
+
+<div class="returns"><strong>Returns:</strong> A list with <code>transition_matrix</code> (rows sum to 1) and <code>initial_probs</code> (sums to 1).</div>
+
+<!-- generate_param_grid -->
+<h3 id="generate_param_grid"><code>generate_param_grid()</code></h3>
+<p>Create parameter grids for simulation studies.</p>
+
+<div class="signature"><code>generate_param_grid(param_ranges, n = 10, method = "random")</code></div>
+
+<table>
+  <tr><th>Parameter</th><th>Description</th><th>Default</th></tr>
+  <tr><td><code>param_ranges</code></td><td>Named list of ranges, e.g., <code>list(n_sequences = c(50, 500))</code></td><td>&mdash;</td></tr>
+  <tr><td><code>n</code></td><td>Number of parameter combinations</td><td><code>10</code></td></tr>
+  <tr><td><code>method</code></td><td><code>"random"</code>, <code>"grid"</code>, or <code>"lhs"</code> (Latin Hypercube)</td><td><code>"random"</code></td></tr>
+</table>
+
+<div class="returns"><strong>Returns:</strong> A data.frame with <code>n</code> rows, one column per parameter.</div>
+
+<details>
+  <summary>Examples</summary>
+  <div class="detail-content">
+<pre><code># Latin Hypercube Sampling for better coverage
+grid <- generate_param_grid(
+  param_ranges = list(
+    n_sequences = c(50, 500),
+    seq_length = c(15, 50),
+    n_states = c(4, 10)
+  ),
+  n = 100,
+  method = "lhs"
+)</code></pre>
+  </div>
+</details>
+
+<!-- fit_network_model -->
+<h3 id="fit_network_model"><code>fit_network_model()</code></h3>
+<p>Fit TNA models to sequence data.</p>
+
+<div class="signature"><code>fit_network_model(data, model_type = "tna", group = NULL)</code></div>
+
+<div class="returns"><strong>Returns:</strong> A fitted <code>tna</code> model object.</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="learning-states">Learning States</h2>
+
+<p>Saqrlab includes <strong>180+ learning action verbs</strong> organized into 8 categories for realistic educational simulations.</p>
+
+<table>
+  <tr><th>Category</th><th>Examples</th><th>Count</th></tr>
+  <tr><td><code>metacognitive</code></td><td>Plan, Monitor, Evaluate, Reflect, Regulate</td><td>20</td></tr>
+  <tr><td><code>cognitive</code></td><td>Read, Analyze, Summarize, Memorize, Synthesize</td><td>30</td></tr>
+  <tr><td><code>behavioral</code></td><td>Practice, Annotate, Research, Write, Review</td><td>30</td></tr>
+  <tr><td><code>social</code></td><td>Collaborate, Discuss, Explain, Share, Teach</td><td>30</td></tr>
+  <tr><td><code>motivational</code></td><td>Focus, Persist, Explore, Strive, Commit</td><td>30</td></tr>
+  <tr><td><code>affective</code></td><td>Enjoy, Appreciate, Cope, Manage, Curious</td><td>30</td></tr>
+  <tr><td><code>group_regulation</code></td><td>Adapt, Cohesion, Consensus, Coregulate</td><td>9</td></tr>
+  <tr><td><code>lms</code></td><td>View, Access, Download, Submit, Quiz</td><td>30</td></tr>
+</table>
+
+<!-- get_learning_states -->
+<h3 id="get_learning_states"><code>get_learning_states()</code></h3>
+<p>Get learning verbs by category.</p>
+
+<div class="signature"><code>get_learning_states(categories = "all", n = NULL, seed = NULL)</code></div>
+
+<div class="returns"><strong>Returns:</strong> A character vector of learning state verbs.</div>
+
+<details>
+  <summary>Examples</summary>
+  <div class="detail-content">
+<pre><code># All metacognitive verbs
+get_learning_states("metacognitive")
+
+# 10 random verbs from cognitive + behavioral
+get_learning_states(c("cognitive", "behavioral"), n = 10, seed = 42)
+
+# All verbs combined
+get_learning_states("all")</code></pre>
+  </div>
+</details>
+
+<!-- select_states -->
+<h3 id="select_states"><code>select_states()</code></h3>
+<p>Intelligently select learning states based on network size.</p>
+
+<div class="signature"><code>select_states(n_states, primary_categories = NULL, secondary_categories = NULL, primary_ratio = 0.6, seed = NULL)</code></div>
+
+<div class="returns"><strong>Returns:</strong> A character vector of <code>n_states</code> learning verbs.</div>
+
+<details>
+  <summary>Examples</summary>
+  <div class="detail-content">
+<pre><code># Auto-selection based on size
+states_5 <- select_states(5, seed = 42)   # single category
+states_15 <- select_states(15, seed = 42) # multiple categories
+
+# Biased selection (70% metacognitive)
+srl_states <- select_states(
+  n_states = 10,
+  primary_categories = "metacognitive",
+  secondary_categories = "cognitive",
+  primary_ratio = 0.7,
+  seed = 42
+)</code></pre>
+  </div>
+</details>
+
+<!-- list_learning_categories -->
+<h3 id="list_learning_categories"><code>list_learning_categories()</code></h3>
+<p>Show available categories with counts and examples.</p>
+
+<div class="signature"><code>list_learning_categories()</code></div>
+
+<div class="returns"><strong>Returns:</strong> A data.frame with <code>Category</code>, <code>Count</code>, and <code>Examples</code>.</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="global-names">Global Names</h2>
+
+<p>Saqrlab includes <strong>300 diverse human names</strong> from multiple world regions for realistic network simulations.</p>
+
+<!-- get_global_names -->
+<h3 id="get_global_names"><code>get_global_names()</code></h3>
+<p>Get human names from specified regions.</p>
+
+<div class="signature"><code>get_global_names(n, regions = NULL, seed = NULL)</code></div>
+
+<table>
+  <tr><th>Parameter</th><th>Description</th><th>Default</th></tr>
+  <tr><td><code>n</code></td><td>Number of names to return</td><td>&mdash;</td></tr>
+  <tr><td><code>regions</code></td><td>Region(s): "arab", "europe", "east_asia", "africa", etc.</td><td><code>NULL</code> (all)</td></tr>
+</table>
+
+<div class="returns"><strong>Returns:</strong> A character vector of <code>n</code> names.</div>
+
+<div class="note"><strong>Region shortcuts:</strong> <code>europe</code>, <code>middle_east</code>, <code>asia</code>, <code>africa</code>, <code>americas</code>, <code>oceania</code>, <code>western</code>, <code>eastern</code>, <code>mediterranean</code>, <code>sub_saharan</code>, <code>pacific</code>, <code>indigenous</code>.</div>
+
+<details>
+  <summary>Examples</summary>
+  <div class="detail-content">
+<pre><code>get_global_names(10, regions = "arab")
+get_global_names(10, regions = "europe")
+get_global_names(20, regions = c("arab", "east_asia", "africa"))</code></pre>
+  </div>
+</details>
+
+<!-- list_name_regions -->
+<h3 id="list_name_regions"><code>list_name_regions()</code></h3>
+<p>Show available name regions.</p>
+
+<div class="signature"><code>list_name_regions()</code></div>
+
+<div class="returns"><strong>Returns:</strong> Prints available regions and shortcuts.</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="conversion">Data Conversion</h2>
+
+<!-- wide_to_long -->
+<h3 id="wide_to_long"><code>wide_to_long()</code></h3>
+<p>Convert wide-format sequences to long format.</p>
+
+<div class="signature"><code>wide_to_long(data, id_col = NULL)</code></div>
+
+<div class="returns"><strong>Returns:</strong> A tibble with <code>id</code>, <code>time</code>, and <code>state</code> columns.</div>
+
+<!-- long_to_wide -->
+<h3 id="long_to_wide"><code>long_to_wide()</code></h3>
+<p>Convert long-format data to wide format.</p>
+
+<div class="signature"><code>long_to_wide(data, id_col = "id", time_col = "time", state_col = "state")</code></div>
+
+<div class="returns"><strong>Returns:</strong> A data.frame with sequences as rows.</div>
+
+<!-- prepare_for_tna -->
+<h3 id="prepare_for_tna"><code>prepare_for_tna()</code></h3>
+<p>Prepare any data format for the tna package.</p>
+
+<div class="signature"><code>prepare_for_tna(data, type = "auto")</code></div>
+
+<div class="returns"><strong>Returns:</strong> A data.frame ready for <code>tna::tna()</code>.</div>
+
+
+<!-- Footer -->
+<p style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); color: var(--muted); font-size: 0.85rem;">
+  <strong>Saqrlab</strong> v0.1.0 &mdash; Simulation and Analysis Tools for Temporal Network Analysis.<br>
+  Documentation generated for <a href="https://github.com/mohsaqr/Saqrlab" style="color: var(--accent)">github.com/mohsaqr/Saqrlab</a>
+</p>
+
+</div>
+</body>
+</html>
