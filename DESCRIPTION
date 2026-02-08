@@ -27,3 +27,4 @@ Suggests:
     network,
     sna
 VignetteBuilder: knitr
+Config/testthat/edition: 3
