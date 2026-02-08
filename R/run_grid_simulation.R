@@ -81,7 +81,7 @@
 #' )
 #'
 #' # Analyze results
-#' analyze_grid_results(grid_results)
+#' summarize_grid_results(grid_results)
 #'
 #' # Old parameter names still work
 #' grid_results <- run_grid_simulation(
@@ -163,7 +163,7 @@ run_grid_simulation <- function(Model,
     sim_results$parameters <- c(
       as.list(current_params_from_grid),
       list(
-        # Old names for backward compatibility with analyze_grid_results
+        # Old names for backward compatibility with summarize_grid_results
         num_rows = current_params_from_grid$n_sequences,
         max_seq_length = current_params_from_grid$seq_length,
         stability_prob = stability_prob, unstable_mode = unstable_mode,

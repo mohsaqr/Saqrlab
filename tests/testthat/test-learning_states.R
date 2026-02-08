@@ -47,15 +47,15 @@ test_that("list_learning_categories returns data frame", {
   expect_true("cognitive" %in% cats$Category)
 })
 
-test_that("smart_select_states returns correct number", {
-  states <- smart_select_states(n_states = 8)
+test_that("select_states returns correct number", {
+  states <- select_states(n_states = 8)
 
   expect_equal(length(states), 8)
   expect_equal(length(unique(states)), 8)
 })
 
-test_that("smart_select_states respects primary_categories", {
-  states <- smart_select_states(
+test_that("select_states respects primary_categories", {
+  states <- select_states(
     n_states = 5,
     primary_categories = "metacognitive"
   )
@@ -66,9 +66,9 @@ test_that("smart_select_states respects primary_categories", {
   expect_true(all(states %in% all_states))
 })
 
-test_that("smart_select_states is reproducible with seed", {
-  states1 <- smart_select_states(n_states = 6, seed = 42)
-  states2 <- smart_select_states(n_states = 6, seed = 42)
+test_that("select_states is reproducible with seed", {
+  states1 <- select_states(n_states = 6, seed = 42)
+  states2 <- select_states(n_states = 6, seed = 42)
 
   expect_equal(states1, states2)
 })

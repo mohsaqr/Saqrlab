@@ -126,19 +126,19 @@ random_cog
 
 ### Smart Selection
 
-The `smart_select_states()` function intelligently selects states based on network size:
+The `select_states()` function intelligently selects states based on network size:
 
 ```{r smart-select}
 # Small network: auto-selects from one category
-small_net <- smart_select_states(5, seed = 42)
+small_net <- select_states(5, seed = 42)
 small_net
 
 # Medium network: balanced across categories
-medium_net <- smart_select_states(10, seed = 42)
+medium_net <- select_states(10, seed = 42)
 medium_net
 
 # Large network: wide variety
-large_net <- smart_select_states(20, seed = 42)
+large_net <- select_states(20, seed = 42)
 large_net
 ```
 
@@ -146,7 +146,7 @@ large_net
 
 ```{r biased-select}
 # Prioritize metacognitive verbs
-meta_focus <- smart_select_states(
+meta_focus <- select_states(
   n_states = 10,
   primary_categories = "metacognitive",
   secondary_categories = "cognitive",
@@ -324,7 +324,7 @@ ref_table
 | `LEARNING_STATES` | Raw dataset of all verbs |
 | `get_learning_states()` | Retrieve verbs by category |
 | `list_learning_categories()` | Show category summary |
-| `smart_select_states()` | Intelligent selection |
+| `select_states()` | Intelligent selection |
 | `GLOBAL_NAMES` | 300 diverse names |
 | `get_global_names()` | Retrieve names |
 

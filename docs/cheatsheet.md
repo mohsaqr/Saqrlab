@@ -75,13 +75,13 @@ edges <- simulate_edge_list(n_nodes = 20, n_edges = 50, seed = 42)
 probs <- generate_probabilities(n_states = 5, seed = 42)
 
 # Complete datasets (sequences + model + probabilities)
-data <- generate_tna_datasets(n_datasets = 5, n_states = 6, seed = 42)
+data <- simulate_tna_datasets(n_datasets = 5, n_states = 6, seed = 42)
 
 # Multiple TNA models
-nets <- generate_tna_networks(n_networks = 5, n_states = 6, seed = 42)
+nets <- simulate_tna_networks(n_networks = 5, n_states = 6, seed = 42)
 
 # Group TNA
-group_net <- generate_group_tna_networks(n_groups = 4, n_actors = 15, seed = 42)
+group_net <- simulate_group_tna_networks(n_groups = 4, n_actors = 15, seed = 42)
 ```
 
 ---
@@ -126,7 +126,7 @@ list_name_regions()  # See all regions
 # Learning states by category
 get_learning_states("metacognitive")
 get_learning_states(c("metacognitive", "cognitive"), n = 10)
-smart_select_states(n_states = 10)  # Auto-select based on size
+select_states(n_states = 10)  # Auto-select based on size
 list_learning_categories()  # See all categories
 ```
 

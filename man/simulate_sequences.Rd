@@ -219,5 +219,5 @@ sequences <- simulate_sequences(
 \code{\link{simulate_sequences_advanced}} for sequences with stability modes,
 \code{\link{simulate_long_data}} for long-format educational data,
 \code{\link{get_learning_states}} for available learning state verbs,
-\code{\link{generate_tna_networks}} for generating complete TNA networks.
+\code{\link{simulate_tna_networks}} for generating complete TNA networks.
 }

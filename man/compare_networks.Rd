@@ -73,5 +73,5 @@ print(comparison$metrics)
 }
 \seealso{
 \code{\link[=compare_centralities]{compare_centralities()}} for comparing centrality profiles,
-\code{\link[=calculate_edge_recovery]{calculate_edge_recovery()}} for edge recovery metrics.
+\code{\link[=compare_edge_recovery]{compare_edge_recovery()}} for edge recovery metrics.
 }

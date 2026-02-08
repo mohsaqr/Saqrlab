@@ -171,8 +171,8 @@ centralities(model)
 
 ```{r workflow2, eval = FALSE}
 # Create two different networks
-net1 <- generate_tna_networks(1, n_states = 5, seed = 42)
-net2 <- generate_tna_networks(1, n_states = 5, seed = 123)
+net1 <- simulate_tna_networks(1, n_states = 5, seed = 42)
+net2 <- simulate_tna_networks(1, n_states = 5, seed = 123)
 
 # Compare them
 comparison <- compare_networks(

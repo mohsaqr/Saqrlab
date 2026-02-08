@@ -522,12 +522,12 @@ head(edges)
 
 ## Complete Network Generation
 
-### Generate TNA Datasets with `generate_tna_datasets()`
+### Generate TNA Datasets with `simulate_tna_datasets()`
 
 Create complete datasets with sequences and their generating parameters:
 
 ```{r generate-datasets, eval = FALSE}
-datasets <- generate_tna_datasets(
+datasets <- simulate_tna_datasets(
   n_datasets = 5,
   n_states = 6,
   n_sequences = 100,
@@ -542,12 +542,12 @@ datasets$dataset_1$trans_matrix
 datasets$dataset_1$init_probs
 ```
 
-### Generate Fitted Networks with `generate_tna_networks()`
+### Generate Fitted Networks with `simulate_tna_networks()`
 
 Create complete networks with fitted TNA models:
 
 ```{r generate-networks, eval = FALSE}
-networks <- generate_tna_networks(
+networks <- simulate_tna_networks(
   n_networks = 5,
   n_states = 6,
   n_sequences = 150,
@@ -610,5 +610,5 @@ identical(mat1, mat2)
 | One-hot encoded | `simulate_onehot_data()` | tibble |
 | Social network edges | `simulate_edge_list()` | data.frame |
 | **Batch Generation** | | |
-| Complete datasets | `generate_tna_datasets()` | list |
-| Fitted networks | `generate_tna_networks()` | list |
+| Complete datasets | `simulate_tna_datasets()` | list |
+| Fitted networks | `simulate_tna_networks()` | list |

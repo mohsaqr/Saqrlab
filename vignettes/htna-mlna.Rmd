@@ -262,7 +262,7 @@ For analyzing multiple groups with the same structure:
 
 ```{r group-htna, eval = FALSE}
 # Generate group TNA networks
-group_networks <- generate_group_tna_networks(
+group_networks <- simulate_group_tna_networks(
   n_groups = 5,
   n_actors = 10,
   n_states = 6,
@@ -272,13 +272,13 @@ group_networks <- generate_group_tna_networks(
 )
 ```
 
-### Using generate_tna_matrix()
+### Using simulate_tna_matrix()
 
 An alternative function for generating HTNA/MLNA matrices:
 
 ```{r generate-tna-matrix, eval = FALSE}
 # Generate matrix with node types
-mat_result <- generate_tna_matrix(
+mat_result <- simulate_tna_matrix(
   n_states = 15,
   matrix_type = "htna",
   n_types = 3,
@@ -377,7 +377,7 @@ meta_to_cog <- extract_type_block(net, "Metacognitive", "Cognitive")
 | `simulate_htna()` | Generate multi-type transition matrix |
 | `simulate_mlna()` | Alias for simulate_htna |
 | `simulate_mtna()` | Alias for simulate_htna |
-| `generate_tna_matrix()` | Alternative matrix generator |
+| `simulate_tna_matrix()` | Alternative matrix generator |
 
 ### Key Parameters
 

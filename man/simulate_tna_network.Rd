@@ -74,7 +74,7 @@ model$initial_probs
 
 }
 \seealso{
-\code{\link{generate_tna_networks}} for generating multiple networks,
+\code{\link{simulate_tna_networks}} for generating multiple networks,
 \code{\link{simulate_sequences}} for generating sequences without fitting,
 \code{\link{fit_network_model}} for fitting models to existing data.
 }

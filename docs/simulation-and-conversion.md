@@ -24,10 +24,10 @@ This tutorial covers all functions in Saqrlab that generate data or convert betw
 | Function | Output | Description |
 |----------|--------|-------------|
 | `generate_probabilities()` | list | Random transition + initial probabilities |
-| `generate_tna_datasets()` | list | Complete datasets with sequences + model |
-| `generate_tna_networks()` | list | Multiple fitted TNA models |
-| `generate_group_tna_networks()` | group_tna | Group TNA model |
-| `generate_tna_matrix()` | list | Matrix with node groupings |
+| `simulate_tna_datasets()` | list | Complete datasets with sequences + model |
+| `simulate_tna_networks()` | list | Multiple fitted TNA models |
+| `simulate_group_tna_networks()` | group_tna | Group TNA model |
+| `simulate_tna_matrix()` | list | Matrix with node groupings |
 
 ### Conversion Functions
 
@@ -432,12 +432,12 @@ probs <- generate_probabilities(
 )
 ```
 
-### generate_tna_datasets() - Complete Datasets
+### simulate_tna_datasets() - Complete Datasets
 
 Generate datasets with sequences, fitted models, and generating probabilities.
 
 ```r
-datasets <- generate_tna_datasets(
+datasets <- simulate_tna_datasets(
   n_datasets = 5,
   n_states = 6,
   n_sequences = 100,
@@ -453,12 +453,12 @@ datasets$dataset_1$initial_probs   # Generating initial probabilities
 datasets$dataset_1$params          # All parameters
 ```
 
-### generate_tna_networks() - Multiple TNA Models
+### simulate_tna_networks() - Multiple TNA Models
 
 Generate multiple fitted TNA models.
 
 ```r
-networks <- generate_tna_networks(
+networks <- simulate_tna_networks(
   n_networks = 5,
   n_states = 6,
   n_sequences = 150,
@@ -473,12 +473,12 @@ plot(networks$network_1)
 centralities(networks$network_1)
 ```
 
-### generate_group_tna_networks() - Group TNA
+### simulate_group_tna_networks() - Group TNA
 
 Generate group TNA models with multiple groups.
 
 ```r
-group_model <- generate_group_tna_networks(
+group_model <- simulate_group_tna_networks(
   n_groups = 4,
   n_actors = 15,
   n_states = 5,
@@ -490,12 +490,12 @@ group_model <- generate_group_tna_networks(
 names(group_model)
 ```
 
-### generate_tna_matrix() - Matrix with Groupings
+### simulate_tna_matrix() - Matrix with Groupings
 
 Generate matrix with node groupings for HTNA/MLNA plots.
 
 ```r
-net <- generate_tna_matrix(
+net <- simulate_tna_matrix(
   nodes_per_group = 5,
   group_names = c("Macro", "Meso", "Micro"),
   seed = 42
@@ -770,5 +770,5 @@ get_learning_states("cognitive", n = 10)
 get_learning_states(c("metacognitive", "cognitive"), n = 15)
 
 # Smart selection based on n_states
-smart_select_states(n_states = 10, seed = 42)
+select_states(n_states = 10, seed = 42)
 ```

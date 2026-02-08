@@ -60,7 +60,7 @@ NULL
 #' }
 #'
 #' @seealso [compare_centralities()] for comparing centrality profiles,
-#'   [calculate_edge_recovery()] for edge recovery metrics.
+#'   [compare_edge_recovery()] for edge recovery metrics.
 #'
 #' @importFrom stats cor sd
 #' @export
@@ -381,15 +381,15 @@ compare_centralities <- function(model1,
 #' @examples
 #' \dontrun{
 #' # Calculate edge recovery
-#' recovery <- calculate_edge_recovery(model_original, model_simulated)
+#' recovery <- compare_edge_recovery(model_original, model_simulated)
 #' print(sprintf("Precision: %.2f, Recall: %.2f", recovery$precision, recovery$recall))
 #' }
 #'
 #' @seealso [compare_networks()] for full network comparison,
-#'   [evaluate_bootstrap()] for bootstrap evaluation.
+#'   [run_bootstrap_iteration()] for bootstrap evaluation.
 #'
 #' @export
-calculate_edge_recovery <- function(original,
+compare_edge_recovery <- function(original,
                                     simulated,
                                     threshold = 0.01,
                                     return_edges = FALSE) {

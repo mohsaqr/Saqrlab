@@ -104,5 +104,5 @@ net <- simulate_mlna(
 
 }
 \seealso{
-\code{\link{simulate_matrix}}, \code{\link{generate_tna_matrix}}
+\code{\link{simulate_matrix}}, \code{\link{simulate_tna_matrix}}
 }

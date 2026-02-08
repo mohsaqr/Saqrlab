@@ -1,4 +1,4 @@
-#' Create Parameter Grid for Simulations
+#' Generate Parameter Grid for Simulations
 #'
 #' @description
 #' Generate a grid of parameter combinations for simulation studies using
@@ -44,18 +44,18 @@
 #' )
 #'
 #' # Random sampling
-#' grid_random <- create_param_grid(ranges, n = 20, method = "random")
+#' grid_random <- generate_param_grid(ranges, n = 20, method = "random")
 #'
 #' # Latin Hypercube Sampling
-#' grid_lhs <- create_param_grid(ranges, n = 20, method = "lhs")
+#' grid_lhs <- generate_param_grid(ranges, n = 20, method = "lhs")
 #'
 #' # Grid sampling
-#' grid_regular <- create_param_grid(ranges, n = 20, method = "grid")
+#' grid_regular <- generate_param_grid(ranges, n = 20, method = "grid")
 #'
 #' @importFrom lhs randomLHS
 #' @importFrom stats runif
 #' @export
-create_param_grid <- function(param_ranges, n = 10, method = "random") {
+generate_param_grid <- function(param_ranges, n = 10, method = "random") {
   if (method == "lhs" && requireNamespace("lhs", quietly = TRUE)) {
     # Latin Hypercube Sampling for better coverage of parameter space
     numeric_params <- names(param_ranges)[sapply(param_ranges, function(x)

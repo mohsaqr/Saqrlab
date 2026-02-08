@@ -124,7 +124,7 @@ grid_results <- run_grid_simulation(
 )
 
 # Analyze results
-analyze_grid_results(grid_results)
+summarize_grid_results(grid_results)
 
 # Old parameter names still work
 grid_results <- run_grid_simulation(

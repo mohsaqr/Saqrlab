@@ -213,7 +213,7 @@ simulate_matrix <- function(n_nodes = 9,
 #' # plot_htna(net$matrix, net$node_types, layout = "polygon")
 #' # plot_mlna(net$matrix, layers = net$node_types)
 #'
-#' @seealso \code{\link{simulate_matrix}}, \code{\link{generate_tna_matrix}}
+#' @seealso \code{\link{simulate_matrix}}, \code{\link{simulate_tna_matrix}}
 #'
 #' @name simulate_htna
 #' @rdname simulate_htna

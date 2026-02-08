@@ -167,7 +167,7 @@
 #' \code{\link{simulate_sequences_advanced}} for sequences with stability modes,
 #' \code{\link{simulate_long_data}} for long-format educational data,
 #' \code{\link{get_learning_states}} for available learning state verbs,
-#' \code{\link{generate_tna_networks}} for generating complete TNA networks.
+#' \code{\link{simulate_tna_networks}} for generating complete TNA networks.
 #'
 #' @importFrom stats runif
 #' @importFrom seqHMM simulate_initial_probs simulate_transition_probs
@@ -230,7 +230,7 @@ if (!is.null(min_na) || !is.null(max_na)) {
     # Determine state names
     if (use_learning_states) {
       if (smart_select && ("all" %in% categories || length(categories) > 2)) {
-        states <- smart_select_states(
+        states <- select_states(
           n_states = n_states,
           primary_categories = if ("all" %in% categories) NULL else categories
         )

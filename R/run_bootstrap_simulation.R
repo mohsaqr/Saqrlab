@@ -53,7 +53,7 @@
 #' }
 #'
 #' @details
-#' For each run, the function calls `evaluate_bootstrap()` and accumulates
+#' For each run, the function calls `run_bootstrap_iteration()` and accumulates
 #' TP/TN/FP/FN counts. After all runs, it computes:
 #'
 #' - **Overall Performance**: Aggregated sensitivity (TPR), specificity (TNR),
@@ -191,7 +191,7 @@ run_bootstrap_simulation <- function(Model,
     run_params_list, function(params) {
       run_result <- tryCatch(
         {
-          evaluate_bootstrap(
+          run_bootstrap_iteration(
             # Pass all params by name
             trans_matrix = params$trans_matrix, init_probs = params$init_probs,
             stable_transitions = params$stable_transitions, seq_length = params$seq_length,

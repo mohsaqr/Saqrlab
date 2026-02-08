@@ -393,7 +393,7 @@ list_learning_categories <- function() {
 }
 
 
-#' Smart State Selection for Networks
+#' Select States for Networks
 #'
 #' @description
 #' Intelligently select learning states based on the number of nodes needed,
@@ -421,19 +421,19 @@ list_learning_categories <- function() {
 #'
 #' @examples
 #' # 5 states focused on self-regulation
-#' smart_select_states(5, primary_categories = "metacognitive")
+#' select_states(5, primary_categories = "metacognitive")
 #'
 #' # 10 states: mostly cognitive, some behavioral
-#' smart_select_states(10,
+#' select_states(10,
 #'   primary_categories = "cognitive",
 #'   secondary_categories = "behavioral"
 #' )
 #'
 #' # 15 states: balanced across categories
-#' smart_select_states(15, seed = 42)
+#' select_states(15, seed = 42)
 #'
 #' @export
-smart_select_states <- function(n_states,
+select_states <- function(n_states,
                                  primary_categories = NULL,
                                  secondary_categories = NULL,
                                  primary_ratio = 0.6,

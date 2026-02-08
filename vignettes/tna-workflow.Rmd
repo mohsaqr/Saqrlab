@@ -144,8 +144,8 @@ Compare two networks with multiple metrics:
 
 ```{r network-comparison, eval = FALSE}
 # Generate two different networks
-net1 <- generate_tna_networks(1, n_states = 6, n_sequences = 150, seed = 42)
-net2 <- generate_tna_networks(1, n_states = 6, n_sequences = 150, seed = 123)
+net1 <- simulate_tna_networks(1, n_states = 6, n_sequences = 150, seed = 42)
+net2 <- simulate_tna_networks(1, n_states = 6, n_sequences = 150, seed = 123)
 
 # Compare
 comparison <- compare_networks(
@@ -182,12 +182,12 @@ cent_comp <- compare_centralities(
 cent_comp$correlations
 ```
 
-### Using `calculate_edge_recovery()`
+### Using `compare_edge_recovery()`
 
 Evaluate edge recovery performance:
 
 ```{r edge-recovery, eval = FALSE}
-recovery <- calculate_edge_recovery(
+recovery <- compare_edge_recovery(
   original = net1$network_1$model,
   simulated = net2$network_1$model,
   threshold = 0.05,
@@ -281,7 +281,7 @@ summary(correlations)
 
 ```{r create-grid, eval = FALSE}
 # Define parameter combinations
-param_grid <- create_param_grid(
+param_grid <- generate_param_grid(
   param_ranges = list(
     n_sequences = c(50, 200),
     seq_length = c(15, 40),
@@ -312,7 +312,7 @@ grid_results <- run_grid_simulation(
 
 ```{r analyze-grid, eval = FALSE}
 # Analyze grid results
-analysis <- analyze_grid_results(grid_results)
+analysis <- summarize_grid_results(grid_results)
 
 # Summary by parameter
 analysis$by_n_sequences
@@ -468,5 +468,5 @@ print(summary_df)
 | Model comparison | `fit_network_model()` with different types |
 | Network metrics | `compare_networks()`, `compare_centralities()` |
 | Batch processing | `batch_fit_models()`, `batch_apply()` |
-| Grid simulation | `create_param_grid()`, `run_grid_simulation()` |
+| Grid simulation | `generate_param_grid()`, `run_grid_simulation()` |
 | Summarizing | `summarize_simulation()`, `summarize_networks()` |

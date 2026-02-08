@@ -65,10 +65,10 @@ communities(model)
 
 | Function | Description | Example |
 |----------|-------------|---------|
-| `generate_tna_datasets()` | Complete TNA datasets | `generate_tna_datasets(n_datasets = 5)` |
-| `generate_tna_networks()` | Fitted TNA models | `generate_tna_networks(n_networks = 5)` |
-| `generate_group_tna_networks()` | Group TNA models | `generate_group_tna_networks(n_groups = 5)` |
-| `generate_tna_matrix()` | HTNA/MLNA matrices | `generate_tna_matrix(n_states = 15)` |
+| `simulate_tna_datasets()` | Complete TNA datasets | `simulate_tna_datasets(n_datasets = 5)` |
+| `simulate_tna_networks()` | Fitted TNA models | `simulate_tna_networks(n_networks = 5)` |
+| `simulate_group_tna_networks()` | Group TNA models | `simulate_group_tna_networks(n_groups = 5)` |
+| `simulate_tna_matrix()` | HTNA/MLNA matrices | `simulate_tna_matrix(n_states = 15)` |
 | `generate_probabilities()` | Random transition probs | `generate_probabilities(n_states = 5)` |
 
 ### Model Fitting & Extraction
@@ -86,7 +86,7 @@ communities(model)
 |----------|-------------|---------|
 | `compare_networks()` | Compare two networks | `compare_networks(model1, model2)` |
 | `compare_centralities()` | Compare centrality profiles | `compare_centralities(model1, model2)` |
-| `calculate_edge_recovery()` | Edge recovery metrics | `calculate_edge_recovery(orig, sim)` |
+| `compare_edge_recovery()` | Edge recovery metrics | `compare_edge_recovery(orig, sim)` |
 
 ### Data Conversion
 
@@ -111,8 +111,8 @@ communities(model)
 | `run_bootstrap_simulation()` | Bootstrap analysis | `run_bootstrap_simulation(data, 100)` |
 | `run_grid_simulation()` | Parameter grid search | `run_grid_simulation(param_grid)` |
 | `run_network_simulation()` | Model comparison study | `run_network_simulation(...)` |
-| `evaluate_bootstrap()` | Evaluate bootstrap results | `evaluate_bootstrap(results, model)` |
-| `analyze_grid_results()` | Analyze grid output | `analyze_grid_results(grid_results)` |
+| `run_bootstrap_iteration()` | Evaluate bootstrap results | `run_bootstrap_iteration(results, model)` |
+| `summarize_grid_results()` | Analyze grid output | `summarize_grid_results(grid_results)` |
 
 ### Learning States
 
@@ -120,7 +120,7 @@ communities(model)
 |----------|-------------|---------|
 | `get_learning_states()` | Get verbs by category | `get_learning_states("metacognitive")` |
 | `list_learning_categories()` | Show categories | `list_learning_categories()` |
-| `smart_select_states()` | Intelligent selection | `smart_select_states(10)` |
+| `select_states()` | Intelligent selection | `select_states(10)` |
 | `LEARNING_STATES` | Full dataset (180+ verbs) | `LEARNING_STATES$cognitive` |
 | `GLOBAL_NAMES` | 300 diverse names | `head(GLOBAL_NAMES, 20)` |
 
@@ -128,7 +128,7 @@ communities(model)
 
 | Function | Description | Example |
 |----------|-------------|---------|
-| `create_param_grid()` | Parameter grids | `create_param_grid(n = c(50, 100))` |
+| `generate_param_grid()` | Parameter grids | `generate_param_grid(n = c(50, 100))` |
 | `validate_sim_params()` | Validate parameters | `validate_sim_params(params)` |
 | `summarize_simulation()` | Summary stats | `summarize_simulation(results)` |
 | `summarize_networks()` | Network summaries | `summarize_networks(model_list)` |
@@ -229,7 +229,7 @@ library(Saqrlab)
 library(tna)
 
 # Create parameter grid for power analysis
-power_grid <- create_param_grid(
+power_grid <- generate_param_grid(
   param_ranges = list(
     n_sequences = c(25, 300),
     seq_length = c(15, 40),
@@ -249,7 +249,7 @@ power_results <- run_grid_simulation(
 )
 
 # Analyze results
-analysis <- analyze_grid_results(power_results)
+analysis <- summarize_grid_results(power_results)
 summary_by_n <- summarize_simulation(
   power_results,
   by = "n_sequences",
@@ -299,7 +299,7 @@ comparisons <- lapply(names(models)[-1], function(m) {
 do.call(rbind, comparisons)
 
 # Edge recovery analysis
-recovery <- calculate_edge_recovery(
+recovery <- compare_edge_recovery(
   original = list(weights = true_probs$transition_matrix),
   simulated = models$tna,
   threshold = 0.05
@@ -326,11 +326,11 @@ mixed_verbs <- get_learning_states(
 )
 
 # Smart selection based on network size
-states_5 <- smart_select_states(5, seed = 42)   # Single category
-states_15 <- smart_select_states(15, seed = 42) # Multiple categories
+states_5 <- select_states(5, seed = 42)   # Single category
+states_15 <- select_states(15, seed = 42) # Multiple categories
 
 # Biased selection
-srl_states <- smart_select_states(
+srl_states <- select_states(
   n_states = 10,
   primary_categories = "metacognitive",
   secondary_categories = "cognitive",

@@ -14,10 +14,10 @@ Initial release of Saqrlab - Simulation and Analysis Tools for Temporal Network 
 - `simulate_edge_list()` - Social network edge lists simulation
 
 ### Network Generation
-- `generate_tna_datasets()` - Complete TNA datasets with sequences and parameters
-- `generate_tna_networks()` - Fitted TNA models with random parameters
-- `generate_group_tna_networks()` - Group TNA models for multi-group analysis
-- `generate_tna_matrix()` - HTNA/MLNA matrices with node types
+- `simulate_tna_datasets()` - Complete TNA datasets with sequences and parameters
+- `simulate_tna_networks()` - Fitted TNA models with random parameters
+- `simulate_group_tna_networks()` - Group TNA models for multi-group analysis
+- `simulate_tna_matrix()` - HTNA/MLNA matrices with node types
 - `generate_probabilities()` - Random transition matrices and initial probabilities
 
 ### Model Fitting & Extraction
@@ -29,7 +29,7 @@ Initial release of Saqrlab - Simulation and Analysis Tools for Temporal Network 
 ### Network Comparison
 - `compare_networks()` - Compare two networks using correlation, RMSE, MAE, and more
 - `compare_centralities()` - Compare centrality profiles between networks
-- `calculate_edge_recovery()` - Edge recovery metrics (precision, recall, F1)
+- `compare_edge_recovery()` - Edge recovery metrics (precision, recall, F1)
 
 ### Data Conversion
 - `wide_to_long()` - Convert wide-format sequences to long format
@@ -45,19 +45,19 @@ Initial release of Saqrlab - Simulation and Analysis Tools for Temporal Network 
 - `run_bootstrap_simulation()` - Bootstrap analysis for stability testing
 - `run_grid_simulation()` - Parameter grid search simulations
 - `run_network_simulation()` - Comprehensive model comparison studies
-- `evaluate_bootstrap()` - Evaluate single bootstrap runs
-- `analyze_grid_results()` - Analyze grid simulation output
+- `run_bootstrap_iteration()` - Evaluate single bootstrap runs
+- `summarize_grid_results()` - Analyze grid simulation output
 
 ### Learning States
 - `get_learning_states()` - Get learning verbs by category
 - `list_learning_categories()` - Show available categories with counts
-- `smart_select_states()` - Intelligent state selection based on network size
+- `select_states()` - Intelligent state selection based on network size
 - `LEARNING_STATES` - Full dataset of 180+ learning verbs in 8 categories
 - `GLOBAL_NAMES` - 300 diverse names for simulation
 - `get_global_names()` - Retrieve names from the global names dataset
 
 ### Utilities
-- `create_param_grid()` - Create parameter combination grids
+- `generate_param_grid()` - Create parameter combination grids
 - `validate_sim_params()` - Validate and set defaults for simulation parameters
 - `summarize_simulation()` - Summary statistics for simulation results
 - `summarize_networks()` - Network-level summaries for model lists

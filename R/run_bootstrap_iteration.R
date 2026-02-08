@@ -1,4 +1,4 @@
-#' Evaluate Bootstrap Performance for a Single Simulation Run
+#' Run Bootstrap Iteration for a Single Simulation Run
 #'
 #' @description
 #' Performs a single bootstrap evaluation run: generates sequences, fits a TNA
@@ -74,7 +74,7 @@
 #' stable <- list(c("A", "B"), c("B", "C"))
 #'
 #' # Run single bootstrap evaluation
-#' result <- evaluate_bootstrap(
+#' result <- run_bootstrap_iteration(
 #'   trans_matrix = trans_mat,
 #'   init_probs = init_probs,
 #'   stable_transitions = stable,
@@ -90,7 +90,7 @@
 #' )
 #'
 #' # Old parameter names still work
-#' result <- evaluate_bootstrap(
+#' result <- run_bootstrap_iteration(
 #'   transition_matrix = trans_mat,
 #'   initial_probabilities = init_probs,
 #'   stable_transitions = stable,
@@ -102,7 +102,7 @@
 #' @import dplyr
 #' @import tna
 #' @export
-evaluate_bootstrap <- function(trans_matrix = NULL,
+run_bootstrap_iteration <- function(trans_matrix = NULL,
                                 init_probs = NULL,
                                 stable_transitions,
                                 seq_length = 20,

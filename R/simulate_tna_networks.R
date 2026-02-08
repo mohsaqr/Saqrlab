@@ -1,11 +1,11 @@
-#' Generate TNA Datasets (Sequences + Models + Probabilities)
+#' Simulate TNA Datasets (Sequences + Models + Probabilities)
 #'
 #' @description
-#' Generate complete TNA datasets including simulated sequences, fitted models,
+#' Simulate complete TNA datasets including simulated sequences, fitted models,
 #' and generating probabilities. This function combines the full simulation
 #' workflow: probability generation -> sequence simulation -> model fitting.
 #'
-#' Use \code{\link{generate_tna_networks}} if you only need the fitted models.
+#' Use \code{\link{simulate_tna_networks}} if you only need the fitted models.
 #'
 #' Supports using realistic learning action verbs as state names for
 #' educational research simulations.
@@ -98,20 +98,20 @@
 #' @examples
 #' \dontrun{
 #' # Simplest usage - generates 1 dataset with sequences + model + probabilities
-#' data <- generate_tna_datasets(seed = 42)
+#' data <- simulate_tna_datasets(seed = 42)
 #' data[[1]]$sequences        # The sequence data
 #' data[[1]]$model            # The fitted TNA model
 #' data[[1]]$transition_probs # The generating probabilities
 #'
 #' # Generate 5 datasets with learning states
-#' data <- generate_tna_datasets(
+#' data <- simulate_tna_datasets(
 #'   n_datasets = 5,
 #'   n_states = 4,
 #'   seed = 42
 #' )
 #'
 #' # Generate with specific learning category
-#' learning_data <- generate_tna_datasets(
+#' learning_data <- simulate_tna_datasets(
 #'   n_datasets = 5,
 #'   n_states = 6,
 #'   categories = c("metacognitive", "cognitive"),
@@ -123,31 +123,28 @@
 #' # e.g., c("Plan", "Monitor", "Read", "Practice", "Discuss", "Focus")
 #'
 #' # Generate with letter names (disable learning states)
-#' letter_data <- generate_tna_datasets(
+#' letter_data <- simulate_tna_datasets(
 #'   n_datasets = 5,
 #'   n_states = 8,
 #'   use_learning_states = FALSE,
 #'   seed = 123
 #' )
-#'
-#' # Old function name still works (deprecated)
-#' data <- generate_sequence_data(n_datasets = 3, seed = 42)
 #' }
 #'
 #' @seealso
-#' \code{\link{generate_tna_networks}} for generating TNA network objects,
+#' \code{\link{simulate_tna_networks}} for generating TNA network objects,
 #' \code{\link{get_learning_states}} for retrieving learning state verbs,
-#' \code{\link{smart_select_states}} for intelligent state selection,
+#' \code{\link{select_states}} for intelligent state selection,
 #' \code{\link{list_learning_categories}} for viewing available categories,
 #' \code{\link{simulate_sequences}} for basic sequence simulation,
 #' \code{\link{fit_network_model}} for model fitting.
 #'
-#' @name generate_tna_datasets
-#' @rdname generate_tna_datasets
+#' @name simulate_tna_datasets
+#' @rdname simulate_tna_datasets
 #' @importFrom seqHMM simulate_initial_probs simulate_transition_probs
 #' @import tna
 #' @export
-generate_tna_datasets <- function(n_datasets = 1,
+simulate_tna_datasets <- function(n_datasets = 1,
                                    n_states = 8,
                                    n_sequences = 100,
                                    seq_length = 30,
@@ -229,7 +226,7 @@ generate_tna_datasets <- function(n_datasets = 1,
 
     if (smart_select && ("all" %in% categories || length(categories) > 2)) {
       # Use smart selection for balanced category representation
-      states <- smart_select_states(
+      states <- select_states(
         n_states = n_states,
         primary_categories = if ("all" %in% categories) NULL else categories
       )
@@ -346,32 +343,14 @@ generate_tna_datasets <- function(n_datasets = 1,
 }
 
 
-#' Generate Sequence Data (Deprecated)
+#' Simulate TNA Network Objects
 #'
 #' @description
-#' `r lifecycle::badge("deprecated")`
-#'
-#' This function has been renamed to \code{\link{generate_tna_datasets}}.
-#' Please use `generate_tna_datasets()` instead.
-#'
-#' @inheritParams generate_tna_datasets
-#' @keywords internal
-#' @export
-generate_sequence_data <- function(...) {
-
-.Deprecated("generate_tna_datasets")
-  generate_tna_datasets(...)
-}
-
-
-#' Generate TNA Network Objects
-#'
-#' @description
-#' Generate multiple TNA network objects (fitted models) for simulation studies.
+#' Simulate multiple TNA network objects (fitted models) for simulation studies.
 #' This function creates TNA model objects by simulating sequence data and
 #' fitting models. For generating raw sequence data with associated probabilities,
-#' use \code{\link{generate_tna_datasets}}. For group TNA models, use
-#' \code{\link{generate_group_tna_networks}}.
+#' use \code{\link{simulate_tna_datasets}}. For group TNA models, use
+#' \code{\link{simulate_group_tna_networks}}.
 #'
 #' @param n_networks Integer. Number of networks to generate. Default: 1.
 #' @param n_states Integer. Number of states/actions in each network. Default: 5.
@@ -388,7 +367,7 @@ generate_sequence_data <- function(...) {
 #'   If NULL (default), randomly selects one category.
 #' @param seed Integer or NULL. Random seed for reproducibility. Default: NULL.
 #' @param verbose Logical. If TRUE, prints progress messages. Default: TRUE.
-#' @param ... Additional parameters passed to \code{\link{generate_tna_datasets}}.
+#' @param ... Additional parameters passed to \code{\link{simulate_tna_datasets}}.
 #'
 #' @param num_sequences Deprecated. Use `n_sequences` instead.
 #' @param max_seq_length Deprecated. Use `seq_length` instead.
@@ -398,7 +377,7 @@ generate_sequence_data <- function(...) {
 #'   Each element is a tna model object (class "tna").
 #'
 #' @details
-#' This function differs from \code{\link{generate_tna_datasets}} in that it
+#' This function differs from \code{\link{simulate_tna_datasets}} in that it
 #' returns only the fitted model objects, not the underlying sequence data or
 #' generating probabilities. Use this when you need TNA network objects for
 #' simulation studies or method comparisons.
@@ -411,10 +390,10 @@ generate_sequence_data <- function(...) {
 #' @examples
 #' \dontrun{
 #' # Generate 5 TNA networks with random learning category
-#' nets <- generate_tna_networks(n_networks = 5, seed = 42)
+#' nets <- simulate_tna_networks(n_networks = 5, seed = 42)
 #'
 #' # Generate networks with specific category
-#' meta_nets <- generate_tna_networks(
+#' meta_nets <- simulate_tna_networks(
 #'   n_networks = 3,
 #'   n_states = 6,
 #'   categories = "metacognitive",
@@ -422,7 +401,7 @@ generate_sequence_data <- function(...) {
 #' )
 #'
 #' # Generate filtered TNA networks
-#' ftna_nets <- generate_tna_networks(
+#' ftna_nets <- simulate_tna_networks(
 #'   n_networks = 5,
 #'   model_type = "ftna",
 #'   seed = 456
@@ -433,7 +412,7 @@ generate_sequence_data <- function(...) {
 #' tna::centralities(nets[[1]])
 #'
 #' # Old parameter names still work
-#' nets <- generate_tna_networks(
+#' nets <- simulate_tna_networks(
 #'   n_networks = 3,
 #'   num_sequences = 50,
 #'   max_seq_length = 25,
@@ -442,15 +421,15 @@ generate_sequence_data <- function(...) {
 #' }
 #'
 #' @seealso
-#' \code{\link{generate_group_tna_networks}} for group TNA models,
-#' \code{\link{generate_tna_datasets}} for generating complete datasets with
+#' \code{\link{simulate_group_tna_networks}} for group TNA models,
+#' \code{\link{simulate_tna_datasets}} for generating complete datasets with
 #'   probabilities, \code{\link{fit_network_model}} for model fitting,
 #' \code{\link{get_learning_states}} for learning state verbs.
 #'
 #' @importFrom seqHMM simulate_initial_probs simulate_transition_probs
 #' @import tna
 #' @export
-generate_tna_networks <- function(n_networks = 1,
+simulate_tna_networks <- function(n_networks = 1,
                                    n_states = 8,
                                    n_sequences = 100,
                                    seq_length = 30,
@@ -506,7 +485,7 @@ generate_tna_networks <- function(n_networks = 1,
     }
 
     # Generate sequences and fit tna model
-    seq_data <- generate_tna_datasets(
+    seq_data <- simulate_tna_datasets(
       n_datasets = 1,
       n_states = n_states,
       states = states,
@@ -532,10 +511,10 @@ generate_tna_networks <- function(n_networks = 1,
 }
 
 
-#' Generate Group TNA Network Objects
+#' Simulate Group TNA Network Objects
 #'
 #' @description
-#' Generate group TNA network objects (fitted group_tna models) for simulation
+#' Simulate group TNA network objects (fitted group_tna models) for simulation
 #' studies with grouped/clustered data. Each network contains multiple groups
 #' (e.g., classrooms, teams) with their own transition patterns.
 #'
@@ -583,7 +562,7 @@ generate_tna_networks <- function(n_networks = 1,
 #' @examples
 #' \dontrun{
 #' # Generate a group TNA network with 4 groups, 15 actors each
-#' group_net <- generate_group_tna_networks(
+#' group_net <- simulate_group_tna_networks(
 #'   n_groups = 4,
 #'   n_actors = 15,
 #'   n_states = 5,
@@ -591,7 +570,7 @@ generate_tna_networks <- function(n_networks = 1,
 #' )
 #'
 #' # Variable group sizes using range notation
-#' var_net <- generate_group_tna_networks(
+#' var_net <- simulate_group_tna_networks(
 #'   n_groups = 5,
 #'   n_actors = c(8, 15),
 #'   seq_length_range = c(5, 25),
@@ -599,7 +578,7 @@ generate_tna_networks <- function(n_networks = 1,
 #' )
 #'
 #' # With specific learning category
-#' ssrl_net <- generate_group_tna_networks(
+#' ssrl_net <- simulate_group_tna_networks(
 #'   n_groups = 6,
 #'   n_actors = c(10, 20),
 #'   categories = "group_regulation",
@@ -611,7 +590,7 @@ generate_tna_networks <- function(n_networks = 1,
 #' group_net[[1]]$weights
 #'
 #' # Old parameter names still work
-#' group_net <- generate_group_tna_networks(
+#' group_net <- simulate_group_tna_networks(
 #'   actors_per_group = 10,
 #'   min_seq_length = 5,
 #'   max_seq_length = 20,
@@ -620,14 +599,14 @@ generate_tna_networks <- function(n_networks = 1,
 #' }
 #'
 #' @seealso
-#' \code{\link{generate_tna_networks}} for individual TNA models,
+#' \code{\link{simulate_tna_networks}} for individual TNA models,
 #' \code{\link{simulate_long_data}} for generating long-format group data,
 #' \code{\link{fit_network_model}} for model fitting.
 #'
 #' @importFrom seqHMM simulate_initial_probs simulate_transition_probs
 #' @import tna
 #' @export
-generate_group_tna_networks <- function(n_groups = 5,
+simulate_group_tna_networks <- function(n_groups = 5,
                                          n_actors = 10,
                                          n_states = 8,
                                          seq_length_range = c(10, 30),
@@ -736,10 +715,10 @@ generate_group_tna_networks <- function(n_groups = 5,
 }
 
 
-#' Generate TNA Transition Matrix with Node Groupings
+#' Simulate TNA Transition Matrix with Node Groupings
 #'
 #' @description
-#' Generate a transition matrix with node groupings, compatible with
+#' Simulate a transition matrix with node groupings, compatible with
 #' `tna::plot_htna()` (hierarchical) and `tna::plot_mlna()` (multilevel)
 #' visualizations. By default creates a 25-node matrix (5 nodes x 5 types)
 #' using learning category names.
@@ -786,7 +765,7 @@ generate_group_tna_networks <- function(n_groups = 5,
 #' @examples
 #' \dontrun{
 #' # Default: 5 groups x 5 nodes = 25 node matrix
-#' net <- generate_tna_matrix(seed = 42)
+#' net <- simulate_tna_matrix(seed = 42)
 #' net$matrix
 #' net$node_types  # Metacognitive, Cognitive, Behavioral, Social, Motivational
 #'
@@ -797,14 +776,14 @@ generate_group_tna_networks <- function(n_groups = 5,
 #' plot_mlna(net$matrix, layers = net$node_types)
 #'
 #' # Custom group names (3 groups)
-#' net <- generate_tna_matrix(
+#' net <- simulate_tna_matrix(
 #'   nodes_per_group = 6,
 #'   group_names = c("Macro", "Meso", "Micro"),
 #'   seed = 42
 #' )
 #'
 #' # Custom categories per group
-#' net <- generate_tna_matrix(
+#' net <- simulate_tna_matrix(
 #'   nodes_per_group = 4,
 #'   group_names = c("Teacher", "Student", "System"),
 #'   categories = c("metacognitive", "cognitive", "behavioral"),
@@ -815,10 +794,10 @@ generate_group_tna_networks <- function(n_groups = 5,
 #' @seealso
 #' \code{\link{simulate_htna}} for the underlying function,
 #' \code{\link{simulate_matrix}} for basic matrix simulation,
-#' \code{\link{generate_tna_networks}} for TNA model objects.
+#' \code{\link{simulate_tna_networks}} for TNA model objects.
 #'
 #' @export
-generate_tna_matrix <- function(nodes_per_group = 5,
+simulate_tna_matrix <- function(nodes_per_group = 5,
                                  group_names = c("Metacognitive", "Cognitive",
                                                  "Behavioral", "Social", "Motivational"),
                                  n_groups = 5,

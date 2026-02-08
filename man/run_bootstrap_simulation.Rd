@@ -98,7 +98,7 @@ Simulate and analyze edge recovery across multiple bootstrap runs. Aggregates
 results to compute overall performance metrics and edge-level significance.
 }
 \details{
-For each run, the function calls \code{evaluate_bootstrap()} and accumulates
+For each run, the function calls \code{run_bootstrap_iteration()} and accumulates
 TP/TN/FP/FN counts. After all runs, it computes:
 \itemize{
 \item \strong{Overall Performance}: Aggregated sensitivity (TPR), specificity (TNR),

@@ -219,7 +219,7 @@ simulate_igraph <- function(n = NULL,
   } else if (name_source == "human") {
     get_global_names(actual_n, regions = regions)
   } else if (name_source == "states") {
-    smart_select_states(actual_n, primary_categories = categories)
+    select_states(actual_n, primary_categories = categories)
   } else {
     paste0("V", 1:actual_n)
   }

@@ -1,7 +1,7 @@
-#' Analyze and Summarize Grid Simulation Results
+#' Summarize Grid Simulation Results
 #'
 #' @description
-#' Analyze results from `run_grid_simulation()`, filtering by parameter ranges
+#' Summarize results from `run_grid_simulation()`, filtering by parameter ranges
 #' and computing aggregated performance metrics. Provides detailed summaries
 #' at both the setting level and across all selected settings.
 #'
@@ -73,10 +73,10 @@
 #' grid_results <- run_grid_simulation(...)
 #'
 #' # Analyze all results
-#' analysis <- analyze_grid_results(grid_results)
+#' analysis <- summarize_grid_results(grid_results)
 #'
 #' # Filter to specific parameter ranges
-#' analysis_filtered <- analyze_grid_results(
+#' analysis_filtered <- summarize_grid_results(
 #'   grid_results,
 #'   n_sequences_range = c(100, 200),
 #'   seq_length_range = c(30, 50),
@@ -90,7 +90,7 @@
 #' setting_summary <- analysis$selected_settings_summary_df
 #'
 #' # Old parameter names still work
-#' analysis_filtered <- analyze_grid_results(
+#' analysis_filtered <- summarize_grid_results(
 #'   grid_results,
 #'   num_rows_range = c(100, 200),
 #'   max_seq_length_range = c(30, 50)
@@ -101,7 +101,7 @@
 #' @importFrom tidyr complete
 #' @importFrom stats sd
 #' @export
-analyze_grid_results <- function(grid_results_list,
+summarize_grid_results <- function(grid_results_list,
                                   n_sequences_range = NULL,
                                   seq_length_range = NULL,
                                   min_na_range = NULL,
