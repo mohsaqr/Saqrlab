@@ -5,7 +5,7 @@
 \alias{create_param_grid}
 \title{Generate Parameter Grid for Simulations}
 \usage{
-generate_param_grid(param_ranges, n = 10, method = "random")
+generate_param_grid(param_ranges = NULL, n = 10, method = "random")
 
 create_param_grid(...)
 }
@@ -14,7 +14,9 @@ create_param_grid(...)
 \itemize{
 \item A numeric vector of length 2 (min, max) for continuous/integer parameters.
 \item A vector of values for categorical parameters.
-}}
+}
+If NULL (default), uses demo ranges for TNA simulation:
+\code{list(n_sequences = c(50, 500), seq_length = c(10, 50), n_states = c(4, 12))}.}
 
 \item{n}{Integer. Number of parameter combinations to generate. Default: 10.}
 
@@ -31,7 +33,7 @@ A data frame with \code{n} rows and columns for each parameter.
 }
 \description{
 Generate a grid of parameter combinations for simulation studies using
-various sampling methods.
+various sampling methods. Can be called with no arguments for a demo grid.
 }
 \details{
 \strong{Method Details:}
@@ -48,7 +50,11 @@ provide better coverage of the parameter space than random sampling.
 Categorical parameters are sampled uniformly with replacement for all methods.
 }
 \examples{
-# Define parameter ranges
+# Simplest usage: demo grid with default TNA parameters
+grid <- generate_param_grid()
+head(grid)
+
+# Define custom parameter ranges
 ranges <- list(
   num_rows = c(50, 500),       # Integer parameter
   max_seq_length = c(10, 100), # Integer parameter

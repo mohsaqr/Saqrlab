@@ -2,13 +2,15 @@
 #'
 #' @description
 #' Generate a grid of parameter combinations for simulation studies using
-#' various sampling methods.
+#' various sampling methods. Can be called with no arguments for a demo grid.
 #'
 #' @param param_ranges Named list of parameter ranges. Each element can be:
 #' \itemize{
 #'   \item A numeric vector of length 2 (min, max) for continuous/integer parameters.
 #'   \item A vector of values for categorical parameters.
 #' }
+#' If NULL (default), uses demo ranges for TNA simulation:
+#' \code{list(n_sequences = c(50, 500), seq_length = c(10, 50), n_states = c(4, 12))}.
 #' @param n Integer. Number of parameter combinations to generate. Default: 10.
 #' @param method Character. Sampling method. One of:
 #' \describe{
@@ -36,7 +38,11 @@
 #' Categorical parameters are sampled uniformly with replacement for all methods.
 #'
 #' @examples
-#' # Define parameter ranges
+#' # Simplest usage: demo grid with default TNA parameters
+#' grid <- generate_param_grid()
+#' head(grid)
+#'
+#' # Define custom parameter ranges
 #' ranges <- list(
 #'   num_rows = c(50, 500),       # Integer parameter
 #'   max_seq_length = c(10, 100), # Integer parameter
@@ -55,7 +61,17 @@
 #' @importFrom lhs randomLHS
 #' @importFrom stats runif
 #' @export
-generate_param_grid <- function(param_ranges, n = 10, method = "random") {
+generate_param_grid <- function(param_ranges = NULL, n = 10, method = "random") {
+  # Default param_ranges for demo/empty call
+
+  if (is.null(param_ranges)) {
+    param_ranges <- list(
+      n_sequences = c(50, 500),
+      seq_length = c(10, 50),
+      n_states = c(4, 12)
+    )
+  }
+
   if (method == "lhs" && requireNamespace("lhs", quietly = TRUE)) {
     # Latin Hypercube Sampling for better coverage of parameter space
     numeric_params <- names(param_ranges)[sapply(param_ranges, function(x)
