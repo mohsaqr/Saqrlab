@@ -24,15 +24,130 @@ library(Saqrlab)
 
 This guide covers all simulation functions in Saqrlab. The package provides multiple ways to generate synthetic data for Temporal Network Analysis:
 
+### Network Objects
+
+| Function | Output | Use Case |
+|----------|--------|----------|
+| `simulate_igraph()` | igraph object | Network analysis with igraph |
+| `simulate_network()` | statnet network | SNA with sna/network packages |
+| `simulate_tna_network()` | Fitted tna model | Ready-to-use TNA model |
+
+### Matrices & Sequences
+
 | Function | Output | Use Case |
 |----------|--------|----------|
 | `simulate_matrix()` | Transition matrix | Simple networks |
 | `simulate_htna()` | Multi-type matrix | HTNA/MLNA analysis |
 | `simulate_sequences()` | Wide-format sequences | Basic TNA |
 | `simulate_sequences_advanced()` | Sequences with patterns | Realistic simulations |
+
+### Hierarchical & Social Data
+
+| Function | Output | Use Case |
+|----------|--------|----------|
 | `simulate_long_data()` | Hierarchical long format | Group/course analysis |
 | `simulate_onehot_data()` | One-hot encoded data | ML applications |
 | `simulate_edge_list()` | Edge list | Social networks |
+
+## Simulating Network Objects
+
+### igraph Networks with `simulate_igraph()`
+
+Generate igraph objects using common graph algorithms. Perfect for network analysis, visualization, and teaching.
+
+```{r simulate-igraph}
+library(igraph)
+
+# Default: random Erdos-Renyi network (20-50 nodes)
+g <- simulate_igraph(seed = 42)
+vcount(g)
+V(g)$name[1:10]  # Human names from diverse regions
+```
+
+#### Graph Algorithms
+
+```{r graph-models}
+# Scale-free network (Barabasi-Albert)
+g_ba <- simulate_igraph(n = 30, model = "ba", m_ba = 2, seed = 42)
+hist(degree(g_ba), main = "Scale-free degree distribution")
+
+# Small-world network (Watts-Strogatz)
+g_ws <- simulate_igraph(n = 30, model = "ws", nei = 3, p_rewire = 0.1, seed = 42)
+
+# Community structure (Stochastic Block Model)
+g_sbm <- simulate_igraph(n = 30, model = "sbm", blocks = 3, seed = 42)
+V(g_sbm)$block  # Block assignments
+```
+
+#### Choosing Name Regions
+
+```{r name-regions}
+# Names from specific regions
+g_arab <- simulate_igraph(n = 15, regions = "arab", seed = 42)
+V(g_arab)$name
+
+# Names from a continent
+g_africa <- simulate_igraph(n = 15, regions = "africa", seed = 42)
+V(g_africa)$name
+
+# Multiple regions
+g_asia <- simulate_igraph(n = 15, regions = c("east_asia", "south_asia"), seed = 42)
+V(g_asia)$name
+
+# Learning states instead of human names
+g_states <- simulate_igraph(n = 10, name_source = "states", seed = 42)
+V(g_states)$name
+```
+
+#### Weighted Networks
+
+```{r weighted-igraph}
+# Add random edge weights
+g_w <- simulate_igraph(n = 20, weighted = TRUE, seed = 42)
+E(g_w)$weight[1:10]
+```
+
+### statnet Networks with `simulate_network()`
+
+Generate network objects for use with sna and network packages.
+
+```{r simulate-network, eval = FALSE}
+library(network)
+library(sna)
+
+# Default network
+net <- simulate_network(seed = 42)
+network.size(net)
+network.vertex.names(net)[1:10]
+
+# Scale-free for SNA analysis
+net_ba <- simulate_network(n = 30, model = "ba", seed = 42)
+betweenness(net_ba)
+```
+
+### Fitted TNA Models with `simulate_tna_network()`
+
+The simplest way to get a ready-to-use TNA model:
+
+```{r simulate-tna-network, eval = FALSE}
+# Generate a fitted tna model
+model <- simulate_tna_network(seed = 42)
+class(model)  # "tna"
+
+# Use with tna functions
+library(tna)
+plot(model)
+centralities(model)
+communities(model)
+
+# Custom configuration
+model <- simulate_tna_network(
+  n_states = 8,
+  n_sequences = 500,
+  categories = "group_regulation",
+  seed = 123
+)
+```
 
 ## Simulating Transition Matrices
 
@@ -384,7 +499,6 @@ edges <- simulate_edge_list(
   n_nodes = 20,
   n_edges = 50,
   directed = TRUE,
-  weighted = TRUE,
   seed = 42
 )
 
@@ -394,12 +508,12 @@ head(edges)
 #### Network Properties
 
 ```{r edge-properties}
-# Undirected, unweighted network
+# Undirected network with custom weight range
 edges <- simulate_edge_list(
   n_nodes = 15,
   n_edges = 30,
   directed = FALSE,
-  weighted = FALSE,
+  weight_range = c(1, 10),
   seed = 42
 )
 
@@ -479,14 +593,22 @@ identical(mat1, mat2)
 
 ## Summary
 
-| Task | Function |
-|------|----------|
-| Simple transition matrix | `simulate_matrix()` |
-| HTNA/MLNA matrix | `simulate_htna()` |
-| Basic sequences | `simulate_sequences()` |
-| Sequences with patterns | `simulate_sequences_advanced()` |
-| Hierarchical data | `simulate_long_data()` |
-| One-hot sequences | `simulate_onehot_data()` |
-| Social network edges | `simulate_edge_list()` |
-| Complete datasets | `generate_tna_datasets()` |
-| Fitted networks | `generate_tna_networks()` |
+| Task | Function | Output |
+|------|----------|--------|
+| **Network Objects** | | |
+| igraph network | `simulate_igraph()` | igraph |
+| statnet network | `simulate_network()` | network |
+| Fitted TNA model | `simulate_tna_network()` | tna |
+| **Matrices** | | |
+| Simple transition matrix | `simulate_matrix()` | matrix |
+| HTNA/MLNA matrix | `simulate_htna()` | list |
+| **Sequences** | | |
+| Basic sequences | `simulate_sequences()` | data.frame |
+| Sequences with patterns | `simulate_sequences_advanced()` | data.frame |
+| **Hierarchical Data** | | |
+| Hierarchical long format | `simulate_long_data()` | tibble |
+| One-hot encoded | `simulate_onehot_data()` | tibble |
+| Social network edges | `simulate_edge_list()` | data.frame |
+| **Batch Generation** | | |
+| Complete datasets | `generate_tna_datasets()` | list |
+| Fitted networks | `generate_tna_networks()` | list |

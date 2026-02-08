@@ -18,9 +18,12 @@ Imports:
     future,
     future.apply,
     progressr,
-    lhs
+    lhs,
+    igraph
 Suggests:
     testthat (>= 3.0.0),
     knitr,
-    rmarkdown
+    rmarkdown,
+    network,
+    sna
 VignetteBuilder: knitr

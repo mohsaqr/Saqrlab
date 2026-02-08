@@ -4,26 +4,47 @@
 \alias{get_global_names}
 \title{Get Global Names}
 \usage{
-get_global_names(n = NULL, seed = NULL)
+get_global_names(n = NULL, regions = "all", seed = NULL)
 }
 \arguments{
-\item{n}{Integer or NULL. Number of names to return. If NULL, returns all names.
-Default: NULL.}
+\item{n}{Integer or NULL. Number of names to return. If NULL, returns all
+matching names. Default: NULL.}
 
-\item{seed}{Integer or NULL. Random seed for reproducibility when sampling.
-Default: NULL.}
+\item{regions}{Character vector. Regions to sample from. Can be:
+\itemize{
+\item \code{"all"}: All regions (default)
+\item Specific regions: e.g., \code{"arab"}, \code{"east_asia"}, \code{"nordic"}
+\item Shortcuts: e.g., \code{"europe"}, \code{"africa"}, \code{"asia"}
+\item Multiple: e.g., \code{c("arab", "persian", "turkish")}
+}
+Default: "all".}
+
+\item{seed}{Integer or NULL. Random seed for reproducibility. Default: NULL.}
 }
 \value{
 Character vector of names.
 }
 \description{
-Retrieve names from the global names dataset, optionally sampling a subset.
+Retrieve names from the global names dataset, with optional filtering by region.
 }
 \examples{
-# Get all names
-get_global_names()
+# Get 20 random names from all regions
+get_global_names(20, seed = 42)
 
-# Get 15 random names
-get_global_names(n = 15, seed = 42)
+# Get 10 names from Arab region
+get_global_names(10, regions = "arab")
 
+# Get 15 names from any African region
+get_global_names(15, regions = "africa")
+
+# Get names from multiple regions
+get_global_names(20, regions = c("east_asia", "south_asia"))
+
+# Get all Nordic names
+get_global_names(regions = "nordic")
+
+}
+\seealso{
+\code{\link{list_name_regions}} for available regions,
+\code{\link{GLOBAL_NAMES}} for the full dataset.
 }

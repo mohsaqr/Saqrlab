@@ -5,36 +5,89 @@
 \alias{GLOBAL_NAMES}
 \title{Global Names Dataset}
 \format{
-A character vector of 300 names from various cultures and regions.
+A named list of character vectors, with each element containing
+names from a specific region.
 }
 \usage{
 GLOBAL_NAMES
 }
 \description{
-A collection of 300 short, diverse names from around the world for use in
-social network simulations.
+A collection of ~1000 culturally diverse names from around the world,
+organized by region for use in social network simulations.
 }
 \details{
-Names are selected to be short (typically 3-7 characters) and represent
-diverse cultural backgrounds including:
+Regions are organized geographically and include:
+
+\strong{Europe:}
 \itemize{
-\item European (Western, Eastern, Nordic)
-\item Arab / Middle Eastern
-\item Asian (East Asian, South Asian, Southeast Asian)
-\item African
-\item Latin American
-\item Oceanian
+\item \code{western_europe}: UK, Ireland, France, Germany, Netherlands, Belgium
+\item \code{eastern_europe}: Russia, Ukraine, Poland, Czech, Romania, Hungary, Bulgaria
+\item \code{southern_europe}: Spain, Italy, Portugal, Greece
+\item \code{nordic}: Sweden, Norway, Denmark, Finland, Iceland
+}
+
+\strong{Middle East & Central Asia:}
+\itemize{
+\item \code{arab}: Gulf states, Levant, Egypt
+\item \code{persian}: Iran, Afghanistan, Tajikistan
+\item \code{turkish}: Turkey, Azerbaijan
+\item \code{central_asia}: Kazakhstan, Uzbekistan, Kyrgyzstan, Turkmenistan
+}
+
+\strong{Asia:}
+\itemize{
+\item \code{south_asia}: India, Pakistan, Bangladesh, Sri Lanka, Nepal
+\item \code{east_asia}: China, Japan, Korea, Mongolia
+\item \code{southeast_asia}: Vietnam, Thailand, Indonesia, Philippines, Malaysia
+}
+
+\strong{Africa:}
+\itemize{
+\item \code{west_africa}: Nigeria, Ghana, Senegal, Mali
+\item \code{east_africa}: Kenya, Ethiopia, Tanzania, Somalia, Uganda
+\item \code{southern_africa}: South Africa, Zimbabwe, Botswana, Namibia
+\item \code{north_africa}: Morocco, Algeria, Tunisia, Libya
+\item \code{central_africa}: DRC, Cameroon, Congo
+}
+
+\strong{Americas:}
+\itemize{
+\item \code{north_america}: USA, Canada
+\item \code{latin_america}: Mexico, Central America, South America, Brazil
+\item \code{caribbean}: Jamaica, Haiti, Cuba, Trinidad, Dominican Republic
+\item \code{indigenous_americas}: Native American, First Nations, Mayan, Incan
+}
+
+\strong{Oceania:}
+\itemize{
+\item \code{australia_nz}: Australia, New Zealand
+\item \code{pacific_islands}: Hawaii, Samoa, Tonga, Fiji, PNG
+\item \code{indigenous_oceania}: Maori, Aboriginal Australian
+}
+
+\strong{Other:}
+\itemize{
+\item \code{jewish_hebrew}: Hebrew/Jewish names
+\item \code{armenian_georgian}: Armenia, Georgia
 }
 }
 \examples{
-# View all names
-GLOBAL_NAMES
+# View all region names
+names(GLOBAL_NAMES)
 
-# Sample 10 random names
-sample(GLOBAL_NAMES, 10)
+# View names from a specific region
+GLOBAL_NAMES$arab
+GLOBAL_NAMES$east_asia
 
-# Use in network simulation
-simulate_edge_list(n_nodes = 20)
+# Count names per region
+sapply(GLOBAL_NAMES, length)
 
+# Total names available
+sum(sapply(GLOBAL_NAMES, length))
+
+}
+\seealso{
+\code{\link{get_global_names}} for sampling names,
+\code{\link{list_name_regions}} for exploring available regions.
 }
 \keyword{datasets}
