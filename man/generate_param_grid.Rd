@@ -27,6 +27,8 @@ If NULL (default), uses demo ranges for TNA simulation:
 \item{"lhs"}{Latin Hypercube Sampling for better coverage (requires lhs package).}
 }
 Default: "random".}
+
+\item{...}{Arguments passed to \code{generate_param_grid}.}
 }
 \value{
 A data frame with \code{n} rows and columns for each parameter.

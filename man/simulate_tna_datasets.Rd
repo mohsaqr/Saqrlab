@@ -113,6 +113,8 @@ no seed is set. Default: NULL.}
 \item{max_na}{Deprecated. Use \code{na_range} instead.}
 
 \item{include_probabilities}{Deprecated. Use \code{include_probs} instead.}
+
+\item{...}{Arguments passed to \code{simulate_tna_datasets}.}
 }
 \value{
 A list of length \code{n_datasets}. Each element is a list containing:

@@ -24,6 +24,8 @@ calculate_edge_recovery(...)
 
 \item{return_edges}{Logical. Whether to return detailed edge-level results.
 Default: FALSE.}
+
+\item{...}{Arguments passed to \code{compare_edge_recovery}.}
 }
 \value{
 A list containing:

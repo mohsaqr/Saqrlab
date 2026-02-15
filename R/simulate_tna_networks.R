@@ -878,6 +878,7 @@ simulate_tna_matrix <- function(nodes_per_group = 5,
 # Backward compatibility aliases (silent - no warnings)
 
 #' @rdname simulate_tna_datasets
+#' @param ... Arguments passed to \code{simulate_tna_datasets}.
 #' @export
 generate_tna_datasets <- function(...) simulate_tna_datasets(...)
 
@@ -886,13 +887,16 @@ generate_tna_datasets <- function(...) simulate_tna_datasets(...)
 generate_sequence_data <- function(...) simulate_tna_datasets(...)
 
 #' @rdname simulate_tna_networks
+#' @param ... Arguments passed to \code{simulate_tna_networks}.
 #' @export
 generate_tna_networks <- function(...) simulate_tna_networks(...)
 
 #' @rdname simulate_group_tna_networks
+#' @param ... Arguments passed to \code{simulate_group_tna_networks}.
 #' @export
 generate_group_tna_networks <- function(...) simulate_group_tna_networks(...)
 
 #' @rdname simulate_tna_matrix
+#' @param ... Arguments passed to \code{simulate_tna_matrix}.
 #' @export
 generate_tna_matrix <- function(...) simulate_tna_matrix(...)

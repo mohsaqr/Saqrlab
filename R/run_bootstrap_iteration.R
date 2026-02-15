@@ -282,5 +282,6 @@ run_bootstrap_iteration <- function(trans_matrix = NULL,
 # Backward compatibility alias (silent - no warning)
 
 #' @rdname run_bootstrap_iteration
+#' @param ... Arguments passed to \code{run_bootstrap_iteration}.
 #' @export
 evaluate_bootstrap <- function(...) run_bootstrap_iteration(...)

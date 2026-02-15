@@ -28,6 +28,8 @@ Default: NULL (use all remaining).}
 categories. Default: 0.6.}
 
 \item{seed}{Integer or NULL. Random seed. Default: NULL.}
+
+\item{...}{Arguments passed to \code{select_states}.}
 }
 \value{
 Character vector of selected learning states.

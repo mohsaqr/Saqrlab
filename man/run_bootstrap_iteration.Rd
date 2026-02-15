@@ -78,6 +78,8 @@ consistency analysis (e.g., c(0.75, 1.25)).}
 \item{min_na}{Deprecated. Use \code{na_range} instead.}
 
 \item{max_na}{Deprecated. Use \code{na_range} instead.}
+
+\item{...}{Arguments passed to \code{run_bootstrap_iteration}.}
 }
 \value{
 A list containing:

@@ -54,6 +54,8 @@ setting. Default: TRUE.}
 \item{num_rows_range}{Deprecated. Use \code{n_sequences_range} instead.}
 
 \item{max_seq_length_range}{Deprecated. Use \code{seq_length_range} instead.}
+
+\item{...}{Arguments passed to \code{summarize_grid_results}.}
 }
 \value{
 A list containing:

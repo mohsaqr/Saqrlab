@@ -469,5 +469,6 @@ compare_edge_recovery <- function(original,
 # Backward compatibility alias (silent - no warning)
 
 #' @rdname compare_edge_recovery
+#' @param ... Arguments passed to \code{compare_edge_recovery}.
 #' @export
 calculate_edge_recovery <- function(...) compare_edge_recovery(...)

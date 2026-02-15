@@ -54,7 +54,7 @@ If NULL (default), randomly selects one category.}
 
 \item{learning_categories}{Deprecated. Use \code{categories} instead.}
 
-\item{...}{Additional parameters passed to \code{\link{simulate_tna_datasets}}.}
+\item{...}{Arguments passed to \code{simulate_tna_networks}.}
 }
 \value{
 A list of length \code{n_networks} containing fitted TNA model objects.

@@ -655,5 +655,6 @@ summarize_grid_results <- function(grid_results_list,
 # Backward compatibility alias (silent - no warning)
 
 #' @rdname summarize_grid_results
+#' @param ... Arguments passed to \code{summarize_grid_results}.
 #' @export
 analyze_grid_results <- function(...) summarize_grid_results(...)

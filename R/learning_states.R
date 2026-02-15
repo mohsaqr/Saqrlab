@@ -516,5 +516,6 @@ select_states <- function(n_states,
 # Backward compatibility alias (silent - no warning)
 
 #' @rdname select_states
+#' @param ... Arguments passed to \code{select_states}.
 #' @export
 smart_select_states <- function(...) select_states(...)

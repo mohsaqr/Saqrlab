@@ -171,5 +171,6 @@ generate_param_grid <- function(param_ranges = NULL, n = 10, method = "random") 
 # Backward compatibility alias (silent - no warning)
 
 #' @rdname generate_param_grid
+#' @param ... Arguments passed to \code{generate_param_grid}.
 #' @export
 create_param_grid <- function(...) generate_param_grid(...)

@@ -55,6 +55,8 @@ states. Default: "N".}
 \item{verbose}{Logical. Print progress messages. Default: TRUE.}
 
 \item{learning_categories}{Deprecated. Use \code{categories} instead.}
+
+\item{...}{Arguments passed to \code{simulate_tna_matrix}.}
 }
 \value{
 A list with two elements:

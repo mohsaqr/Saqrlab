@@ -55,7 +55,7 @@ If NULL (default), randomly selects one category.}
 
 \item{learning_categories}{Deprecated. Use \code{categories} instead.}
 
-\item{...}{Additional parameters passed to \code{\link{simulate_long_data}}.}
+\item{...}{Arguments passed to \code{simulate_group_tna_networks}.}
 }
 \value{
 A group_tna model object (class "group_tna") containing:
