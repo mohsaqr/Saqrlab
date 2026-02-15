@@ -4,21 +4,21 @@
 \alias{plot.psych_network_ml}
 \title{Plot Method for Multilevel Psychological Network}
 \usage{
-\method{plot}{psych_network_ml}(x, predictability = FALSE, pie_color = "#377EB8", ...)
+\method{plot}{psych_network_ml}(x, predictability = TRUE, pie_color = "#377EB8", ...)
 }
 \arguments{
 \item{x}{A \code{psych_network_ml} object.}
 
 \item{predictability}{Logical. If \code{TRUE}, display node predictability
-as pie chart rings (default: \code{FALSE}).}
+as pie charts on each node (default: \code{TRUE}).}
 
 \item{pie_color}{Character. Color for the predictability pie segments.
 Default: \code{"#377EB8"}.}
 
-\item{...}{Additional arguments passed to \code{cograph::tplot()}.}
+\item{...}{Additional arguments passed to \code{cograph::splot()}.}
 }
 \description{
 Plots the between-person and within-person networks side by side using
-\code{cograph::tplot()}.
+\code{cograph::splot()}.
 Requires the \pkg{cograph} package to be installed.
 }

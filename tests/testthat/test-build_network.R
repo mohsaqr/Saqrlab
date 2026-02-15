@@ -630,13 +630,9 @@ test_that("predictability works for psych_network_ml", {
   expect_true(all(r2$within >= 0 & r2$within <= 1))
 })
 
-test_that("print shows predictability for all methods", {
+test_that("print does not show predictability", {
   df <- .make_freq_data(n = 80, p = 5)
-
-  for (m in c("glasso", "pcor", "cor")) {
-    net <- build_network(df, method = m, nlambda = 20L)
-    out <- capture.output(print(net))
-    expect_true(any(grepl("predictability", out)),
-                info = sprintf("method = %s", m))
-  }
+  net <- build_network(df, nlambda = 20L)
+  out <- capture.output(print(net))
+  expect_false(any(grepl("predictability", out)))
 })

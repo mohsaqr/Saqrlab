@@ -4,22 +4,22 @@
 \alias{plot.psych_network}
 \title{Plot Method for Psychological Network}
 \usage{
-\method{plot}{psych_network}(x, predictability = FALSE, pie_color = "#377EB8", ...)
+\method{plot}{psych_network}(x, predictability = TRUE, pie_color = "#377EB8", ...)
 }
 \arguments{
 \item{x}{A \code{psych_network} object.}
 
 \item{predictability}{Logical. If \code{TRUE}, display node predictability
-as pie chart rings (default: \code{FALSE}).}
+as pie charts (default: \code{TRUE}).}
 
 \item{pie_color}{Character. Color for the predictability pie segments.
 Default: \code{"#377EB8"} (blue, following mgm convention).}
 
-\item{...}{Additional arguments passed to \code{cograph::tplot()}.}
+\item{...}{Additional arguments passed to \code{cograph::splot()}.}
 }
 \description{
-Plots the network using \code{cograph::tplot()}.
+Plots the network using \code{cograph::splot()}.
 Requires the \pkg{cograph} package to be installed.
-When \code{predictability = TRUE}, node predictability (R\eqn{^2}) is shown
-as pie rings around each node.
+By default, node predictability (R\eqn{^2}) is shown as pie charts
+on each node.
 }

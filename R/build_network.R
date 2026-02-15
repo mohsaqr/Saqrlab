@@ -662,11 +662,6 @@ print.psych_network <- function(x, ...) {
     cat(sprintf("  Gamma: %.2f  |  Lambda: %.4f\n",
                 x$gamma, x$lambda_selected))
   }
-
-  r2 <- predictability.psych_network(x)
-  cat(sprintf("  Avg. predictability: %.3f  |  Range: [%.3f, %.3f]\n",
-              mean(r2), min(r2), max(r2)))
-
   invisible(x)
 }
 
@@ -700,9 +695,6 @@ print.psych_network_ml <- function(x, ...) {
     cat(sprintf("  Gamma: %.2f  |  Lambda: %.4f\n",
                 b$gamma, b$lambda_selected))
   }
-  r2_b <- predictability.psych_network(b)
-  cat(sprintf("  Avg. predictability: %.3f  |  Range: [%.3f, %.3f]\n",
-              mean(r2_b), min(r2_b), max(r2_b)))
   cat("-- Within-person --\n")
   w <- x$within
   total_w <- w$p * (w$p - 1) / 2
@@ -719,10 +711,31 @@ print.psych_network_ml <- function(x, ...) {
     cat(sprintf("  Gamma: %.2f  |  Lambda: %.4f\n",
                 w$gamma, w$lambda_selected))
   }
-  r2_w <- predictability.psych_network(w)
-  cat(sprintf("  Avg. predictability: %.3f  |  Range: [%.3f, %.3f]\n",
-              mean(r2_w), min(r2_w), max(r2_w)))
   invisible(x)
+}
+
+
+#' Generate distinct pastel node colors
+#' @noRd
+.node_colors <- function(p) {
+  palette <- c(
+    "#A8D8EA", # light blue
+    "#FFCAB1", # peach
+    "#B5EAD7", # mint
+    "#E2B6CF", # mauve
+    "#FFDAC1", # apricot
+    "#C7CEEA", # lavender
+    "#F3E8C0", # cream
+    "#D4F0C0", # pistachio
+    "#F5C6D0", # pink
+    "#B8E0D2", # seafoam
+    "#EAC8A0", # sand
+    "#C8B8DB", # lilac
+    "#A0D2DB", # teal
+    "#F0D9A0", # gold
+    "#D8A8C8"  # orchid
+  )
+  rep_len(palette, p)
 }
 
 
@@ -730,19 +743,19 @@ print.psych_network_ml <- function(x, ...) {
 #'
 #' @description
 #' Plots the between-person and within-person networks side by side using
-#' \code{cograph::tplot()}.
+#' \code{cograph::splot()}.
 #' Requires the \pkg{cograph} package to be installed.
 #'
 #' @param x A \code{psych_network_ml} object.
 #' @param predictability Logical. If \code{TRUE}, display node predictability
-#'   as pie chart rings (default: \code{FALSE}).
+#'   as pie charts on each node (default: \code{TRUE}).
 #' @param pie_color Character. Color for the predictability pie segments.
 #'   Default: \code{"#377EB8"}.
-#' @param ... Additional arguments passed to \code{cograph::tplot()}.
+#' @param ... Additional arguments passed to \code{cograph::splot()}.
 #'
-#' @importFrom graphics par title
+#' @importFrom graphics par
 #' @export
-plot.psych_network_ml <- function(x, predictability = FALSE,
+plot.psych_network_ml <- function(x, predictability = TRUE,
                                   pie_color = "#377EB8", ...) {
   if (!requireNamespace("cograph", quietly = TRUE)) {
     stop(
@@ -753,44 +766,61 @@ plot.psych_network_ml <- function(x, predictability = FALSE,
   old_par <- graphics::par(mfrow = c(1, 2))
   on.exit(graphics::par(old_par))
 
-  dots <- list(...)
+  p <- x$between$p
+  node_cols <- .node_colors(p)
+
+  dots <- list(
+    directed = FALSE,
+    node_fill = node_cols,
+    edge_labels = TRUE,
+    edge_label_size = 0.65,
+    node_size = 8,
+    theme = "colorblind",
+    ...
+  )
+
   if (predictability) {
     r2 <- predictability.psych_network_ml(x)
-    dots_b <- c(dots, list(pie = r2$between,
-                           pieColor = rep(pie_color, length(r2$between))))
-    dots_w <- c(dots, list(pie = r2$within,
-                           pieColor = rep(pie_color, length(r2$within))))
+
+    dots_b <- c(list(x = x$between$network_matrix,
+                     title = "Between-person",
+                     pie_values = r2$between,
+                     pie_colors = pie_color),
+                dots)
+    dots_w <- c(list(x = x$within$network_matrix,
+                     title = "Within-person",
+                     pie_values = r2$within,
+                     pie_colors = pie_color),
+                dots)
   } else {
-    dots_b <- dots
-    dots_w <- dots
+    dots_b <- c(list(x = x$between$network_matrix,
+                     title = "Between-person"), dots)
+    dots_w <- c(list(x = x$within$network_matrix,
+                     title = "Within-person"), dots)
   }
 
-  do.call(cograph::tplot,
-          c(list(x$between$network_matrix, directed = FALSE), dots_b))
-  graphics::title("Between-person")
-  do.call(cograph::tplot,
-          c(list(x$within$network_matrix, directed = FALSE), dots_w))
-  graphics::title("Within-person")
+  do.call(cograph::splot, dots_b)
+  do.call(cograph::splot, dots_w)
 }
 
 
 #' Plot Method for Psychological Network
 #'
 #' @description
-#' Plots the network using \code{cograph::tplot()}.
+#' Plots the network using \code{cograph::splot()}.
 #' Requires the \pkg{cograph} package to be installed.
-#' When \code{predictability = TRUE}, node predictability (R\eqn{^2}) is shown
-#' as pie rings around each node.
+#' By default, node predictability (R\eqn{^2}) is shown as pie charts
+#' on each node.
 #'
 #' @param x A \code{psych_network} object.
 #' @param predictability Logical. If \code{TRUE}, display node predictability
-#'   as pie chart rings (default: \code{FALSE}).
+#'   as pie charts (default: \code{TRUE}).
 #' @param pie_color Character. Color for the predictability pie segments.
 #'   Default: \code{"#377EB8"} (blue, following mgm convention).
-#' @param ... Additional arguments passed to \code{cograph::tplot()}.
+#' @param ... Additional arguments passed to \code{cograph::splot()}.
 #'
 #' @export
-plot.psych_network <- function(x, predictability = FALSE,
+plot.psych_network <- function(x, predictability = TRUE,
                                pie_color = "#377EB8", ...) {
   if (!requireNamespace("cograph", quietly = TRUE)) {
     stop(
@@ -798,14 +828,28 @@ plot.psych_network <- function(x, predictability = FALSE,
       "Install it with: install.packages('cograph')"
     )
   }
-  dots <- list(...)
+
+  p <- x$p
+  node_cols <- .node_colors(p)
+
+  dots <- list(
+    x = x$network_matrix,
+    directed = FALSE,
+    node_fill = node_cols,
+    edge_labels = TRUE,
+    edge_label_size = 0.65,
+    node_size = 8,
+    theme = "colorblind",
+    ...
+  )
+
   if (predictability) {
     r2 <- predictability.psych_network(x)
-    dots$pie <- r2
-    dots$pieColor <- rep(pie_color, length(r2))
+    dots$pie_values <- r2
+    dots$pie_colors <- pie_color
   }
-  do.call(cograph::tplot,
-          c(list(x$network_matrix, directed = FALSE), dots))
+
+  do.call(cograph::splot, dots)
 }
 
 
