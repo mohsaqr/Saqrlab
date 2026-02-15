@@ -7,6 +7,8 @@
 generate_probabilities(
   n_states = 8,
   states = NULL,
+  alpha = 1,
+  diag_c = 0,
   seed = NULL,
   possible_state_names = NULL
 )
@@ -17,6 +19,18 @@ generate_probabilities(
 \item{states}{Character vector. Names for the states.
 Must have at least \code{n_states} elements. If NULL, uses letters A, B, C, ...
 Default: NULL.}
+
+\item{alpha}{Numeric. Dirichlet concentration parameter passed to
+\code{\link[seqHMM:simulate_pars]{seqHMM::simulate_initial_probs()}} and
+\code{\link[seqHMM:simulate_pars]{seqHMM::simulate_transition_probs()}}.
+Small values (e.g., 0.1) produce sparse matrices with a few dominant
+transitions; large values (e.g., 10) produce near-uniform matrices.
+Default: 1.}
+
+\item{diag_c}{Numeric. Diagonal boost added before row normalisation,
+passed to \code{\link[seqHMM:simulate_pars]{seqHMM::simulate_transition_probs()}}.
+Higher values create "sticky" states with strong self-transitions.
+Default: 0.}
 
 \item{seed}{Integer or NULL. Random seed for reproducibility. Default: NULL.}
 

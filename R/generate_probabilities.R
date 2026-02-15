@@ -8,6 +8,16 @@
 #' @param states Character vector. Names for the states.
 #'   Must have at least `n_states` elements. If NULL, uses letters A, B, C, ...
 #'   Default: NULL.
+#' @param alpha Numeric. Dirichlet concentration parameter passed to
+#'   [seqHMM::simulate_initial_probs()] and
+#'   [seqHMM::simulate_transition_probs()].
+#'   Small values (e.g., 0.1) produce sparse matrices with a few dominant
+#'   transitions; large values (e.g., 10) produce near-uniform matrices.
+#'   Default: 1.
+#' @param diag_c Numeric. Diagonal boost added before row normalisation,
+#'   passed to [seqHMM::simulate_transition_probs()].
+#'   Higher values create "sticky" states with strong self-transitions.
+#'   Default: 0.
 #' @param seed Integer or NULL. Random seed for reproducibility. Default: NULL.
 #'
 #' @param possible_state_names Deprecated. Use `states` instead.
@@ -54,6 +64,8 @@
 #' @export
 generate_probabilities <- function(n_states = 8,
                                     states = NULL,
+                                    alpha = 1,
+                                    diag_c = 0,
                                     seed = NULL,
                                     # Backward compatibility
                                     possible_state_names = NULL) {
@@ -79,9 +91,11 @@ generate_probabilities <- function(n_states = 8,
     states <- states[1:n_states]
   }
 
-  initial_probs <- seqHMM::simulate_initial_probs(n_states)
+  initial_probs <- seqHMM::simulate_initial_probs(n_states, alpha = alpha)
   names(initial_probs) <- states
-  transition_probs <- seqHMM::simulate_transition_probs(n_states)
+  transition_probs <- seqHMM::simulate_transition_probs(
+    n_states, alpha = alpha, diag_c = diag_c
+  )
   dimnames(transition_probs) <- list(states, states)
 
   return(list(
