@@ -20,13 +20,15 @@ Imports:
     progressr,
     lhs,
     igraph,
-    ggplot2
+    ggplot2,
+    glasso
 Suggests:
     testthat (>= 3.0.0),
     knitr,
     rmarkdown,
     network,
     sna,
-    ggridges
+    ggridges,
+    cograph
 VignetteBuilder: knitr
 Config/testthat/edition: 3
