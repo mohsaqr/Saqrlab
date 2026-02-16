@@ -79,29 +79,9 @@ frequencies <- function(data,
   stopifnot(is.null(cols) || is.character(cols))
   format <- match.arg(format)
 
-  # Auto-detect format
-  if (format == "auto") {
-    format <- if (action %in% names(data)) "long" else "wide"
-  }
-
-  if (format == "long") {
-    pairs <- .build_pairs_long(data, action, id, time)
-  } else {
-    pairs <- .build_pairs_wide(data, id, cols)
-  }
-
-  # Build frequency matrix from pairs
-  states <- sort(unique(c(pairs$from, pairs$to)))
-  pairs$from <- factor(pairs$from, levels = states)
-  pairs$to <- factor(pairs$to, levels = states)
-  freq_mat <- table(pairs$from, pairs$to)
-  freq_mat <- matrix(
-    as.integer(freq_mat),
-    nrow = length(states),
-    ncol = length(states),
-    dimnames = list(states, states)
+  .count_transitions(
+    data, format = format, action = action, id = id, time = time, cols = cols
   )
-  freq_mat
 }
 
 

@@ -5,5 +5,12 @@
 utils::globalVariables(c(
   "density", "mean_val", "mean_value", "median_val", "sd_val", "sd_value",
   "value", "metric", "category", "model_type", "iteration", "mean", "sd",
-  "sim_alpha", "sim_diag_c"
+  "sim_alpha", "sim_diag_c",
+  ".grp_key", ".", ".SD", ":="
 ))
+
+
+#' @noRd
+.onLoad <- function(libname, pkgname) {
+  .register_builtin_estimators()
+}

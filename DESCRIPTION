@@ -21,7 +21,8 @@ Imports:
     lhs,
     igraph,
     ggplot2,
-    glasso
+    glasso,
+    data.table
 Suggests:
     testthat (>= 3.0.0),
     knitr,

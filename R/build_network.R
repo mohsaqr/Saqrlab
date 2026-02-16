@@ -196,61 +196,81 @@ build_network <- function(data,
 
   stopifnot(is.numeric(threshold), threshold >= 0)
 
-  # Validate level parameter
-  if (!is.null(level)) {
-    level <- match.arg(level, c("between", "within", "both"))
-    if (is.null(id_col)) {
-      stop("'id_col' is required when 'level' is specified.", call. = FALSE)
-    }
-    if (!is.data.frame(data)) {
-      stop("'data' must be a data frame when 'level' is specified.",
-           call. = FALSE)
-    }
-  }
+  # Build params list for estimate_network
+  params <- list(
+    id_col = id_col,
+    n = n,
+    gamma = gamma,
+    nlambda = nlambda,
+    lambda.min.ratio = lambda.min.ratio,
+    penalize.diagonal = penalize.diagonal,
+    threshold = threshold,
+    cor_method = cor_method,
+    input_type = input_type
+  )
 
-  # level = "both": recursive dispatch
+  # Delegate to estimate_network
+  saqr_net <- estimate_network(
+    data = data,
+    method = method,
+    params = params,
+    scaling = NULL,
+    threshold = 0,   # threshold handled inside estimator via params
+    level = level,
+    id_col = id_col
+  )
 
-  if (identical(level, "both")) {
-    between <- build_network(
-      data, method = method, id_col = id_col, level = "between", n = n,
-      gamma = gamma, nlambda = nlambda, lambda.min.ratio = lambda.min.ratio,
-      penalize.diagonal = penalize.diagonal, threshold = threshold,
-      cor_method = cor_method, input_type = input_type
+  # Convert saqr_network -> psych_network for backward compat
+  if (inherits(saqr_net, "saqr_network_ml")) {
+    result <- list(
+      between = .saqr_to_psych_network(saqr_net$between),
+      within  = .saqr_to_psych_network(saqr_net$within),
+      method  = method
     )
-    within <- build_network(
-      data, method = method, id_col = id_col, level = "within", n = n,
-      gamma = gamma, nlambda = nlambda, lambda.min.ratio = lambda.min.ratio,
-      penalize.diagonal = penalize.diagonal, threshold = threshold,
-      cor_method = cor_method, input_type = input_type
-    )
-    result <- list(between = between, within = within, method = method)
     class(result) <- "psych_network_ml"
     return(result)
   }
 
-  # Prepare input: get correlation matrix S and sample size n
-  prepared <- .prepare_network_input(
-    data, id_col = id_col, n = n,
-    cor_method = cor_method, input_type = input_type,
-    level = level
-  )
-  S <- prepared$S
-  n <- prepared$n
-  p <- ncol(S)
+  .saqr_to_psych_network(saqr_net)
+}
 
-  # Dispatch to method-specific estimation
-  result <- switch(method,
-    glasso = .estimate_glasso(S, n, p, gamma, nlambda, lambda.min.ratio,
-                              penalize.diagonal, threshold),
-    pcor   = .estimate_pcor(S, p, threshold),
-    cor    = .estimate_cor(S, threshold)
+
+#' Convert saqr_network to psych_network for backward compatibility
+#' @noRd
+.saqr_to_psych_network <- function(saqr_net) {
+  # Rebuild edges using the undirected extractor (upper triangle only)
+  edges <- .network_to_edges(saqr_net$matrix)
+
+  result <- list(
+    network_matrix = saqr_net$matrix,
+    cor_matrix     = saqr_net$cor_matrix,
+    edges          = edges,
+    n              = saqr_net$n,
+    p              = saqr_net$p,
+    method         = saqr_net$method,
+    n_edges        = nrow(edges),
+    level          = saqr_net$level
   )
 
-  result$cor_matrix <- S
-  result$n <- n
-  result$p <- p
-  result$method <- method
-  result$level <- level
+  # Carry over method-specific extras
+  if (!is.null(saqr_net$precision_matrix)) {
+    result$precision_matrix <- saqr_net$precision_matrix
+  }
+  if (!is.null(saqr_net$lambda_selected)) {
+    result$lambda_selected <- saqr_net$lambda_selected
+  }
+  if (!is.null(saqr_net$ebic_selected)) {
+    result$ebic_selected <- saqr_net$ebic_selected
+  }
+  if (!is.null(saqr_net$lambda_path)) {
+    result$lambda_path <- saqr_net$lambda_path
+  }
+  if (!is.null(saqr_net$ebic_path)) {
+    result$ebic_path <- saqr_net$ebic_path
+  }
+  if (!is.null(saqr_net$gamma)) {
+    result$gamma <- saqr_net$gamma
+  }
 
   structure(result, class = "psych_network")
 }
