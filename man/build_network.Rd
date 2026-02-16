@@ -52,6 +52,7 @@ Default: \code{NULL}.}
 \value{
 An object of class \code{"netobject"} containing:
 \describe{
+\item{data}{The input data used for estimation, as a matrix.}
 \item{matrix}{The estimated network weight matrix.}
 \item{nodes}{Character vector of node names.}
 \item{directed}{Logical. Whether the network is directed.}

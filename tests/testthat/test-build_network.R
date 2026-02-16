@@ -658,3 +658,48 @@ test_that("print does not show predictability", {
   out <- capture.output(print(net))
   expect_false(any(grepl("predictability", out)))
 })
+
+
+# ---- $data field ----
+
+test_that("$data is a matrix for association methods (data frame input)", {
+  df <- .make_freq_data(n = 80, p = 5)
+  net <- build_network(df, method = "glasso", params = list(nlambda = 20L))
+
+  expect_true(is.matrix(net$data))
+  expect_true(is.numeric(net$data))
+  expect_equal(nrow(net$data), 80)
+  # 5 state columns + rid column = 6
+  expect_equal(ncol(net$data), 6)
+})
+
+test_that("$data is a matrix for association methods (matrix input)", {
+  df <- .make_freq_data(n = 100, p = 5)
+  num_cols <- setdiff(names(df), "rid")
+  S <- cor(df[, num_cols])
+
+  net <- build_network(S, method = "glasso", params = list(n = 100,
+                                                            nlambda = 20L))
+
+  expect_true(is.matrix(net$data))
+  expect_equal(nrow(net$data), 5)
+  expect_equal(ncol(net$data), 5)
+})
+
+test_that("$data is a character matrix for transition methods", {
+  skip_if_not_installed("tna")
+  net <- build_network(tna::group_regulation, method = "tna")
+
+  expect_true(is.matrix(net$data))
+  expect_true(is.character(net$data))
+  expect_equal(nrow(net$data), 2000)
+  expect_equal(ncol(net$data), 26)
+})
+
+test_that("print.netobject shows data dimensions", {
+  df <- .make_freq_data(n = 80, p = 5)
+  net <- build_network(df, method = "glasso", params = list(nlambda = 20L))
+
+  out <- capture.output(print(net))
+  expect_true(any(grepl("Data: 80 x 6", out)))
+})

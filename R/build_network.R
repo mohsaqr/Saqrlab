@@ -36,6 +36,7 @@
 #'
 #' @return An object of class \code{"netobject"} containing:
 #' \describe{
+#'   \item{data}{The input data used for estimation, as a matrix.}
 #'   \item{matrix}{The estimated network weight matrix.}
 #'   \item{nodes}{Character vector of node names.}
 #'   \item{directed}{Logical. Whether the network is directed.}
@@ -199,6 +200,7 @@ build_network <- function(data,
 
   # Build netobject
   result <- list(
+    data = as.matrix(data),
     matrix = net_matrix,
     nodes = nodes,
     directed = directed,
@@ -255,6 +257,9 @@ print.netobject <- function(x, ...) {
   }
 
   cat(label, dir_label, level_label, "\n", sep = "")
+  if (!is.null(x$data)) {
+    cat(sprintf("  Data: %d x %d\n", nrow(x$data), ncol(x$data)))
+  }
   cat(sprintf("  Nodes: %d  |  Edges: %d\n", x$n_nodes, x$n_edges))
 
   if (!is.null(x$n)) {
