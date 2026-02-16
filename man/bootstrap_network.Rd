@@ -21,7 +21,7 @@ bootstrap_network(
 )
 }
 \arguments{
-\item{data}{Data frame or matrix, passed to \code{estimate_network()}.}
+\item{data}{Data frame or matrix, passed to \code{build_network()}.}
 
 \item{method}{Character. Registered estimator name (default:
 \code{"relative"}). Aliases are resolved automatically.}
@@ -59,7 +59,7 @@ percentile of absolute original edge weights.}
 \value{
 An object of class \code{"saqr_bootstrap"} containing:
 \describe{
-\item{original}{The original \code{saqr_network} object.}
+\item{original}{The original \code{netobject}.}
 \item{mean}{Bootstrap mean weight matrix.}
 \item{sd}{Bootstrap SD matrix.}
 \item{p_values}{P-value matrix.}
@@ -69,21 +69,23 @@ An object of class \code{"saqr_bootstrap"} containing:
 \item{cr_lower}{Consistency range lower bound (stability only).}
 \item{cr_upper}{Consistency range upper bound (stability only).}
 \item{summary}{Long-format data frame of edge-level statistics.}
-\item{model}{Pruned \code{saqr_network} (non-significant edges zeroed).}
+\item{model}{Pruned \code{netobject} (non-significant edges zeroed).}
 \item{method, params, iter, ci_level, inference}{Bootstrap config.}
 \item{consistency_range, edge_threshold}{Inference parameters.}
 }
 }
 \description{
 Non-parametric bootstrap for any network estimated by
-\code{\link{estimate_network}}. Works with all built-in methods
+\code{\link{build_network}}. Works with all built-in methods
 (transition and association) as well as custom registered estimators.
 
 For transition methods (\code{"relative"}, \code{"frequency"},
 \code{"co_occurrence"}), uses a fast pre-computation strategy:
 per-sequence count matrices are computed once, and each bootstrap
 iteration only resamples sequences via \code{colSums} (C-level)
-plus lightweight post-processing.
+plus lightweight post-processing. Data must be in wide format for
+transition bootstrap; use \code{\link{convert_sequence_format}} to
+convert long-format data first.
 
 For association methods (\code{"cor"}, \code{"pcor"}, \code{"glasso"},
 and custom estimators), the full estimator is called on resampled rows
@@ -108,6 +110,6 @@ boot2 <- bootstrap_network(wide, method = "relative",
 
 }
 \seealso{
-\code{\link{estimate_network}}, \code{\link{print.saqr_bootstrap}},
+\code{\link{build_network}}, \code{\link{print.saqr_bootstrap}},
 \code{\link{summary.saqr_bootstrap}}, \code{\link{plot.saqr_bootstrap}}
 }

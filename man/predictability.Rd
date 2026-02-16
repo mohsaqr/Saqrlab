@@ -2,26 +2,26 @@
 % Please edit documentation in R/build_network.R
 \name{predictability}
 \alias{predictability}
-\alias{predictability.psych_network}
-\alias{predictability.psych_network_ml}
+\alias{predictability.netobject}
+\alias{predictability.netobject_ml}
 \title{Compute Node Predictability}
 \usage{
 predictability(object, ...)
 
-\method{predictability}{psych_network}(object, ...)
+\method{predictability}{netobject}(object, ...)
 
-\method{predictability}{psych_network_ml}(object, ...)
+\method{predictability}{netobject_ml}(object, ...)
 }
 \arguments{
-\item{object}{A \code{psych_network} or \code{psych_network_ml} object.}
+\item{object}{A \code{netobject} or \code{netobject_ml} object.}
 
 \item{...}{Additional arguments (ignored).}
 }
 \value{
-For \code{psych_network}: a named numeric vector of R\eqn{^2} values
+For \code{netobject}: a named numeric vector of R\eqn{^2} values
 (one per node, between 0 and 1).
 
-For \code{psych_network_ml}: a list with elements \code{$between} and
+For \code{netobject_ml}: a list with elements \code{$between} and
 \code{$within}, each a named numeric vector.
 }
 \description{
@@ -39,7 +39,7 @@ regressing each node on its network neighbors (nodes with non-zero edges).
 \examples{
 \dontrun{
 freq <- convert_sequence_format(group_regulation, format = "frequency")
-net <- build_network(freq)
+net <- build_network(freq, method = "glasso")
 predictability(net)
 
 # Plot with predictability rings

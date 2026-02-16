@@ -25,8 +25,8 @@ test_that("bootstrap_network works with method='relative'", {
   boot <- bootstrap_network(wide, method = "relative", iter = 30L, seed = 1)
 
   expect_s3_class(boot, "saqr_bootstrap")
-  expect_s3_class(boot$original, "saqr_network")
-  expect_s3_class(boot$model, "saqr_network")
+  expect_s3_class(boot$original, "netobject")
+  expect_s3_class(boot$model, "netobject")
   expect_equal(boot$method, "relative")
   expect_equal(boot$iter, 30L)
   expect_true(is.matrix(boot$mean))
@@ -185,7 +185,7 @@ test_that("params stored and original matches standalone estimate", {
   expect_identical(boot$original$params, params)
 
   # Original should match standalone call
-  standalone <- estimate_network(wide, method = "relative", params = params)
+  standalone <- build_network(wide, method = "relative", params = params)
   expect_equal(boot$original$matrix, standalone$matrix)
 })
 

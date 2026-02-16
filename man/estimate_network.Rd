@@ -2,7 +2,7 @@
 % Please edit documentation in R/estimate_network.R
 \name{estimate_network}
 \alias{estimate_network}
-\title{Estimate a Network}
+\title{Estimate a Network (Deprecated)}
 \usage{
 estimate_network(
   data,
@@ -18,14 +18,8 @@ estimate_network(
 \item{data}{Data frame (sequences or per-observation frequencies) or a
 square symmetric matrix (correlation or covariance).}
 
-\item{method}{Character. Name of a registered estimator. Built-in methods:
-\code{"relative"} (default), \code{"frequency"}, \code{"co_occurrence"},
-\code{"cor"}, \code{"pcor"}, \code{"glasso"}.
-Aliases: \code{"ebicglasso"} and \code{"regularized"} map to
-\code{"glasso"}; \code{"partial"} maps to \code{"pcor"};
-\code{"correlation"} maps to \code{"cor"};
-\code{"transition"} maps to \code{"relative"};
-\code{"counts"} maps to \code{"frequency"}.}
+\item{method}{Character. Defaults to \code{"relative"} for backward
+compatibility.}
 
 \item{params}{Named list. Method-specific parameters passed to the estimator
 function (e.g. \code{list(gamma = 0.5)} for glasso, or
@@ -49,78 +43,11 @@ methods. One of \code{NULL}, \code{"between"}, \code{"within"},
 Default: \code{NULL}.}
 }
 \value{
-An object of class \code{"saqr_network"} containing:
-\describe{
-\item{matrix}{The estimated network weight matrix.}
-\item{nodes}{Character vector of node names.}
-\item{directed}{Logical. Whether the network is directed.}
-\item{method}{The resolved method name.}
-\item{params}{The params list used (for reproducibility).}
-\item{scaling}{The scaling applied (or NULL).}
-\item{threshold}{The threshold applied.}
-\item{n_nodes}{Number of nodes.}
-\item{n_edges}{Number of non-zero edges.}
-\item{edges}{Data frame of non-zero edges (from, to, weight).}
-\item{level}{Decomposition level used (or NULL).}
-}
-Method-specific extras (e.g. \code{precision_matrix}, \code{cor_matrix},
-\code{frequency_matrix}, \code{lambda_selected}, etc.) are preserved
-from the estimator output.
-
-When \code{level = "both"}, returns an object of class
-\code{"saqr_network_ml"} with \code{$between} and \code{$within}
-sub-networks and a \code{$method} field.
+A \code{netobject} (see \code{\link{build_network}}).
 }
 \description{
-Universal network estimation function that supports both transition
-networks (relative, frequency, co-occurrence) and association networks
-(correlation, partial correlation, graphical lasso). Uses the global
-estimator registry, so custom estimators can also be used.
-}
-\details{
-The function works as follows:
-\enumerate{
-\item Resolves method aliases to canonical names.
-\item Retrieves the estimator function from the global registry.
-\item For association methods with \code{level} specified, decomposes
-the data (between-person means or within-person centering).
-\item Calls the estimator: \code{do.call(fn, c(list(data = data), params))}.
-\item Applies scaling and thresholding to the result matrix.
-\item Extracts edges and constructs the \code{saqr_network} object.
-}
-}
-\examples{
-\dontrun{
-library(tna)
-
-# Transition network (relative probabilities)
-net <- estimate_network(group_regulation, method = "relative")
-print(net)
-
-# Transition network (raw frequencies)
-net_freq <- estimate_network(group_regulation, method = "frequency")
-
-# Association network (glasso)
-freq_data <- convert_sequence_format(group_regulation, format = "frequency")
-net_glasso <- estimate_network(freq_data, method = "glasso",
-                                params = list(gamma = 0.5, nlambda = 50))
-
-# With scaling
-net_scaled <- estimate_network(group_regulation, method = "relative",
-                                scaling = c("rank", "minmax"))
-
-# Composable: replay config on new data
-config <- net_glasso$params
-net2 <- estimate_network(new_data, method = net_glasso$method,
-                          params = config)
-
-# Custom estimator
-register_estimator("my_method", my_fn, "My method", directed = FALSE)
-net_custom <- estimate_network(data, method = "my_method")
-}
-
+This function is deprecated. Use \code{\link{build_network}} instead.
 }
 \seealso{
-\code{\link{register_estimator}}, \code{\link{list_estimators}},
 \code{\link{build_network}}
 }

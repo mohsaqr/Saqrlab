@@ -1,4 +1,5 @@
 # ---- estimate_network() Tests ----
+# estimate_network() is deprecated; these tests verify backward compat.
 
 # Helper: generate reproducible frequency-like data
 .make_assoc_data <- function(n = 100, p = 5, seed = 42) {
@@ -18,13 +19,24 @@
 }
 
 
+# ---- Deprecation ----
+
+test_that("estimate_network emits deprecation warning", {
+  wide <- .make_wide_seq()
+  expect_warning(
+    estimate_network(wide, method = "relative"),
+    "deprecated"
+  )
+})
+
+
 # ---- Transition methods ----
 
 test_that("estimate_network works with method='relative'", {
   wide <- .make_wide_seq()
-  net <- estimate_network(wide, method = "relative")
+  net <- suppressWarnings(estimate_network(wide, method = "relative"))
 
-  expect_s3_class(net, "saqr_network")
+  expect_s3_class(net, "netobject")
   expect_equal(net$method, "relative")
   expect_true(net$directed)
   expect_true(is.matrix(net$matrix))
@@ -42,9 +54,9 @@ test_that("estimate_network works with method='relative'", {
 
 test_that("estimate_network works with method='frequency'", {
   wide <- .make_wide_seq()
-  net <- estimate_network(wide, method = "frequency")
+  net <- suppressWarnings(estimate_network(wide, method = "frequency"))
 
-  expect_s3_class(net, "saqr_network")
+  expect_s3_class(net, "netobject")
   expect_equal(net$method, "frequency")
   expect_true(net$directed)
   expect_true(is.integer(net$matrix))
@@ -56,9 +68,9 @@ test_that("estimate_network works with method='frequency'", {
 
 test_that("estimate_network works with method='co_occurrence'", {
   wide <- .make_wide_seq()
-  net <- estimate_network(wide, method = "co_occurrence")
+  net <- suppressWarnings(estimate_network(wide, method = "co_occurrence"))
 
-  expect_s3_class(net, "saqr_network")
+  expect_s3_class(net, "netobject")
   expect_equal(net$method, "co_occurrence")
   expect_false(net$directed)
   # Symmetric
@@ -72,10 +84,11 @@ test_that("estimate_network works with method='co_occurrence'", {
 
 test_that("estimate_network works with method='glasso'", {
   df <- .make_assoc_data(n = 80, p = 6)
-  net <- estimate_network(df, method = "glasso",
-                           params = list(nlambda = 20L))
+  net <- suppressWarnings(
+    estimate_network(df, method = "glasso", params = list(nlambda = 20L))
+  )
 
-  expect_s3_class(net, "saqr_network")
+  expect_s3_class(net, "netobject")
   expect_equal(net$method, "glasso")
   expect_false(net$directed)
   expect_true(is.matrix(net$matrix))
@@ -92,9 +105,9 @@ test_that("estimate_network works with method='glasso'", {
 
 test_that("estimate_network works with method='pcor'", {
   df <- .make_assoc_data(n = 80, p = 5)
-  net <- estimate_network(df, method = "pcor")
+  net <- suppressWarnings(estimate_network(df, method = "pcor"))
 
-  expect_s3_class(net, "saqr_network")
+  expect_s3_class(net, "netobject")
   expect_equal(net$method, "pcor")
   expect_false(net$directed)
   expect_true(all(diag(net$matrix) == 0))
@@ -104,9 +117,9 @@ test_that("estimate_network works with method='pcor'", {
 
 test_that("estimate_network works with method='cor'", {
   df <- .make_assoc_data(n = 80, p = 5)
-  net <- estimate_network(df, method = "cor")
+  net <- suppressWarnings(estimate_network(df, method = "cor"))
 
-  expect_s3_class(net, "saqr_network")
+  expect_s3_class(net, "netobject")
   expect_equal(net$method, "cor")
   expect_false(net$directed)
   expect_true(all(diag(net$matrix) == 0))
@@ -120,24 +133,26 @@ test_that("method aliases resolve correctly", {
   df <- .make_assoc_data(n = 80, p = 4)
   wide <- .make_wide_seq()
 
-  net1 <- estimate_network(df, method = "ebicglasso",
-                            params = list(nlambda = 20L))
+  net1 <- suppressWarnings(
+    estimate_network(df, method = "ebicglasso", params = list(nlambda = 20L))
+  )
   expect_equal(net1$method, "glasso")
 
-  net2 <- estimate_network(df, method = "regularized",
-                            params = list(nlambda = 20L))
+  net2 <- suppressWarnings(
+    estimate_network(df, method = "regularized", params = list(nlambda = 20L))
+  )
   expect_equal(net2$method, "glasso")
 
-  net3 <- estimate_network(df, method = "partial")
+  net3 <- suppressWarnings(estimate_network(df, method = "partial"))
   expect_equal(net3$method, "pcor")
 
-  net4 <- estimate_network(df, method = "correlation")
+  net4 <- suppressWarnings(estimate_network(df, method = "correlation"))
   expect_equal(net4$method, "cor")
 
-  net5 <- estimate_network(wide, method = "transition")
+  net5 <- suppressWarnings(estimate_network(wide, method = "transition"))
   expect_equal(net5$method, "relative")
 
-  net6 <- estimate_network(wide, method = "counts")
+  net6 <- suppressWarnings(estimate_network(wide, method = "counts"))
   expect_equal(net6$method, "frequency")
 })
 
@@ -146,7 +161,9 @@ test_that("method aliases resolve correctly", {
 
 test_that("scaling='minmax' works", {
   wide <- .make_wide_seq()
-  net <- estimate_network(wide, method = "relative", scaling = "minmax")
+  net <- suppressWarnings(
+    estimate_network(wide, method = "relative", scaling = "minmax")
+  )
 
   nz <- net$matrix[net$matrix != 0]
   if (length(nz) > 1) {
@@ -157,13 +174,17 @@ test_that("scaling='minmax' works", {
 
 test_that("scaling='max' normalizes by max absolute value", {
   wide <- .make_wide_seq()
-  net <- estimate_network(wide, method = "relative", scaling = "max")
+  net <- suppressWarnings(
+    estimate_network(wide, method = "relative", scaling = "max")
+  )
   expect_true(max(abs(net$matrix)) <= 1 + 1e-10)
 })
 
 test_that("scaling='rank' replaces values with ranks", {
   wide <- .make_wide_seq()
-  net <- estimate_network(wide, method = "relative", scaling = "rank")
+  net <- suppressWarnings(
+    estimate_network(wide, method = "relative", scaling = "rank")
+  )
   nz <- net$matrix[net$matrix != 0]
   if (length(nz) > 0) {
     # Ranks should be positive integers or half-integers (from ties)
@@ -174,7 +195,9 @@ test_that("scaling='rank' replaces values with ranks", {
 
 test_that("scaling='normalize' makes rows sum to ~1 (absolute values)", {
   wide <- .make_wide_seq()
-  net <- estimate_network(wide, method = "relative", scaling = "normalize")
+  net <- suppressWarnings(
+    estimate_network(wide, method = "relative", scaling = "normalize")
+  )
   rs <- rowSums(abs(net$matrix))
   nonzero <- rs > 0
   expect_true(all(abs(rs[nonzero] - 1) < 1e-10))
@@ -182,9 +205,11 @@ test_that("scaling='normalize' makes rows sum to ~1 (absolute values)", {
 
 test_that("combined scaling works", {
   wide <- .make_wide_seq()
-  net <- estimate_network(wide, method = "relative",
-                           scaling = c("rank", "minmax"))
-  expect_s3_class(net, "saqr_network")
+  net <- suppressWarnings(
+    estimate_network(wide, method = "relative",
+                     scaling = c("rank", "minmax"))
+  )
+  expect_s3_class(net, "netobject")
   nz <- net$matrix[net$matrix != 0]
   if (length(nz) > 1) {
     expect_true(min(nz) >= 0)
@@ -195,7 +220,9 @@ test_that("combined scaling works", {
 test_that("invalid scaling errors", {
   wide <- .make_wide_seq()
   expect_error(
-    estimate_network(wide, method = "relative", scaling = "invalid"),
+    suppressWarnings(
+      estimate_network(wide, method = "relative", scaling = "invalid")
+    ),
     "Unknown scaling"
   )
 })
@@ -205,8 +232,12 @@ test_that("invalid scaling errors", {
 
 test_that("threshold filters weak edges", {
   df <- .make_assoc_data(n = 100, p = 5)
-  net_low <- estimate_network(df, method = "cor", threshold = 0.01)
-  net_high <- estimate_network(df, method = "cor", threshold = 0.3)
+  net_low <- suppressWarnings(
+    estimate_network(df, method = "cor", threshold = 0.01)
+  )
+  net_high <- suppressWarnings(
+    estimate_network(df, method = "cor", threshold = 0.3)
+  )
 
   expect_true(net_high$n_edges <= net_low$n_edges)
   # All non-zero values should be >= threshold
@@ -221,7 +252,7 @@ test_that("threshold filters weak edges", {
 
 test_that("directed network has directional edges", {
   wide <- .make_wide_seq()
-  net <- estimate_network(wide, method = "relative")
+  net <- suppressWarnings(estimate_network(wide, method = "relative"))
 
   # For a 3-state directed network, can have up to 3*2=6 directed edges
   # (excluding self-loops on diagonal)
@@ -234,7 +265,7 @@ test_that("directed network has directional edges", {
 
 test_that("undirected network uses upper triangle only", {
   df <- .make_assoc_data(n = 80, p = 5)
-  net <- estimate_network(df, method = "cor")
+  net <- suppressWarnings(estimate_network(df, method = "cor"))
 
   expect_false(net$directed)
   # n_edges should match upper triangle non-zeros
@@ -257,10 +288,12 @@ test_that("multilevel level='between' works with association methods", {
     state_3 = rpois(n_persons * obs_per, 10)
   )
 
-  net <- estimate_network(df, method = "cor", level = "between",
-                           id_col = "person")
+  net <- suppressWarnings(
+    estimate_network(df, method = "cor", level = "between",
+                     id_col = "person")
+  )
 
-  expect_s3_class(net, "saqr_network")
+  expect_s3_class(net, "netobject")
   expect_equal(net$level, "between")
   expect_equal(net$n, 30)
 })
@@ -276,15 +309,17 @@ test_that("multilevel level='within' works", {
     state_3 = rpois(n_persons * obs_per, 10)
   )
 
-  net <- estimate_network(df, method = "cor", level = "within",
-                           id_col = "person")
+  net <- suppressWarnings(
+    estimate_network(df, method = "cor", level = "within",
+                     id_col = "person")
+  )
 
-  expect_s3_class(net, "saqr_network")
+  expect_s3_class(net, "netobject")
   expect_equal(net$level, "within")
   expect_equal(net$n, 150)
 })
 
-test_that("multilevel level='both' returns saqr_network_ml", {
+test_that("multilevel level='both' returns netobject_ml", {
   set.seed(42)
   n_persons <- 30
   obs_per <- 5
@@ -295,19 +330,23 @@ test_that("multilevel level='both' returns saqr_network_ml", {
     state_3 = rpois(n_persons * obs_per, 10)
   )
 
-  net <- estimate_network(df, method = "cor", level = "both",
-                           id_col = "person")
+  net <- suppressWarnings(
+    estimate_network(df, method = "cor", level = "both",
+                     id_col = "person")
+  )
 
-  expect_s3_class(net, "saqr_network_ml")
-  expect_s3_class(net$between, "saqr_network")
-  expect_s3_class(net$within, "saqr_network")
+  expect_s3_class(net, "netobject_ml")
+  expect_s3_class(net$between, "netobject")
+  expect_s3_class(net$within, "netobject")
   expect_equal(net$method, "cor")
 })
 
 test_that("level requires id_col", {
   df <- .make_assoc_data()
   expect_error(
-    estimate_network(df, method = "cor", level = "between"),
+    suppressWarnings(
+      estimate_network(df, method = "cor", level = "between")
+    ),
     "id_col.*required"
   )
 })
@@ -315,9 +354,10 @@ test_that("level requires id_col", {
 test_that("level requires data frame", {
   m <- diag(5)
   expect_error(
-    estimate_network(m, method = "cor", level = "between",
-                      id_col = "person",
-                      params = list(n = 50)),
+    suppressWarnings(
+      estimate_network(m, method = "cor", level = "between",
+                       id_col = "person", params = list(n = 50))
+    ),
     "data frame"
   )
 })
@@ -328,21 +368,23 @@ test_that("level requires data frame", {
 test_that("params list is stored and reusable", {
   wide <- .make_wide_seq()
   params <- list(format = "wide")
-  net <- estimate_network(wide, method = "relative", params = params)
+  net <- suppressWarnings(
+    estimate_network(wide, method = "relative", params = params)
+  )
 
   expect_identical(net$params, params)
 
   # Can be replayed
-  net2 <- estimate_network(wide, method = net$method, params = net$params)
+  net2 <- build_network(wide, method = net$method, params = net$params)
   expect_equal(net$matrix, net2$matrix)
 })
 
 
 # ---- Print methods ----
 
-test_that("print.saqr_network works for transition", {
+test_that("print.netobject works for transition", {
   wide <- .make_wide_seq()
-  net <- estimate_network(wide, method = "relative")
+  net <- suppressWarnings(estimate_network(wide, method = "relative"))
   out <- capture.output(print(net))
   expect_true(any(grepl("Transition Network", out)))
   expect_true(any(grepl("directed", out)))
@@ -350,38 +392,43 @@ test_that("print.saqr_network works for transition", {
   expect_true(any(grepl("Edges:", out)))
 })
 
-test_that("print.saqr_network works for association", {
+test_that("print.netobject works for association", {
   df <- .make_assoc_data(n = 80, p = 5)
-  net <- estimate_network(df, method = "glasso",
-                           params = list(nlambda = 20L))
+  net <- suppressWarnings(
+    estimate_network(df, method = "glasso", params = list(nlambda = 20L))
+  )
   out <- capture.output(print(net))
   expect_true(any(grepl("EBICglasso", out)))
   expect_true(any(grepl("undirected", out)))
   expect_true(any(grepl("Gamma:", out)))
 })
 
-test_that("print.saqr_network shows scaling", {
+test_that("print.netobject shows scaling", {
   wide <- .make_wide_seq()
-  net <- estimate_network(wide, method = "relative", scaling = "minmax")
+  net <- suppressWarnings(
+    estimate_network(wide, method = "relative", scaling = "minmax")
+  )
   out <- capture.output(print(net))
   expect_true(any(grepl("Scaling:", out)))
 })
 
-test_that("print.saqr_network shows threshold", {
+test_that("print.netobject shows threshold", {
   wide <- .make_wide_seq()
-  net <- estimate_network(wide, method = "relative", threshold = 0.1)
+  net <- suppressWarnings(
+    estimate_network(wide, method = "relative", threshold = 0.1)
+  )
   out <- capture.output(print(net))
   expect_true(any(grepl("Threshold:", out)))
 })
 
-test_that("print.saqr_network returns invisible(x)", {
+test_that("print.netobject returns invisible(x)", {
   wide <- .make_wide_seq()
-  net <- estimate_network(wide, method = "relative")
+  net <- suppressWarnings(estimate_network(wide, method = "relative"))
   ret <- capture.output(result <- print(net))
   expect_identical(result, net)
 })
 
-test_that("print.saqr_network_ml works", {
+test_that("print.netobject_ml works", {
   set.seed(42)
   df <- data.frame(
     person = rep(1:20, each = 5),
@@ -389,8 +436,10 @@ test_that("print.saqr_network_ml works", {
     state_2 = rpois(100, 10),
     state_3 = rpois(100, 10)
   )
-  net <- estimate_network(df, method = "cor", level = "both",
-                           id_col = "person")
+  net <- suppressWarnings(
+    estimate_network(df, method = "cor", level = "both",
+                     id_col = "person")
+  )
   out <- capture.output(print(net))
   expect_true(any(grepl("Multilevel", out)))
   expect_true(any(grepl("Between-person", out)))
@@ -402,7 +451,7 @@ test_that("print.saqr_network_ml works", {
 
 test_that("edges match non-zero entries in matrix (directed)", {
   wide <- .make_wide_seq()
-  net <- estimate_network(wide, method = "relative")
+  net <- suppressWarnings(estimate_network(wide, method = "relative"))
 
   mat <- net$matrix
   # All non-diagonal non-zero entries
@@ -412,7 +461,7 @@ test_that("edges match non-zero entries in matrix (directed)", {
 
 test_that("edges match upper triangle (undirected)", {
   df <- .make_assoc_data(n = 80, p = 5)
-  net <- estimate_network(df, method = "cor")
+  net <- suppressWarnings(estimate_network(df, method = "cor"))
 
   mat <- net$matrix
   expected_n <- sum(upper.tri(mat) & mat != 0)
@@ -425,9 +474,11 @@ test_that("edges match upper triangle (undirected)", {
 test_that("estimate_network works with tna::group_regulation (wide)", {
   skip_if_not_installed("tna")
 
-  net <- estimate_network(tna::group_regulation, method = "relative")
+  net <- suppressWarnings(
+    estimate_network(tna::group_regulation, method = "relative")
+  )
 
-  expect_s3_class(net, "saqr_network")
+  expect_s3_class(net, "netobject")
   expect_true(net$directed)
   expect_equal(net$n_nodes, 9)
   # Rows sum to ~1
@@ -438,7 +489,9 @@ test_that("estimate_network works with tna::group_regulation (wide)", {
 test_that("estimate_network frequency matches frequencies() output", {
   skip_if_not_installed("tna")
 
-  net <- estimate_network(tna::group_regulation, method = "frequency")
+  net <- suppressWarnings(
+    estimate_network(tna::group_regulation, method = "frequency")
+  )
   freq_mat <- frequencies(tna::group_regulation, format = "wide")
 
   expect_equal(net$matrix, freq_mat)

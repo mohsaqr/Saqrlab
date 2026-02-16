@@ -94,7 +94,7 @@ test_that("directed flags are correct for built-in estimators", {
                     undirected_methods))
 })
 
-test_that("custom estimator can be used with estimate_network", {
+test_that("custom estimator can be used with build_network", {
   my_fn <- function(data, scale_factor = 1, ...) {
     S <- cor(data)
     diag(S) <- 0
@@ -105,10 +105,10 @@ test_that("custom estimator can be used with estimate_network", {
 
   set.seed(42)
   df <- data.frame(a = rnorm(50), b = rnorm(50), c = rnorm(50))
-  net <- estimate_network(df, method = "test_scaled_cor",
-                           params = list(scale_factor = 0.5))
+  net <- build_network(df, method = "test_scaled_cor",
+                       params = list(scale_factor = 0.5))
 
-  expect_s3_class(net, "saqr_network")
+  expect_s3_class(net, "netobject")
   expect_equal(net$method, "test_scaled_cor")
   expect_false(net$directed)
 

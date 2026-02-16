@@ -1,661 +1,252 @@
-#' Build a Psychological Network
+#' Build a Network
 #'
 #' @description
-#' Estimates a network from frequency data or a correlation/covariance matrix.
-#' Supports three methods:
-#' \itemize{
-#'   \item \code{"glasso"} (aliases: \code{"ebicglasso"}, \code{"regularized"}):
-#'     Sparse partial correlations via graphical lasso with EBIC model selection.
-#'   \item \code{"pcor"} (alias: \code{"partial"}):
-#'     Unregularised partial correlations (inverts the correlation matrix
-#'     directly; requires p < n).
-#'   \item \code{"cor"} (alias: \code{"correlation"}):
-#'     Pairwise correlation network.
-#' }
+#' Universal network estimation function that supports both transition
+#' networks (relative, frequency, co-occurrence) and association networks
+#' (correlation, partial correlation, graphical lasso). Uses the global
+#' estimator registry, so custom estimators can also be used.
 #'
-#' @param data A data frame of per-sequence action frequencies (e.g., output of
-#'   \code{\link{convert_sequence_format}} with \code{format = "frequency"}),
-#'   or a square symmetric correlation/covariance matrix.
-#' @param method Character. Network estimation method. One of \code{"glasso"},
-#'   \code{"ebicglasso"}, \code{"regularized"} (all equivalent),
-#'   \code{"pcor"}, \code{"partial"} (equivalent),
-#'   \code{"cor"}, \code{"correlation"} (equivalent).
-#'   Default: \code{"glasso"}.
-#' @param id_col Character vector. Name(s) of ID column(s) to exclude when
-#'   \code{data} is a data frame. If NULL, columns named \code{"rid"} and
-#'   non-numeric columns are automatically excluded. Default: NULL.
-#' @param level Character or NULL. Decomposition level for multilevel networks
-#'   when data has repeated measures per person. One of:
-#'   \itemize{
-#'     \item \code{NULL} (default): no decomposition, current behavior.
-#'     \item \code{"between"}: aggregate to person means, estimate network
-#'       of trait-level associations.
-#'     \item \code{"within"}: person-mean center each variable, estimate
-#'       network of state-level (occasion-to-occasion) associations.
-#'     \item \code{"both"}: return both between and within networks in a
-#'       \code{psych_network_ml} object.
-#'   }
-#'   Requires \code{id_col} and a data frame input.
-#' @param n Integer. Sample size. Required when \code{data} is a matrix.
-#'   Ignored when \code{data} is a data frame (n is taken from \code{nrow()}).
-#'   Default: NULL.
-#' @param gamma Numeric. EBIC tuning parameter controlling sparsity preference
-#'   (only used when \code{method = "glasso"}). Higher values favour sparser
-#'   networks; 0 reduces to BIC. Default: 0.5.
-#' @param nlambda Integer. Number of lambda values in the regularisation path
-#'   (only used when \code{method = "glasso"}). Default: 100.
-#' @param lambda.min.ratio Numeric. Ratio of the smallest to the largest lambda
-#'   value (only used when \code{method = "glasso"}). Default: 0.01.
-#' @param penalize.diagonal Logical. Whether to penalise the diagonal of the
-#'   precision matrix (only used when \code{method = "glasso"}).
-#'   Default: FALSE.
-#' @param threshold Numeric. Absolute values in the result matrix below this
-#'   are set to zero. For \code{"glasso"} and \code{"pcor"} this applies to
-#'   partial correlations; for \code{"cor"} it applies to correlations.
-#'   Default: 1e-4.
-#' @param cor_method Character. Correlation method when computing from a data
-#'   frame: \code{"pearson"}, \code{"spearman"}, or \code{"kendall"}.
-#'   Default: \code{"pearson"}.
-#' @param input_type Character. How to interpret a matrix input:
-#'   \code{"auto"} (detect from diagonal), \code{"cor"}, or \code{"cov"}.
-#'   Default: \code{"auto"}.
+#' @param data Data frame (sequences or per-observation frequencies) or a
+#'   square symmetric matrix (correlation or covariance).
+#' @param method Character. Required. Name of a registered estimator.
+#'   Built-in methods: \code{"relative"}, \code{"frequency"},
+#'   \code{"co_occurrence"}, \code{"cor"}, \code{"pcor"}, \code{"glasso"}.
+#'   Aliases: \code{"tna"} and \code{"transition"} map to \code{"relative"};
+#'   \code{"ftna"} and \code{"counts"} map to \code{"frequency"};
+#'   \code{"cna"} maps to \code{"co_occurrence"};
+#'   \code{"corr"} and \code{"correlation"} map to \code{"cor"};
+#'   \code{"partial"} maps to \code{"pcor"};
+#'   \code{"ebicglasso"} and \code{"regularized"} map to \code{"glasso"}.
+#' @param params Named list. Method-specific parameters passed to the estimator
+#'   function (e.g. \code{list(gamma = 0.5)} for glasso, or
+#'   \code{list(format = "wide")} for transition methods). This is the key
+#'   composability feature: downstream functions like bootstrap or grid search
+#'   can store and replay the full params list without knowing method internals.
+#' @param scaling Character vector or NULL. Post-estimation scaling to apply
+#'   (in order). Options: \code{"minmax"}, \code{"max"}, \code{"rank"},
+#'   \code{"normalize"}. Can combine: \code{c("rank", "minmax")}.
+#'   Default: \code{NULL} (no scaling).
+#' @param threshold Numeric. Absolute values below this are set to zero in the
+#'   result matrix. Default: 0 (no thresholding).
+#' @param level Character or NULL. Multilevel decomposition for association
+#'   methods. One of \code{NULL}, \code{"between"}, \code{"within"},
+#'   \code{"both"}. Requires \code{id_col}. Default: \code{NULL}.
+#' @param id_col Character. Name of the ID column for multilevel decomposition.
+#'   Default: \code{NULL}.
 #'
-#' @return An object of class \code{"psych_network"} (or
-#'   \code{"psych_network_ml"} when \code{level = "both"}), a list containing:
+#' @return An object of class \code{"netobject"} containing:
 #' \describe{
-#'   \item{network_matrix}{The estimated network weight matrix (partial
-#'     correlations for \code{"glasso"} and \code{"pcor"}; correlations for
-#'     \code{"cor"}). Diagonal is zero.}
-#'   \item{cor_matrix}{Correlation matrix used as input.}
-#'   \item{edges}{Data frame of non-zero edges (from, to, weight).}
-#'   \item{n}{Sample size.}
-#'   \item{p}{Number of variables.}
-#'   \item{method}{The resolved method name (\code{"glasso"}, \code{"pcor"},
-#'     or \code{"cor"}).}
-#'   \item{n_edges}{Number of non-zero edges.}
-#'   \item{level}{The decomposition level used (\code{NULL}, \code{"between"},
-#'     or \code{"within"}).}
-#' }
-#'
-#' Additional fields for \code{method = "glasso"}:
-#' \describe{
-#'   \item{precision_matrix}{Estimated precision (inverse covariance) matrix.}
-#'   \item{lambda_selected}{The lambda value of the selected model.}
-#'   \item{ebic_selected}{The EBIC value of the selected model.}
-#'   \item{lambda_path}{Numeric vector of all lambda values evaluated.}
-#'   \item{ebic_path}{Numeric vector of EBIC values for each lambda.}
-#'   \item{gamma}{EBIC gamma used.}
-#' }
-#'
-#' Additional fields for \code{method = "pcor"}:
-#' \describe{
-#'   \item{precision_matrix}{Precision (inverse correlation) matrix.}
-#' }
-#'
-#' When \code{level = "both"}, a \code{"psych_network_ml"} object is returned
-#' containing:
-#' \describe{
-#'   \item{between}{A \code{psych_network} object for the between-person level.}
-#'   \item{within}{A \code{psych_network} object for the within-person level.}
+#'   \item{matrix}{The estimated network weight matrix.}
+#'   \item{nodes}{Character vector of node names.}
+#'   \item{directed}{Logical. Whether the network is directed.}
 #'   \item{method}{The resolved method name.}
+#'   \item{params}{The params list used (for reproducibility).}
+#'   \item{scaling}{The scaling applied (or NULL).}
+#'   \item{threshold}{The threshold applied.}
+#'   \item{n_nodes}{Number of nodes.}
+#'   \item{n_edges}{Number of non-zero edges.}
+#'   \item{edges}{Data frame of non-zero edges (from, to, weight).}
+#'   \item{level}{Decomposition level used (or NULL).}
 #' }
+#' Method-specific extras (e.g. \code{precision_matrix}, \code{cor_matrix},
+#' \code{frequency_matrix}, \code{lambda_selected}, etc.) are preserved
+#' from the estimator output.
+#'
+#' When \code{level = "both"}, returns an object of class
+#' \code{"netobject_ml"} with \code{$between} and \code{$within}
+#' sub-networks and a \code{$method} field.
 #'
 #' @details
-#' When \code{data} is a data frame, the function automatically excludes
-#' non-numeric columns, ID columns (\code{id_col} and \code{"rid"}), columns
-#' with non-syntactic names (e.g., \code{"\%"}), zero-variance columns, and
-#' columns that are entirely \code{NA}. Rows with any \code{NA} in the
-#' remaining columns are dropped before computing correlations.
-#'
-#' \strong{Method details:}
-#' \describe{
-#'   \item{glasso}{Fits the graphical lasso across a log-spaced lambda path
-#'     using \code{glasso::glasso()} with warm starts, selects the model with
-#'     the lowest EBIC, and converts the precision matrix to partial
-#'     correlations.}
-#'   \item{pcor}{Directly inverts the correlation matrix to obtain the
-#'     precision matrix, then converts to partial correlations. Requires
-#'     \code{p < n} (more observations than variables).}
-#'   \item{cor}{Returns the pairwise correlation matrix as the network.
-#'     Values below \code{threshold} are zeroed out.}
-#' }
-#'
-#' \strong{Multilevel decomposition:}
-#' When \code{level} is specified, the data is decomposed before estimation:
-#' \describe{
-#'   \item{between}{Rows are aggregated to person means (using the first
-#'     element of \code{id_col} as the grouping variable), then the network
-#'     is estimated from the aggregated data.}
-#'   \item{within}{Each variable is person-mean centered (group-mean centering).
-#'     Persons with only one observation are dropped (no within-person
-#'     variance). The network is estimated from the pooled centered residuals.}
-#'   \item{both}{Both between and within networks are estimated and returned
-#'     in a \code{psych_network_ml} object.}
+#' The function works as follows:
+#' \enumerate{
+#'   \item Resolves method aliases to canonical names.
+#'   \item Retrieves the estimator function from the global registry.
+#'   \item For association methods with \code{level} specified, decomposes
+#'     the data (between-person means or within-person centering).
+#'   \item Calls the estimator: \code{do.call(fn, c(list(data = data), params))}.
+#'   \item Applies scaling and thresholding to the result matrix.
+#'   \item Extracts edges and constructs the \code{netobject}.
 #' }
 #'
 #' @examples
 #' \dontrun{
 #' library(tna)
 #'
-#' # From wide sequence data — regularised (default)
-#' freq <- convert_sequence_format(group_regulation, format = "frequency")
-#' net <- build_network(freq)
+#' # Transition network (relative probabilities)
+#' net <- build_network(group_regulation, method = "relative")
 #' print(net)
 #'
-#' # Unregularised partial correlations
-#' net_pcor <- build_network(freq, method = "pcor")
+#' # Aliases
+#' net_tna <- build_network(group_regulation, method = "tna")
+#' net_ftna <- build_network(group_regulation, method = "ftna")
+#' net_cna <- build_network(group_regulation, method = "cna")
 #'
-#' # Correlation network
-#' net_cor <- build_network(freq, method = "cor", threshold = 0.1)
+#' # Association network (glasso)
+#' freq_data <- convert_sequence_format(group_regulation, format = "frequency")
+#' net_glasso <- build_network(freq_data, method = "glasso",
+#'                              params = list(gamma = 0.5, nlambda = 50))
 #'
-#' # From a correlation matrix
-#' S <- cor(freq[, -c(1, 2)])
-#' net2 <- build_network(S, n = nrow(freq), method = "glasso")
+#' # Partial correlation network
+#' net_pcor <- build_network(freq_data, method = "pcor")
 #'
-#' # Multilevel: between-person network
-#' freq_long <- convert_sequence_format(group_regulation_long,
-#'   action = "Action", id_col = "Actor", format = "frequency")
-#' net_between <- build_network(freq_long, id_col = "Actor",
-#'   level = "between")
+#' # Correlation network with alias
+#' net_cor <- build_network(freq_data, method = "corr")
 #'
-#' # Multilevel: both levels
-#' net_ml <- build_network(freq_long, id_col = "Actor", level = "both")
-#' print(net_ml)
+#' # With scaling
+#' net_scaled <- build_network(group_regulation, method = "relative",
+#'                              scaling = c("rank", "minmax"))
+#'
+#' # Composable: replay config on new data
+#' config <- net_glasso$params
+#' net2 <- build_network(new_data, method = net_glasso$method,
+#'                        params = config)
 #' }
 #'
-#' @seealso \code{\link{convert_sequence_format}} for producing frequency data.
+#' @seealso \code{\link{register_estimator}}, \code{\link{list_estimators}},
+#'   \code{\link{bootstrap_network}}
 #'
-#' @importFrom stats aggregate ave cor cov complete.cases var
+#' @importFrom stats aggregate ave cor complete.cases var
 #' @export
 build_network <- function(data,
-                          method = c("glasso", "ebicglasso", "regularized",
-                                     "pcor", "partial",
-                                     "cor", "correlation"),
-                          id_col = NULL,
+                          method,
+                          params = list(),
+                          scaling = NULL,
+                          threshold = 0,
                           level = NULL,
-                          n = NULL,
-                          gamma = 0.5,
-                          nlambda = 100L,
-                          lambda.min.ratio = 0.01,
-                          penalize.diagonal = FALSE,
-                          threshold = 1e-4,
-                          cor_method = c("pearson", "spearman", "kendall"),
-                          input_type = c("auto", "cor", "cov")) {
-  method <- match.arg(method)
-  cor_method <- match.arg(cor_method)
-  input_type <- match.arg(input_type)
+                          id_col = NULL) {
+  stopifnot(is.character(method), length(method) == 1)
+  stopifnot(is.list(params))
+  stopifnot(is.numeric(threshold), length(threshold) == 1, threshold >= 0)
 
-  # Normalise method aliases
-  method <- switch(method,
-    ebicglasso  = ,
-    regularized = "glasso",
-    partial     = "pcor",
-    correlation = "cor",
-    method
-  )
+  # Resolve method aliases
+  method <- .resolve_method_alias(method)
 
-  stopifnot(is.numeric(threshold), threshold >= 0)
+  # Validate level parameter
+  if (!is.null(level)) {
+    level <- match.arg(level, c("between", "within", "both"))
+    if (is.null(id_col)) {
+      stop("'id_col' is required when 'level' is specified.", call. = FALSE)
+    }
+    if (!is.data.frame(data)) {
+      stop("'data' must be a data frame when 'level' is specified.",
+           call. = FALSE)
+    }
+  }
 
-  # Build params list for estimate_network
-  params <- list(
-    id_col = id_col,
-    n = n,
-    gamma = gamma,
-    nlambda = nlambda,
-    lambda.min.ratio = lambda.min.ratio,
-    penalize.diagonal = penalize.diagonal,
-    threshold = threshold,
-    cor_method = cor_method,
-    input_type = input_type
-  )
+  # Validate scaling
+  if (!is.null(scaling)) {
+    valid_scaling <- c("minmax", "max", "rank", "normalize")
+    bad <- setdiff(scaling, valid_scaling)
+    if (length(bad) > 0) {
+      stop("Unknown scaling method(s): ", paste(bad, collapse = ", "),
+           ". Options: ", paste(valid_scaling, collapse = ", "),
+           call. = FALSE)
+    }
+  }
 
-  # Delegate to estimate_network
-  saqr_net <- estimate_network(
-    data = data,
-    method = method,
-    params = params,
-    scaling = NULL,
-    threshold = 0,   # threshold handled inside estimator via params
-    level = level,
-    id_col = id_col
-  )
+  # Get estimator from registry
+  estimator <- get_estimator(method)
 
-  # Convert saqr_network -> psych_network for backward compat
-  if (inherits(saqr_net, "saqr_network_ml")) {
-    result <- list(
-      between = .saqr_to_psych_network(saqr_net$between),
-      within  = .saqr_to_psych_network(saqr_net$within),
-      method  = method
+  # level = "both": recursive dispatch
+  if (identical(level, "both")) {
+    between <- build_network(
+      data, method = method, params = params, scaling = scaling,
+      threshold = threshold, level = "between", id_col = id_col
     )
-    class(result) <- "psych_network_ml"
+    within_net <- build_network(
+      data, method = method, params = params, scaling = scaling,
+      threshold = threshold, level = "within", id_col = id_col
+    )
+    result <- list(between = between, within = within_net, method = method)
+    class(result) <- "netobject_ml"
     return(result)
   }
 
-  .saqr_to_psych_network(saqr_net)
-}
+  # Multilevel decomposition for association methods
+  if (!is.null(level) && !estimator$directed) {
+    data <- .decompose_multilevel(data, id_col = id_col, level = level)
+  }
 
+  # Call estimator
+  est_result <- do.call(estimator$fn, c(list(data = data), params))
 
-#' Convert saqr_network to psych_network for backward compatibility
-#' @noRd
-.saqr_to_psych_network <- function(saqr_net) {
-  # Rebuild edges using the undirected extractor (upper triangle only)
-  edges <- .network_to_edges(saqr_net$matrix)
+  # Validate estimator output
+  if (!is.list(est_result) ||
+      is.null(est_result$matrix) ||
+      is.null(est_result$nodes) ||
+      is.null(est_result$directed)) {
+    stop("Estimator '", method,
+         "' must return a list with 'matrix', 'nodes', and 'directed'.",
+         call. = FALSE)
+  }
 
+  net_matrix <- est_result$matrix
+  nodes <- est_result$nodes
+  directed <- est_result$directed
+
+  # Apply scaling
+  if (!is.null(scaling)) {
+    net_matrix <- .apply_scaling(net_matrix, scaling)
+  }
+
+  # Apply threshold
+  if (threshold > 0) {
+    net_matrix[abs(net_matrix) < threshold] <- 0
+  }
+
+  # Extract edges
+  edges <- .extract_edges_from_matrix(net_matrix, directed = directed)
+
+  # Build netobject
   result <- list(
-    network_matrix = saqr_net$matrix,
-    cor_matrix     = saqr_net$cor_matrix,
-    edges          = edges,
-    n              = saqr_net$n,
-    p              = saqr_net$p,
-    method         = saqr_net$method,
-    n_edges        = nrow(edges),
-    level          = saqr_net$level
+    matrix = net_matrix,
+    nodes = nodes,
+    directed = directed,
+    method = method,
+    params = params,
+    scaling = scaling,
+    threshold = threshold,
+    n_nodes = length(nodes),
+    n_edges = nrow(edges),
+    edges = edges,
+    level = level
   )
 
   # Carry over method-specific extras
-  if (!is.null(saqr_net$precision_matrix)) {
-    result$precision_matrix <- saqr_net$precision_matrix
-  }
-  if (!is.null(saqr_net$lambda_selected)) {
-    result$lambda_selected <- saqr_net$lambda_selected
-  }
-  if (!is.null(saqr_net$ebic_selected)) {
-    result$ebic_selected <- saqr_net$ebic_selected
-  }
-  if (!is.null(saqr_net$lambda_path)) {
-    result$lambda_path <- saqr_net$lambda_path
-  }
-  if (!is.null(saqr_net$ebic_path)) {
-    result$ebic_path <- saqr_net$ebic_path
-  }
-  if (!is.null(saqr_net$gamma)) {
-    result$gamma <- saqr_net$gamma
+  extras <- setdiff(names(est_result), c("matrix", "nodes", "directed"))
+  for (key in extras) {
+    result[[key]] <- est_result[[key]]
   }
 
-  structure(result, class = "psych_network")
-}
-
-
-# ---- Method: glasso (EBICglasso) ----
-
-#' Regularised partial correlations via graphical lasso + EBIC
-#' @noRd
-.estimate_glasso <- function(S, n, p, gamma, nlambda, lambda.min.ratio,
-                             penalize.diagonal, threshold) {
-  stopifnot(is.numeric(gamma), length(gamma) == 1, gamma >= 0)
-  stopifnot(is.numeric(nlambda), length(nlambda) == 1, nlambda >= 2)
-  stopifnot(is.numeric(lambda.min.ratio), lambda.min.ratio > 0,
-            lambda.min.ratio < 1)
-  stopifnot(is.logical(penalize.diagonal), length(penalize.diagonal) == 1)
-
-  lambda_path <- .compute_lambda_path(S, nlambda, lambda.min.ratio)
-  selected <- .select_ebic(S, lambda_path, n, gamma, penalize.diagonal)
-
-  pcor <- .precision_to_pcor(selected$wi, threshold)
-  colnames(pcor) <- rownames(pcor) <- colnames(S)
-  edges <- .network_to_edges(pcor)
-
-  list(
-    network_matrix   = pcor,
-    precision_matrix = selected$wi,
-    edges            = edges,
-    lambda_selected  = selected$lambda,
-    ebic_selected    = selected$ebic,
-    lambda_path      = lambda_path,
-    ebic_path        = selected$ebic_path,
-    gamma            = gamma,
-    n_edges          = nrow(edges)
-  )
-}
-
-
-# ---- Method: pcor (unregularised) ----
-
-#' Unregularised partial correlations via matrix inversion
-#' @noRd
-.estimate_pcor <- function(S, p, threshold) {
-  Wi <- tryCatch(
-    solve(S),
-    error = function(e) {
-      stop(
-        "Correlation matrix is singular (p >= n or collinear variables). ",
-        "Use method = 'glasso' for regularised estimation.",
-        call. = FALSE
-      )
-    }
-  )
-  colnames(Wi) <- rownames(Wi) <- colnames(S)
-
-  pcor <- .precision_to_pcor(Wi, threshold)
-  colnames(pcor) <- rownames(pcor) <- colnames(S)
-  edges <- .network_to_edges(pcor)
-
-  list(
-    network_matrix   = pcor,
-    precision_matrix = Wi,
-    edges            = edges,
-    n_edges          = nrow(edges)
-  )
-}
-
-
-# ---- Method: cor (correlation network) ----
-
-#' Correlation network (threshold and return)
-#' @noRd
-.estimate_cor <- function(S, threshold) {
-  net <- S
-  diag(net) <- 0
-  net[abs(net) < threshold] <- 0
-  colnames(net) <- rownames(net) <- colnames(S)
-  edges <- .network_to_edges(net)
-
-  list(
-    network_matrix = net,
-    edges          = edges,
-    n_edges        = nrow(edges)
-  )
-}
-
-
-# ---- Input preparation ----
-
-#' Validate and prepare input for build_network
-#' @noRd
-.prepare_network_input <- function(data, id_col, n, cor_method, input_type,
-                                   level = NULL) {
-  if (is.data.frame(data)) {
-    # Extract id values before subsetting (needed for level decomposition)
-    id_vals_raw <- if (!is.null(level) && !is.null(id_col)) {
-      data[[id_col[1]]]
-    } else {
-      NULL
-    }
-
-    # Exclude id columns, "rid", and non-numeric columns
-    exclude <- c(id_col, "rid")
-    numeric_cols <- vapply(data, is.numeric, logical(1))
-    keep <- setdiff(names(data)[numeric_cols], exclude)
-
-    # Drop columns with non-syntactic names (e.g. "%", "*", "NA")
-    syntactic <- make.names(keep) == keep
-    if (any(!syntactic)) {
-      dropped <- keep[!syntactic]
-      message("Dropping non-syntactic columns: ",
-              paste(dropped, collapse = ", "))
-      keep <- keep[syntactic]
-    }
-
-    if (length(keep) < 2) {
-      stop("At least 2 numeric columns are required after cleaning.")
-    }
-
-    mat <- as.matrix(data[, keep, drop = FALSE])
-
-    # Track which rows survive cleaning (for aligning id_vals)
-    row_mask <- rep(TRUE, nrow(mat))
-
-    # Drop all-NA columns
-    all_na <- apply(mat, 2, function(x) all(is.na(x)))
-    if (any(all_na)) {
-      message("Dropping all-NA columns: ",
-              paste(keep[all_na], collapse = ", "))
-      mat <- mat[, !all_na, drop = FALSE]
-    }
-
-    # Drop rows with any NA
-    complete <- complete.cases(mat)
-    if (!all(complete)) {
-      n_dropped <- sum(!complete)
-      message("Dropping ", n_dropped, " rows with NA values.")
-      mat <- mat[complete, , drop = FALSE]
-      row_mask[!complete] <- FALSE
-    }
-
-    if (nrow(mat) < 3) {
-      stop("Fewer than 3 complete rows remain after removing NAs.")
-    }
-
-    # Drop zero-variance columns
-    col_vars <- apply(mat, 2, stats::var)
-    zero_var <- colnames(mat)[col_vars == 0]
-    if (length(zero_var) > 0) {
-      message("Dropping zero-variance columns: ",
-              paste(zero_var, collapse = ", "))
-      mat <- mat[, col_vars > 0, drop = FALSE]
-    }
-
-    if (ncol(mat) < 2) {
-      stop("At least 2 variable columns are required after cleaning.")
-    }
-
-    # Multilevel preprocessing
-    if (!is.null(level) && !is.null(id_vals_raw)) {
-      id_vals <- id_vals_raw[row_mask]
-
-      if (level == "between") {
-        # Aggregate to person means
-        mat_df <- as.data.frame(mat)
-        mat_df$.id <- id_vals
-        agg <- aggregate(. ~ .id, data = mat_df, FUN = mean)
-        mat <- as.matrix(agg[, names(agg) != ".id", drop = FALSE])
-      } else if (level == "within") {
-        # Drop persons with < 2 observations
-        tab <- table(id_vals)
-        multi <- names(tab[tab >= 2])
-        keep_rows <- id_vals %in% multi
-        if (any(!keep_rows)) {
-          n_single <- sum(!keep_rows)
-          message("Dropping ", n_single,
-                  " single-observation rows (within-person centering).")
-          mat <- mat[keep_rows, , drop = FALSE]
-          id_vals <- id_vals[keep_rows]
-        }
-
-        if (nrow(mat) < 3) {
-          stop("Fewer than 3 rows remain after dropping ",
-               "single-observation persons.")
-        }
-
-        # Person-mean center each variable
-        for (j in seq_len(ncol(mat))) {
-          mat[, j] <- mat[, j] - ave(mat[, j], id_vals, FUN = mean)
-        }
-
-        # Re-check zero-variance columns after centering
-        col_vars2 <- apply(mat, 2, stats::var)
-        zero_var2 <- colnames(mat)[col_vars2 == 0]
-        if (length(zero_var2) > 0) {
-          message("Dropping zero-variance columns after centering: ",
-                  paste(zero_var2, collapse = ", "))
-          mat <- mat[, col_vars2 > 0, drop = FALSE]
-        }
-
-        if (ncol(mat) < 2) {
-          stop("At least 2 variable columns required after within centering.")
-        }
-      }
-    }
-
-    n <- nrow(mat)
-    S <- cor(mat, method = cor_method)
-
-  } else if (is.matrix(data)) {
-    stopifnot(nrow(data) == ncol(data))
-    if (!isSymmetric(unname(data), tol = 1e-8)) {
-      stop("Matrix input must be symmetric.")
-    }
-    if (is.null(n)) {
-      stop("Sample size 'n' is required when data is a matrix.")
-    }
-    stopifnot(is.numeric(n), length(n) == 1, n > 0)
-
-    if (input_type == "auto") {
-      diag_vals <- diag(data)
-      input_type <- if (all(abs(diag_vals - 1) < 1e-8)) "cor" else "cov"
-    }
-
-    if (input_type == "cov") {
-      d <- sqrt(diag(data))
-      S <- data / outer(d, d)
-    } else {
-      S <- data
-    }
-
-    if (is.null(colnames(S))) {
-      colnames(S) <- rownames(S) <- paste0("V", seq_len(ncol(S)))
-    }
-  } else {
-    stop("data must be a data frame or a square symmetric matrix.")
-  }
-
-  list(S = S, n = n)
-}
-
-
-# ---- Lambda path ----
-
-#' Compute log-spaced lambda path
-#' @noRd
-.compute_lambda_path <- function(S, nlambda, lambda.min.ratio) {
-  lambda_max <- max(abs(S[upper.tri(S)]))
-  if (lambda_max <= 0) {
-    stop("All off-diagonal correlations are zero; nothing to regularise.")
-  }
-  lambda_min <- lambda_max * lambda.min.ratio
-  exp(seq(log(lambda_max), log(lambda_min), length.out = nlambda))
-}
-
-
-# ---- EBIC model selection ----
-
-#' Select best lambda via EBIC using glasso fits with warm starts
-#' @noRd
-.select_ebic <- function(S, lambda_path, n, gamma, penalize_diagonal) {
-  p <- ncol(S)
-  n_lambda <- length(lambda_path)
-  ebic_vals <- numeric(n_lambda)
-
-  w_prev <- NULL
-  wi_prev <- NULL
-  best_idx <- 1L
-  best_ebic <- Inf
-  best_wi <- NULL
-
-  for (i in seq_along(lambda_path)) {
-    lam <- lambda_path[i]
-
-    fit <- tryCatch(
-      glasso::glasso(
-        s = S,
-        rho = lam,
-        penalize.diagonal = penalize_diagonal,
-        start = if (is.null(w_prev)) "cold" else "warm",
-        w.init = w_prev,
-        wi.init = wi_prev,
-        trace = FALSE
-      ),
-      error = function(e) NULL
-    )
-
-    if (is.null(fit)) {
-      ebic_vals[i] <- Inf
-      next
-    }
-
-    w_prev <- fit$w
-    wi_prev <- fit$wi
-
-    log_det <- determinant(fit$wi, logarithm = TRUE)
-    if (log_det$sign <= 0) {
-      ebic_vals[i] <- Inf
-      next
-    }
-    log_det_val <- as.numeric(log_det$modulus)
-
-    loglik <- (n / 2) * (log_det_val - sum(diag(S %*% fit$wi)))
-    npar <- sum(abs(fit$wi[upper.tri(fit$wi)]) > 1e-10)
-    ebic_vals[i] <- -2 * loglik + npar * log(n) +
-      4 * npar * gamma * log(p)
-
-    if (ebic_vals[i] < best_ebic) {
-      best_ebic <- ebic_vals[i]
-      best_idx <- i
-      best_wi <- fit$wi
-    }
-  }
-
-  if (is.null(best_wi)) {
-    stop("All glasso fits failed. Check your input data.")
-  }
-
-  colnames(best_wi) <- rownames(best_wi) <- colnames(S)
-
-  list(
-    wi        = best_wi,
-    lambda    = lambda_path[best_idx],
-    ebic      = best_ebic,
-    ebic_path = ebic_vals
-  )
-}
-
-
-# ---- Partial correlation conversion ----
-
-#' Convert precision matrix to partial correlations
-#' @noRd
-.precision_to_pcor <- function(Wi, threshold) {
-  d <- sqrt(diag(Wi))
-  pcor <- -Wi / outer(d, d)
-  diag(pcor) <- 0
-  pcor[abs(pcor) < threshold] <- 0
-  pcor
-}
-
-
-# ---- Edge extraction ----
-
-#' Extract non-zero edges from a symmetric network matrix
-#' @noRd
-.network_to_edges <- function(net) {
-  idx <- which(upper.tri(net) & net != 0, arr.ind = TRUE)
-  if (nrow(idx) == 0) {
-    return(data.frame(
-      from = character(0), to = character(0),
-      weight = numeric(0), stringsAsFactors = FALSE
-    ))
-  }
-  nms <- colnames(net)
-  data.frame(
-    from   = nms[idx[, 1]],
-    to     = nms[idx[, 2]],
-    weight = net[idx],
-    stringsAsFactors = FALSE
-  )
+  structure(result, class = "netobject")
 }
 
 
 # ---- S3 methods ----
 
-#' Print Method for Psychological Network
+#' Print Method for Network Object
 #'
-#' @param x A \code{psych_network} object.
+#' @param x A \code{netobject}.
 #' @param ... Additional arguments (ignored).
 #'
 #' @export
-print.psych_network <- function(x, ...) {
-  total_possible <- x$p * (x$p - 1) / 2
-  pct <- if (total_possible > 0) {
-    sprintf("%.1f%%", 100 * x$n_edges / total_possible)
+print.netobject <- function(x, ...) {
+  method_labels <- c(
+    relative      = "Transition Network (relative probabilities)",
+    frequency     = "Transition Network (frequency counts)",
+    co_occurrence = "Co-occurrence Network",
+    glasso        = "Partial Correlation Network (EBICglasso)",
+    pcor          = "Partial Correlation Network (unregularised)",
+    cor           = "Correlation Network"
+  )
+
+  label <- if (x$method %in% names(method_labels)) {
+    method_labels[[x$method]]
   } else {
-    "0%"
+    sprintf("Network (method: %s)", x$method)
   }
 
-  label <- switch(x$method,
-    glasso = "Partial Correlation Network (EBICglasso)",
-    pcor   = "Partial Correlation Network (unregularised)",
-    cor    = "Correlation Network"
-  )
+  dir_label <- if (x$directed) " [directed]" else " [undirected]"
 
   level_label <- if (!is.null(x$level)) {
     sprintf(" [%s-person]", x$level)
@@ -663,73 +254,49 @@ print.psych_network <- function(x, ...) {
     ""
   }
 
-  n_label <- if (identical(x$level, "between")) {
-    sprintf("  Variables: %d  |  Sample size: %d (unique persons)\n",
-            x$p, x$n)
-  } else if (identical(x$level, "within")) {
-    sprintf("  Variables: %d  |  Sample size: %d (observations)\n",
-            x$p, x$n)
-  } else {
-    sprintf("  Variables: %d  |  Sample size: %d\n", x$p, x$n)
+  cat(label, dir_label, level_label, "\n", sep = "")
+  cat(sprintf("  Nodes: %d  |  Edges: %d\n", x$n_nodes, x$n_edges))
+
+  if (!is.null(x$n)) {
+    cat(sprintf("  Sample size: %d\n", x$n))
   }
 
-  cat(label, level_label, "\n", sep = "")
-  cat(n_label)
-  cat(sprintf("  Non-zero edges: %d / %d (%s)\n",
-              x$n_edges, total_possible, pct))
-
-  if (x$method == "glasso") {
+  if (x$method == "glasso" && !is.null(x$gamma)) {
     cat(sprintf("  Gamma: %.2f  |  Lambda: %.4f\n",
                 x$gamma, x$lambda_selected))
   }
+
+  if (!is.null(x$scaling)) {
+    cat(sprintf("  Scaling: %s\n", paste(x$scaling, collapse = " -> ")))
+  }
+
+  if (x$threshold > 0) {
+    cat(sprintf("  Threshold: %g\n", x$threshold))
+  }
+
   invisible(x)
 }
 
 
-#' Print Method for Multilevel Psychological Network
+#' Print Method for Multilevel Network Object
 #'
-#' @param x A \code{psych_network_ml} object.
+#' @param x A \code{netobject_ml}.
 #' @param ... Additional arguments (ignored).
 #'
 #' @export
-print.psych_network_ml <- function(x, ...) {
-  label <- switch(x$method,
-    glasso = "glasso",
-    pcor   = "pcor",
-    cor    = "cor"
-  )
-  cat(sprintf("Multilevel Psychological Network (%s)\n", label))
+print.netobject_ml <- function(x, ...) {
+  cat(sprintf("Multilevel Network (method: %s)\n", x$method))
   cat("-- Between-person --\n")
   b <- x$between
-  total_b <- b$p * (b$p - 1) / 2
-  pct_b <- if (total_b > 0) {
-    sprintf("%.1f%%", 100 * b$n_edges / total_b)
-  } else {
-    "0%"
-  }
-  cat(sprintf("  Variables: %d  |  Sample size: %d (unique persons)\n",
-              b$p, b$n))
-  cat(sprintf("  Non-zero edges: %d / %d (%s)\n",
-              b$n_edges, total_b, pct_b))
-  if (b$method == "glasso") {
-    cat(sprintf("  Gamma: %.2f  |  Lambda: %.4f\n",
-                b$gamma, b$lambda_selected))
+  cat(sprintf("  Nodes: %d  |  Edges: %d\n", b$n_nodes, b$n_edges))
+  if (!is.null(b$n)) {
+    cat(sprintf("  Sample size: %d (unique persons)\n", b$n))
   }
   cat("-- Within-person --\n")
   w <- x$within
-  total_w <- w$p * (w$p - 1) / 2
-  pct_w <- if (total_w > 0) {
-    sprintf("%.1f%%", 100 * w$n_edges / total_w)
-  } else {
-    "0%"
-  }
-  cat(sprintf("  Variables: %d  |  Sample size: %d (observations)\n",
-              w$p, w$n))
-  cat(sprintf("  Non-zero edges: %d / %d (%s)\n",
-              w$n_edges, total_w, pct_w))
-  if (w$method == "glasso") {
-    cat(sprintf("  Gamma: %.2f  |  Lambda: %.4f\n",
-                w$gamma, w$lambda_selected))
+  cat(sprintf("  Nodes: %d  |  Edges: %d\n", w$n_nodes, w$n_edges))
+  if (!is.null(w$n)) {
+    cat(sprintf("  Sample size: %d (observations)\n", w$n))
   }
   invisible(x)
 }
@@ -759,24 +326,72 @@ print.psych_network_ml <- function(x, ...) {
 }
 
 
-#' Plot Method for Multilevel Psychological Network
+#' Plot Method for Network Object
+#'
+#' @description
+#' Plots the network using \code{cograph::splot()}.
+#' Requires the \pkg{cograph} package to be installed.
+#' For association methods (\code{"glasso"}, \code{"pcor"}, \code{"cor"}),
+#' node predictability (R\eqn{^2}) is shown as pie charts by default.
+#'
+#' @param x A \code{netobject}.
+#' @param predictability Logical. If \code{TRUE}, display node predictability
+#'   as pie charts for association methods (default: \code{TRUE}).
+#' @param pie_color Character. Color for the predictability pie segments.
+#'   Default: \code{"#377EB8"} (blue, following mgm convention).
+#' @param ... Additional arguments passed to \code{cograph::splot()}.
+#'
+#' @export
+plot.netobject <- function(x, predictability = TRUE,
+                           pie_color = "#377EB8", ...) {
+  if (!requireNamespace("cograph", quietly = TRUE)) {
+    stop(
+      "Package 'cograph' is required for plotting. ",
+      "Install it with: install.packages('cograph')"
+    )
+  }
+
+  node_cols <- .node_colors(x$n_nodes)
+
+  dots <- list(
+    x = x$matrix,
+    directed = x$directed,
+    node_fill = node_cols,
+    edge_labels = TRUE,
+    edge_label_size = 0.65,
+    node_size = 8,
+    theme = "colorblind",
+    ...
+  )
+
+  if (predictability && x$method %in% c("glasso", "pcor", "cor")) {
+    r2 <- predictability.netobject(x)
+    dots$pie_values <- r2
+    dots$pie_colors <- pie_color
+  }
+
+  do.call(cograph::splot, dots)
+}
+
+
+#' Plot Method for Multilevel Network Object
 #'
 #' @description
 #' Plots the between-person and within-person networks side by side using
 #' \code{cograph::splot()}.
 #' Requires the \pkg{cograph} package to be installed.
 #'
-#' @param x A \code{psych_network_ml} object.
+#' @param x A \code{netobject_ml}.
 #' @param predictability Logical. If \code{TRUE}, display node predictability
-#'   as pie charts on each node (default: \code{TRUE}).
+#'   as pie charts for association methods (default: \code{TRUE}).
 #' @param pie_color Character. Color for the predictability pie segments.
 #'   Default: \code{"#377EB8"}.
 #' @param ... Additional arguments passed to \code{cograph::splot()}.
 #'
 #' @importFrom graphics par
 #' @export
-plot.psych_network_ml <- function(x, predictability = TRUE,
-                                  pie_color = "#377EB8", ...) {
+plot.netobject_ml <- function(x, predictability = TRUE,
+                              pie_color = "#377EB8", ...) {
   if (!requireNamespace("cograph", quietly = TRUE)) {
     stop(
       "Package 'cograph' is required for plotting. ",
@@ -786,11 +401,11 @@ plot.psych_network_ml <- function(x, predictability = TRUE,
   old_par <- graphics::par(mfrow = c(1, 2))
   on.exit(graphics::par(old_par))
 
-  p <- x$between$p
+  p <- x$between$n_nodes
   node_cols <- .node_colors(p)
 
   dots <- list(
-    directed = FALSE,
+    directed = x$between$directed,
     node_fill = node_cols,
     edge_labels = TRUE,
     edge_label_size = 0.65,
@@ -799,77 +414,28 @@ plot.psych_network_ml <- function(x, predictability = TRUE,
     ...
   )
 
-  if (predictability) {
-    r2 <- predictability.psych_network_ml(x)
+  if (predictability && x$method %in% c("glasso", "pcor", "cor")) {
+    r2 <- predictability.netobject_ml(x)
 
-    dots_b <- c(list(x = x$between$network_matrix,
+    dots_b <- c(list(x = x$between$matrix,
                      title = "Between-person",
                      pie_values = r2$between,
                      pie_colors = pie_color),
                 dots)
-    dots_w <- c(list(x = x$within$network_matrix,
+    dots_w <- c(list(x = x$within$matrix,
                      title = "Within-person",
                      pie_values = r2$within,
                      pie_colors = pie_color),
                 dots)
   } else {
-    dots_b <- c(list(x = x$between$network_matrix,
+    dots_b <- c(list(x = x$between$matrix,
                      title = "Between-person"), dots)
-    dots_w <- c(list(x = x$within$network_matrix,
+    dots_w <- c(list(x = x$within$matrix,
                      title = "Within-person"), dots)
   }
 
   do.call(cograph::splot, dots_b)
   do.call(cograph::splot, dots_w)
-}
-
-
-#' Plot Method for Psychological Network
-#'
-#' @description
-#' Plots the network using \code{cograph::splot()}.
-#' Requires the \pkg{cograph} package to be installed.
-#' By default, node predictability (R\eqn{^2}) is shown as pie charts
-#' on each node.
-#'
-#' @param x A \code{psych_network} object.
-#' @param predictability Logical. If \code{TRUE}, display node predictability
-#'   as pie charts (default: \code{TRUE}).
-#' @param pie_color Character. Color for the predictability pie segments.
-#'   Default: \code{"#377EB8"} (blue, following mgm convention).
-#' @param ... Additional arguments passed to \code{cograph::splot()}.
-#'
-#' @export
-plot.psych_network <- function(x, predictability = TRUE,
-                               pie_color = "#377EB8", ...) {
-  if (!requireNamespace("cograph", quietly = TRUE)) {
-    stop(
-      "Package 'cograph' is required for plotting. ",
-      "Install it with: install.packages('cograph')"
-    )
-  }
-
-  p <- x$p
-  node_cols <- .node_colors(p)
-
-  dots <- list(
-    x = x$network_matrix,
-    directed = FALSE,
-    node_fill = node_cols,
-    edge_labels = TRUE,
-    edge_label_size = 0.65,
-    node_size = 8,
-    theme = "colorblind",
-    ...
-  )
-
-  if (predictability) {
-    r2 <- predictability.psych_network(x)
-    dots$pie_values <- r2
-    dots$pie_colors <- pie_color
-  }
-
-  do.call(cograph::splot, dots)
 }
 
 
@@ -889,13 +455,13 @@ plot.psych_network <- function(x, predictability = TRUE,
 #' For \code{method = "cor"}, predictability is the multiple R\eqn{^2} from
 #' regressing each node on its network neighbors (nodes with non-zero edges).
 #'
-#' @param object A \code{psych_network} or \code{psych_network_ml} object.
+#' @param object A \code{netobject} or \code{netobject_ml} object.
 #' @param ... Additional arguments (ignored).
 #'
-#' @return For \code{psych_network}: a named numeric vector of R\eqn{^2} values
+#' @return For \code{netobject}: a named numeric vector of R\eqn{^2} values
 #'   (one per node, between 0 and 1).
 #'
-#'   For \code{psych_network_ml}: a list with elements \code{$between} and
+#'   For \code{netobject_ml}: a list with elements \code{$between} and
 #'   \code{$within}, each a named numeric vector.
 #'
 #' @references
@@ -907,7 +473,7 @@ plot.psych_network <- function(x, predictability = TRUE,
 #' @examples
 #' \dontrun{
 #' freq <- convert_sequence_format(group_regulation, format = "frequency")
-#' net <- build_network(freq)
+#' net <- build_network(freq, method = "glasso")
 #' predictability(net)
 #'
 #' # Plot with predictability rings
@@ -922,7 +488,7 @@ predictability <- function(object, ...) {
 
 #' @rdname predictability
 #' @export
-predictability.psych_network <- function(object, ...) {
+predictability.netobject <- function(object, ...) {
   if (object$method %in% c("glasso", "pcor")) {
     # From precision matrix: R²_j = 1 - 1/Omega_jj
     omega_diag <- diag(object$precision_matrix)
@@ -930,7 +496,7 @@ predictability.psych_network <- function(object, ...) {
   } else {
     # cor method: multiple R² from correlation matrix
     S <- object$cor_matrix
-    net <- object$network_matrix
+    net <- object$matrix
     p <- ncol(net)
     r2 <- vapply(seq_len(p), function(j) {
       neighbors <- which(net[j, ] != 0)
@@ -945,14 +511,14 @@ predictability.psych_network <- function(object, ...) {
     }, numeric(1))
   }
   r2 <- pmin(pmax(r2, 0), 1)
-  names(r2) <- colnames(object$network_matrix)
+  names(r2) <- colnames(object$matrix)
   r2
 }
 
 
 #' @rdname predictability
 #' @export
-predictability.psych_network_ml <- function(object, ...) {
+predictability.netobject_ml <- function(object, ...) {
   list(
     between = predictability(object$between),
     within  = predictability(object$within)

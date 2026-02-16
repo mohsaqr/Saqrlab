@@ -632,6 +632,102 @@
 }
 
 
+# ---- Shared association helpers ----
+
+#' Compute log-spaced lambda path
+#' @noRd
+.compute_lambda_path <- function(S, nlambda, lambda.min.ratio) {
+  lambda_max <- max(abs(S[upper.tri(S)]))
+  if (lambda_max <= 0) {
+    stop("All off-diagonal correlations are zero; nothing to regularise.")
+  }
+  lambda_min <- lambda_max * lambda.min.ratio
+  exp(seq(log(lambda_max), log(lambda_min), length.out = nlambda))
+}
+
+
+#' Select best lambda via EBIC using glasso fits with warm starts
+#' @noRd
+.select_ebic <- function(S, lambda_path, n, gamma, penalize_diagonal) {
+  p <- ncol(S)
+  n_lambda <- length(lambda_path)
+  ebic_vals <- numeric(n_lambda)
+
+  w_prev <- NULL
+  wi_prev <- NULL
+  best_idx <- 1L
+  best_ebic <- Inf
+  best_wi <- NULL
+
+  for (i in seq_along(lambda_path)) {
+    lam <- lambda_path[i]
+
+    fit <- tryCatch(
+      glasso::glasso(
+        s = S,
+        rho = lam,
+        penalize.diagonal = penalize_diagonal,
+        start = if (is.null(w_prev)) "cold" else "warm",
+        w.init = w_prev,
+        wi.init = wi_prev,
+        trace = FALSE
+      ),
+      error = function(e) NULL
+    )
+
+    if (is.null(fit)) {
+      ebic_vals[i] <- Inf
+      next
+    }
+
+    w_prev <- fit$w
+    wi_prev <- fit$wi
+
+    log_det <- determinant(fit$wi, logarithm = TRUE)
+    if (log_det$sign <= 0) {
+      ebic_vals[i] <- Inf
+      next
+    }
+    log_det_val <- as.numeric(log_det$modulus)
+
+    loglik <- (n / 2) * (log_det_val - sum(diag(S %*% fit$wi)))
+    npar <- sum(abs(fit$wi[upper.tri(fit$wi)]) > 1e-10)
+    ebic_vals[i] <- -2 * loglik + npar * log(n) +
+      4 * npar * gamma * log(p)
+
+    if (ebic_vals[i] < best_ebic) {
+      best_ebic <- ebic_vals[i]
+      best_idx <- i
+      best_wi <- fit$wi
+    }
+  }
+
+  if (is.null(best_wi)) {
+    stop("All glasso fits failed. Check your input data.")
+  }
+
+  colnames(best_wi) <- rownames(best_wi) <- colnames(S)
+
+  list(
+    wi        = best_wi,
+    lambda    = lambda_path[best_idx],
+    ebic      = best_ebic,
+    ebic_path = ebic_vals
+  )
+}
+
+
+#' Convert precision matrix to partial correlations
+#' @noRd
+.precision_to_pcor <- function(Wi, threshold) {
+  d <- sqrt(diag(Wi))
+  pcor <- -Wi / outer(d, d)
+  diag(pcor) <- 0
+  pcor[abs(pcor) < threshold] <- 0
+  pcor
+}
+
+
 #' EBICglasso estimator
 #' @noRd
 .estimator_glasso <- function(data,

@@ -4,7 +4,7 @@
 #'
 #' @description
 #' Non-parametric bootstrap for any network estimated by
-#' \code{\link{estimate_network}}. Works with all built-in methods
+#' \code{\link{build_network}}. Works with all built-in methods
 #' (transition and association) as well as custom registered estimators.
 #'
 #' For transition methods (\code{"relative"}, \code{"frequency"},
@@ -19,7 +19,7 @@
 #' and custom estimators), the full estimator is called on resampled rows
 #' each iteration.
 #'
-#' @param data Data frame or matrix, passed to \code{estimate_network()}.
+#' @param data Data frame or matrix, passed to \code{build_network()}.
 #' @param method Character. Registered estimator name (default:
 #'   \code{"relative"}). Aliases are resolved automatically.
 #' @param params Named list. Method-specific parameters passed to the
@@ -44,7 +44,7 @@
 #'
 #' @return An object of class \code{"saqr_bootstrap"} containing:
 #' \describe{
-#'   \item{original}{The original \code{saqr_network} object.}
+#'   \item{original}{The original \code{netobject}.}
 #'   \item{mean}{Bootstrap mean weight matrix.}
 #'   \item{sd}{Bootstrap SD matrix.}
 #'   \item{p_values}{P-value matrix.}
@@ -54,7 +54,7 @@
 #'   \item{cr_lower}{Consistency range lower bound (stability only).}
 #'   \item{cr_upper}{Consistency range upper bound (stability only).}
 #'   \item{summary}{Long-format data frame of edge-level statistics.}
-#'   \item{model}{Pruned \code{saqr_network} (non-significant edges zeroed).}
+#'   \item{model}{Pruned \code{netobject} (non-significant edges zeroed).}
 #'   \item{method, params, iter, ci_level, inference}{Bootstrap config.}
 #'   \item{consistency_range, edge_threshold}{Inference parameters.}
 #' }
@@ -76,7 +76,7 @@
 #'                             scaling = "minmax", seed = 42, iter = 100)
 #' }
 #'
-#' @seealso \code{\link{estimate_network}}, \code{\link{print.saqr_bootstrap}},
+#' @seealso \code{\link{build_network}}, \code{\link{print.saqr_bootstrap}},
 #'   \code{\link{summary.saqr_bootstrap}}, \code{\link{plot.saqr_bootstrap}}
 #'
 #' @importFrom stats quantile sd
@@ -118,7 +118,7 @@ bootstrap_network <- function(data,
   directed <- estimator$directed
 
   # ---- Compute original network ----
-  original <- estimate_network(
+  original <- build_network(
     data = data, method = method, params = params,
     scaling = scaling, threshold = threshold,
     level = level, id_col = id_col
@@ -192,7 +192,7 @@ bootstrap_network <- function(data,
     edges = pruned_edges,
     level = level
   )
-  class(model) <- "saqr_network"
+  class(model) <- "netobject"
 
   # ---- Assemble result ----
   result <- list(

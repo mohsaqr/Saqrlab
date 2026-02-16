@@ -2,201 +2,130 @@
 % Please edit documentation in R/build_network.R
 \name{build_network}
 \alias{build_network}
-\title{Build a Psychological Network}
+\title{Build a Network}
 \usage{
 build_network(
   data,
-  method = c("glasso", "ebicglasso", "regularized", "pcor", "partial", "cor",
-    "correlation"),
-  id_col = NULL,
+  method,
+  params = list(),
+  scaling = NULL,
+  threshold = 0,
   level = NULL,
-  n = NULL,
-  gamma = 0.5,
-  nlambda = 100L,
-  lambda.min.ratio = 0.01,
-  penalize.diagonal = FALSE,
-  threshold = 1e-04,
-  cor_method = c("pearson", "spearman", "kendall"),
-  input_type = c("auto", "cor", "cov")
+  id_col = NULL
 )
 }
 \arguments{
-\item{data}{A data frame of per-sequence action frequencies (e.g., output of
-\code{\link{convert_sequence_format}} with \code{format = "frequency"}),
-or a square symmetric correlation/covariance matrix.}
+\item{data}{Data frame (sequences or per-observation frequencies) or a
+square symmetric matrix (correlation or covariance).}
 
-\item{method}{Character. Network estimation method. One of \code{"glasso"},
-\code{"ebicglasso"}, \code{"regularized"} (all equivalent),
-\code{"pcor"}, \code{"partial"} (equivalent),
-\code{"cor"}, \code{"correlation"} (equivalent).
-Default: \code{"glasso"}.}
+\item{method}{Character. Required. Name of a registered estimator.
+Built-in methods: \code{"relative"}, \code{"frequency"},
+\code{"co_occurrence"}, \code{"cor"}, \code{"pcor"}, \code{"glasso"}.
+Aliases: \code{"tna"} and \code{"transition"} map to \code{"relative"};
+\code{"ftna"} and \code{"counts"} map to \code{"frequency"};
+\code{"cna"} maps to \code{"co_occurrence"};
+\code{"corr"} and \code{"correlation"} map to \code{"cor"};
+\code{"partial"} maps to \code{"pcor"};
+\code{"ebicglasso"} and \code{"regularized"} map to \code{"glasso"}.}
 
-\item{id_col}{Character vector. Name(s) of ID column(s) to exclude when
-\code{data} is a data frame. If NULL, columns named \code{"rid"} and
-non-numeric columns are automatically excluded. Default: NULL.}
+\item{params}{Named list. Method-specific parameters passed to the estimator
+function (e.g. \code{list(gamma = 0.5)} for glasso, or
+\code{list(format = "wide")} for transition methods). This is the key
+composability feature: downstream functions like bootstrap or grid search
+can store and replay the full params list without knowing method internals.}
 
-\item{level}{Character or NULL. Decomposition level for multilevel networks
-when data has repeated measures per person. One of:
-\itemize{
-\item \code{NULL} (default): no decomposition, current behavior.
-\item \code{"between"}: aggregate to person means, estimate network
-of trait-level associations.
-\item \code{"within"}: person-mean center each variable, estimate
-network of state-level (occasion-to-occasion) associations.
-\item \code{"both"}: return both between and within networks in a
-\code{psych_network_ml} object.
-}
-Requires \code{id_col} and a data frame input.}
+\item{scaling}{Character vector or NULL. Post-estimation scaling to apply
+(in order). Options: \code{"minmax"}, \code{"max"}, \code{"rank"},
+\code{"normalize"}. Can combine: \code{c("rank", "minmax")}.
+Default: \code{NULL} (no scaling).}
 
-\item{n}{Integer. Sample size. Required when \code{data} is a matrix.
-Ignored when \code{data} is a data frame (n is taken from \code{nrow()}).
-Default: NULL.}
+\item{threshold}{Numeric. Absolute values below this are set to zero in the
+result matrix. Default: 0 (no thresholding).}
 
-\item{gamma}{Numeric. EBIC tuning parameter controlling sparsity preference
-(only used when \code{method = "glasso"}). Higher values favour sparser
-networks; 0 reduces to BIC. Default: 0.5.}
+\item{level}{Character or NULL. Multilevel decomposition for association
+methods. One of \code{NULL}, \code{"between"}, \code{"within"},
+\code{"both"}. Requires \code{id_col}. Default: \code{NULL}.}
 
-\item{nlambda}{Integer. Number of lambda values in the regularisation path
-(only used when \code{method = "glasso"}). Default: 100.}
-
-\item{lambda.min.ratio}{Numeric. Ratio of the smallest to the largest lambda
-value (only used when \code{method = "glasso"}). Default: 0.01.}
-
-\item{penalize.diagonal}{Logical. Whether to penalise the diagonal of the
-precision matrix (only used when \code{method = "glasso"}).
-Default: FALSE.}
-
-\item{threshold}{Numeric. Absolute values in the result matrix below this
-are set to zero. For \code{"glasso"} and \code{"pcor"} this applies to
-partial correlations; for \code{"cor"} it applies to correlations.
-Default: 1e-4.}
-
-\item{cor_method}{Character. Correlation method when computing from a data
-frame: \code{"pearson"}, \code{"spearman"}, or \code{"kendall"}.
-Default: \code{"pearson"}.}
-
-\item{input_type}{Character. How to interpret a matrix input:
-\code{"auto"} (detect from diagonal), \code{"cor"}, or \code{"cov"}.
-Default: \code{"auto"}.}
+\item{id_col}{Character. Name of the ID column for multilevel decomposition.
+Default: \code{NULL}.}
 }
 \value{
-An object of class \code{"psych_network"} (or
-\code{"psych_network_ml"} when \code{level = "both"}), a list containing:
+An object of class \code{"netobject"} containing:
 \describe{
-\item{network_matrix}{The estimated network weight matrix (partial
-correlations for \code{"glasso"} and \code{"pcor"}; correlations for
-\code{"cor"}). Diagonal is zero.}
-\item{cor_matrix}{Correlation matrix used as input.}
-\item{edges}{Data frame of non-zero edges (from, to, weight).}
-\item{n}{Sample size.}
-\item{p}{Number of variables.}
-\item{method}{The resolved method name (\code{"glasso"}, \code{"pcor"},
-or \code{"cor"}).}
-\item{n_edges}{Number of non-zero edges.}
-\item{level}{The decomposition level used (\code{NULL}, \code{"between"},
-or \code{"within"}).}
-}
-
-Additional fields for \code{method = "glasso"}:
-\describe{
-\item{precision_matrix}{Estimated precision (inverse covariance) matrix.}
-\item{lambda_selected}{The lambda value of the selected model.}
-\item{ebic_selected}{The EBIC value of the selected model.}
-\item{lambda_path}{Numeric vector of all lambda values evaluated.}
-\item{ebic_path}{Numeric vector of EBIC values for each lambda.}
-\item{gamma}{EBIC gamma used.}
-}
-
-Additional fields for \code{method = "pcor"}:
-\describe{
-\item{precision_matrix}{Precision (inverse correlation) matrix.}
-}
-
-When \code{level = "both"}, a \code{"psych_network_ml"} object is returned
-containing:
-\describe{
-\item{between}{A \code{psych_network} object for the between-person level.}
-\item{within}{A \code{psych_network} object for the within-person level.}
+\item{matrix}{The estimated network weight matrix.}
+\item{nodes}{Character vector of node names.}
+\item{directed}{Logical. Whether the network is directed.}
 \item{method}{The resolved method name.}
+\item{params}{The params list used (for reproducibility).}
+\item{scaling}{The scaling applied (or NULL).}
+\item{threshold}{The threshold applied.}
+\item{n_nodes}{Number of nodes.}
+\item{n_edges}{Number of non-zero edges.}
+\item{edges}{Data frame of non-zero edges (from, to, weight).}
+\item{level}{Decomposition level used (or NULL).}
 }
+Method-specific extras (e.g. \code{precision_matrix}, \code{cor_matrix},
+\code{frequency_matrix}, \code{lambda_selected}, etc.) are preserved
+from the estimator output.
+
+When \code{level = "both"}, returns an object of class
+\code{"netobject_ml"} with \code{$between} and \code{$within}
+sub-networks and a \code{$method} field.
 }
 \description{
-Estimates a network from frequency data or a correlation/covariance matrix.
-Supports three methods:
-\itemize{
-\item \code{"glasso"} (aliases: \code{"ebicglasso"}, \code{"regularized"}):
-Sparse partial correlations via graphical lasso with EBIC model selection.
-\item \code{"pcor"} (alias: \code{"partial"}):
-Unregularised partial correlations (inverts the correlation matrix
-directly; requires p < n).
-\item \code{"cor"} (alias: \code{"correlation"}):
-Pairwise correlation network.
-}
+Universal network estimation function that supports both transition
+networks (relative, frequency, co-occurrence) and association networks
+(correlation, partial correlation, graphical lasso). Uses the global
+estimator registry, so custom estimators can also be used.
 }
 \details{
-When \code{data} is a data frame, the function automatically excludes
-non-numeric columns, ID columns (\code{id_col} and \code{"rid"}), columns
-with non-syntactic names (e.g., \code{"\%"}), zero-variance columns, and
-columns that are entirely \code{NA}. Rows with any \code{NA} in the
-remaining columns are dropped before computing correlations.
-
-\strong{Method details:}
-\describe{
-\item{glasso}{Fits the graphical lasso across a log-spaced lambda path
-using \code{glasso::glasso()} with warm starts, selects the model with
-the lowest EBIC, and converts the precision matrix to partial
-correlations.}
-\item{pcor}{Directly inverts the correlation matrix to obtain the
-precision matrix, then converts to partial correlations. Requires
-\code{p < n} (more observations than variables).}
-\item{cor}{Returns the pairwise correlation matrix as the network.
-Values below \code{threshold} are zeroed out.}
-}
-
-\strong{Multilevel decomposition:}
-When \code{level} is specified, the data is decomposed before estimation:
-\describe{
-\item{between}{Rows are aggregated to person means (using the first
-element of \code{id_col} as the grouping variable), then the network
-is estimated from the aggregated data.}
-\item{within}{Each variable is person-mean centered (group-mean centering).
-Persons with only one observation are dropped (no within-person
-variance). The network is estimated from the pooled centered residuals.}
-\item{both}{Both between and within networks are estimated and returned
-in a \code{psych_network_ml} object.}
+The function works as follows:
+\enumerate{
+\item Resolves method aliases to canonical names.
+\item Retrieves the estimator function from the global registry.
+\item For association methods with \code{level} specified, decomposes
+the data (between-person means or within-person centering).
+\item Calls the estimator: \code{do.call(fn, c(list(data = data), params))}.
+\item Applies scaling and thresholding to the result matrix.
+\item Extracts edges and constructs the \code{netobject}.
 }
 }
 \examples{
 \dontrun{
 library(tna)
 
-# From wide sequence data — regularised (default)
-freq <- convert_sequence_format(group_regulation, format = "frequency")
-net <- build_network(freq)
+# Transition network (relative probabilities)
+net <- build_network(group_regulation, method = "relative")
 print(net)
 
-# Unregularised partial correlations
-net_pcor <- build_network(freq, method = "pcor")
+# Aliases
+net_tna <- build_network(group_regulation, method = "tna")
+net_ftna <- build_network(group_regulation, method = "ftna")
+net_cna <- build_network(group_regulation, method = "cna")
 
-# Correlation network
-net_cor <- build_network(freq, method = "cor", threshold = 0.1)
+# Association network (glasso)
+freq_data <- convert_sequence_format(group_regulation, format = "frequency")
+net_glasso <- build_network(freq_data, method = "glasso",
+                             params = list(gamma = 0.5, nlambda = 50))
 
-# From a correlation matrix
-S <- cor(freq[, -c(1, 2)])
-net2 <- build_network(S, n = nrow(freq), method = "glasso")
+# Partial correlation network
+net_pcor <- build_network(freq_data, method = "pcor")
 
-# Multilevel: between-person network
-freq_long <- convert_sequence_format(group_regulation_long,
-  action = "Action", id_col = "Actor", format = "frequency")
-net_between <- build_network(freq_long, id_col = "Actor",
-  level = "between")
+# Correlation network with alias
+net_cor <- build_network(freq_data, method = "corr")
 
-# Multilevel: both levels
-net_ml <- build_network(freq_long, id_col = "Actor", level = "both")
-print(net_ml)
+# With scaling
+net_scaled <- build_network(group_regulation, method = "relative",
+                             scaling = c("rank", "minmax"))
+
+# Composable: replay config on new data
+config <- net_glasso$params
+net2 <- build_network(new_data, method = net_glasso$method,
+                       params = config)
 }
 
 }
 \seealso{
-\code{\link{convert_sequence_format}} for producing frequency data.
+\code{\link{register_estimator}}, \code{\link{list_estimators}},
+\code{\link{bootstrap_network}}
 }
