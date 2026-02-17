@@ -204,13 +204,8 @@ permutation_test <- function(x, y,
   is_relative <- method == "relative"
 
   # Pre-compute per-sequence counts for both groups
-  # $data is stored as matrix; convert back to data.frame for precompute
-  trans_x <- .precompute_per_sequence(
-    as.data.frame(x$data, stringsAsFactors = FALSE), method, x$params, nodes
-  )
-  trans_y <- .precompute_per_sequence(
-    as.data.frame(y$data, stringsAsFactors = FALSE), method, y$params, nodes
-  )
+  trans_x <- .precompute_per_sequence(x$data, method, x$params, nodes)
+  trans_y <- .precompute_per_sequence(y$data, method, y$params, nodes)
 
   n_x <- nrow(trans_x)
   n_y <- nrow(trans_y)
@@ -296,12 +291,12 @@ permutation_test <- function(x, y,
   n_nodes <- length(nodes)
   nbins <- n_nodes * n_nodes
 
-  # Pool raw data and pre-clean ONCE
-  data_x <- as.data.frame(x$data, stringsAsFactors = FALSE)
-  data_y <- as.data.frame(y$data, stringsAsFactors = FALSE)
-  n_x <- nrow(data_x)
-  n_y <- nrow(data_y)
-  pooled_raw <- rbind(data_x, data_y)
+  # $data is already cleaned by the estimator (numeric matrix, no NAs,
+  # no zero-variance columns) — just pool directly
+  n_x <- nrow(x$data)
+  n_y <- nrow(y$data)
+  pooled_mat <- rbind(x$data, y$data)
+  n_total <- n_x + n_y
 
   # Extract params
   params_x <- x$params
@@ -310,28 +305,6 @@ permutation_test <- function(x, y,
   threshold_y <- y$threshold
   scaling_x <- x$scaling
   scaling_y <- y$scaling
-
-  # Pre-clean: keep only numeric columns matching nodes, drop NAs
-  numeric_cols <- vapply(pooled_raw, is.numeric, logical(1))
-  keep_cols <- intersect(names(pooled_raw)[numeric_cols], nodes)
-  if (length(keep_cols) < n_nodes) {
-    # Fallback: nodes may not match column names (e.g. custom estimator)
-    keep_cols <- names(pooled_raw)[numeric_cols]
-  }
-  pooled_mat <- as.matrix(pooled_raw[, keep_cols, drop = FALSE])
-
-  # Drop rows with NA
-  complete <- complete.cases(pooled_mat)
-  if (!all(complete)) {
-    # Track which rows belong to which group after NA removal
-    group_ids <- c(rep(1L, n_x), rep(2L, n_y))
-    pooled_mat <- pooled_mat[complete, , drop = FALSE]
-    group_ids <- group_ids[complete]
-    n_x <- sum(group_ids == 1L)
-    n_y <- sum(group_ids == 2L)
-  }
-
-  n_total <- nrow(pooled_mat)
   obs_flat <- as.vector(x$matrix - y$matrix)
 
   # Select fast path based on method

@@ -200,7 +200,7 @@ build_network <- function(data,
 
   # Build netobject
   result <- list(
-    data = as.matrix(data),
+    data = est_result$cleaned_data,
     matrix = net_matrix,
     nodes = nodes,
     directed = directed,

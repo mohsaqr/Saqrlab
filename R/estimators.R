@@ -238,6 +238,7 @@
     matrix = freq_mat,
     nodes = states,
     directed = TRUE,
+    cleaned_data = data,
     frequency_matrix = freq_mat
   )
 }
@@ -268,6 +269,7 @@
     matrix = rel_mat,
     nodes = states,
     directed = TRUE,
+    cleaned_data = data,
     frequency_matrix = freq_mat
   )
 }
@@ -304,7 +306,8 @@
   list(
     matrix = cooc_mat,
     nodes = rownames(cooc_mat),
-    directed = FALSE
+    directed = FALSE,
+    cleaned_data = data
   )
 }
 
@@ -548,11 +551,12 @@
     if (is.null(colnames(S))) {
       colnames(S) <- rownames(S) <- paste0("V", seq_len(ncol(S)))
     }
+    mat <- NULL
   } else {
     stop("data must be a data frame or a square symmetric matrix.")
   }
 
-  list(S = S, n = n)
+  list(S = S, n = n, mat = mat)
 }
 
 
@@ -581,6 +585,7 @@
     matrix = net,
     nodes = nodes,
     directed = FALSE,
+    cleaned_data = prepared$mat,
     cor_matrix = S,
     n = n_obs,
     p = ncol(S)
@@ -624,6 +629,7 @@
     matrix = pcor,
     nodes = nodes,
     directed = FALSE,
+    cleaned_data = prepared$mat,
     precision_matrix = Wi,
     cor_matrix = S,
     n = n_obs,
@@ -766,6 +772,7 @@
     matrix = pcor,
     nodes = nodes,
     directed = FALSE,
+    cleaned_data = prepared$mat,
     precision_matrix = selected$wi,
     cor_matrix = S,
     lambda_selected = selected$lambda,

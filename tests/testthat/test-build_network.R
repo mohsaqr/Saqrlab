@@ -662,18 +662,18 @@ test_that("print does not show predictability", {
 
 # ---- $data field ----
 
-test_that("$data is a matrix for association methods (data frame input)", {
+test_that("$data is cleaned numeric matrix for association methods (data frame input)", {
   df <- .make_freq_data(n = 80, p = 5)
   net <- build_network(df, method = "glasso", params = list(nlambda = 20L))
 
   expect_true(is.matrix(net$data))
   expect_true(is.numeric(net$data))
   expect_equal(nrow(net$data), 80)
-  # 5 state columns + rid column = 6
-  expect_equal(ncol(net$data), 6)
+  # 5 state columns only (rid excluded during cleaning)
+  expect_equal(ncol(net$data), 5)
 })
 
-test_that("$data is a matrix for association methods (matrix input)", {
+test_that("$data is NULL for association methods (matrix input)", {
   df <- .make_freq_data(n = 100, p = 5)
   num_cols <- setdiff(names(df), "rid")
   S <- cor(df[, num_cols])
@@ -681,17 +681,15 @@ test_that("$data is a matrix for association methods (matrix input)", {
   net <- build_network(S, method = "glasso", params = list(n = 100,
                                                             nlambda = 20L))
 
-  expect_true(is.matrix(net$data))
-  expect_equal(nrow(net$data), 5)
-  expect_equal(ncol(net$data), 5)
+  # No row-level data available from matrix input
+  expect_null(net$data)
 })
 
-test_that("$data is a character matrix for transition methods", {
+test_that("$data is a data frame for transition methods", {
   skip_if_not_installed("tna")
   net <- build_network(tna::group_regulation, method = "tna")
 
-  expect_true(is.matrix(net$data))
-  expect_true(is.character(net$data))
+  expect_true(is.data.frame(net$data))
   expect_equal(nrow(net$data), 2000)
   expect_equal(ncol(net$data), 26)
 })
@@ -701,5 +699,5 @@ test_that("print.netobject shows data dimensions", {
   net <- build_network(df, method = "glasso", params = list(nlambda = 20L))
 
   out <- capture.output(print(net))
-  expect_true(any(grepl("Data: 80 x 6", out)))
+  expect_true(any(grepl("Data: 80 x 5", out)))
 })
