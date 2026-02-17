@@ -54,3 +54,6 @@
 - [permutation_test vs tna]: 100-dataset simulation against `tna::permutation_test`: identical p-values (r=1.0) and negligible effect size differences for both TNA (relative) and CNA (co_occurrence) methods. Confirms numerical correctness.
 - [glassopath]: `glasso::glassopath(s, rholist, trace = 0, penalize.diagonal)` returns `$wi` as a 3D array (p × p × n_lambda). Use `.select_ebic_from_path()` to pick the best precision matrix via EBIC. Much faster than calling `glasso()` separately for each lambda because it warm-starts from the previous solution internally.
 - [fixed lambda rejected]: Using a fixed regularization lambda (from the original network) across permutations drops significance agreement from 99% to 93%. Must re-select lambda via EBIC on each permutation for valid inference. The `glassopath()` approach preserves proper model selection while being fast.
+
+### 2026-02-17
+- [replication guide]: Comprehensive 7-file technical report written to `tmp/replication_guide/`. Covers architecture, all 6 estimators, build_network, bootstrap, permutation test, registry/S3, and testing strategy. Total ~2600 lines. All code snippets cross-referenced against actual source files with line numbers.
