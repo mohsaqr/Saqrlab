@@ -11,6 +11,7 @@ permutation_test(
   alpha = 0.05,
   paired = FALSE,
   adjust = "none",
+  nlambda = 50L,
   seed = NULL
 )
 }
@@ -30,6 +31,11 @@ equal number of observations in \code{x} and \code{y}). Default: FALSE.}
 \item{adjust}{Character. p-value adjustment method passed to
 \code{\link[stats]{p.adjust}} (default: \code{"none"}). Common choices:
 \code{"holm"}, \code{"BH"}, \code{"bonferroni"}.}
+
+\item{nlambda}{Integer. Number of lambda values for the \code{glassopath}
+regularisation path (only used when \code{method = "glasso"}).
+Higher values give finer lambda resolution at the cost of speed.
+Default: 50.}
 
 \item{seed}{Integer or NULL. RNG seed for reproducibility.}
 }

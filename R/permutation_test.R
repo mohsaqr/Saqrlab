@@ -28,6 +28,10 @@
 #' @param adjust Character. p-value adjustment method passed to
 #'   \code{\link[stats]{p.adjust}} (default: \code{"none"}). Common choices:
 #'   \code{"holm"}, \code{"BH"}, \code{"bonferroni"}.
+#' @param nlambda Integer. Number of lambda values for the \code{glassopath}
+#'   regularisation path (only used when \code{method = "glasso"}).
+#'   Higher values give finer lambda resolution at the cost of speed.
+#'   Default: 50.
 #' @param seed Integer or NULL. RNG seed for reproducibility.
 #'
 #' @return An object of class \code{"saqr_permutation"} containing:
@@ -70,6 +74,7 @@ permutation_test <- function(x, y,
                              alpha = 0.05,
                              paired = FALSE,
                              adjust = "none",
+                             nlambda = 50L,
                              seed = NULL) {
   # ---- Input validation ----
   stopifnot(
@@ -134,7 +139,7 @@ permutation_test <- function(x, y,
   } else {
     perm_result <- .permutation_association(
       x = x, y = y, nodes = nodes, method = method,
-      iter = iter, paired = paired
+      iter = iter, paired = paired, nlambda = nlambda
     )
   }
 
@@ -287,7 +292,8 @@ permutation_test <- function(x, y,
 #' input validation overhead. For custom/unknown estimators, falls
 #' back to full estimator calls.
 #' @noRd
-.permutation_association <- function(x, y, nodes, method, iter, paired) {
+.permutation_association <- function(x, y, nodes, method, iter, paired,
+                                    nlambda = 50L) {
   n_nodes <- length(nodes)
   nbins <- n_nodes * n_nodes
 
@@ -319,7 +325,7 @@ permutation_test <- function(x, y,
     # Compute lambda path from pooled correlation, using glassopath
     # for the per-iteration solve (single Fortran call for full path)
     S_pooled <- cor(pooled_mat, method = cor_method)
-    perm_rholist <- .compute_lambda_path(S_pooled, 50L, 0.01)
+    perm_rholist <- .compute_lambda_path(S_pooled, nlambda, 0.01)
     p_glasso <- ncol(pooled_mat)
   }
 
