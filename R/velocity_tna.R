@@ -29,9 +29,16 @@
 #' @param method Character. Estimation method: \code{"regression"} (default),
 #'   \code{"glla"}, or \code{"finite_difference"}.
 #' @param regression_type Character. For \code{method = "regression"}: type of
-#'   regression. \code{"ols"} (default) or \code{"beta"} (requires the
-#'   \pkg{betareg} package). Beta regression is appropriate for bounded
-#'   (0 to 1) transition probabilities.
+#'   regression. \code{"ols"} (default), \code{"beta"} (requires the
+#'   \pkg{betareg} package), or \code{"logistic"} (per-edge logistic
+#'   regression on individual transitions --- requires wide-format data,
+#'   bypasses matrix aggregation, uses all raw transitions for maximum
+#'   statistical power).
+#' @param weights Numeric vector or NULL. Regression weights per time point
+#'   (e.g., number of transitions per matrix). If \code{NULL} (default),
+#'   weights are auto-computed from the matrix element sums, giving more
+#'   influence to matrices based on larger samples. Set to \code{rep(1, T)}
+#'   for unweighted regression. Only used when \code{method = "regression"}.
 #' @param n_embed Integer. GLLA embedding dimension (must be odd, >= 3).
 #'   Default: \code{5L}.
 #' @param delta Numeric. Time interval between consecutive observations.
@@ -93,13 +100,14 @@
 #'
 #' @seealso \code{\link{build_network}}, \code{\link{bootstrap_network}}
 #'
-#' @importFrom stats embed lm coef predict poly
+#' @importFrom stats embed lm glm binomial coef predict poly
 #' @importFrom graphics matplot abline legend image axis
 #' @importFrom grDevices colorRampPalette
 #' @export
 velocity_tna <- function(data,
                          method = "regression",
                          regression_type = "ols",
+                         weights = NULL,
                          n_embed = 5L,
                          delta = 1,
                          order = 1L,
@@ -110,7 +118,7 @@ velocity_tna <- function(data,
                          scaling = NULL) {
   # ---- Input validation ----
   method <- match.arg(method, c("regression", "glla", "finite_difference"))
-  regression_type <- match.arg(regression_type, c("ols", "beta"))
+  regression_type <- match.arg(regression_type, c("ols", "beta", "logistic"))
   diff_type <- match.arg(diff_type, c("central", "forward", "backward"))
   stopifnot(
     is.numeric(delta), length(delta) == 1, delta > 0,
@@ -118,6 +126,18 @@ velocity_tna <- function(data,
   )
   order <- as.integer(order)
   n_embed <- as.integer(n_embed)
+
+  # ---- Logistic regression: works on raw wide data directly ----
+  if (method == "regression" && regression_type == "logistic") {
+    if (!is.data.frame(data) &&
+        !(is.list(data) && !is.null(data$windows))) {
+      # Accept wide data frames or try to detect columns
+      stop("regression_type = 'logistic' requires a wide-format data frame ",
+           "(rows = sequences, columns = time points).", call. = FALSE)
+    }
+    result_logistic <- .velocity_logistic(data, delta, order)
+    return(result_logistic)
+  }
 
   # ---- Extract matrices from input ----
   mat_list <- .detect_and_extract_matrices(
@@ -138,6 +158,16 @@ velocity_tna <- function(data,
     stop("At least 2 time points are required.", call. = FALSE)
   }
 
+  # ---- Weights for regression ----
+  if (method == "regression") {
+    if (is.null(weights)) {
+      weights <- rep(1, T_len)
+    } else {
+      stopifnot(is.numeric(weights), length(weights) == T_len)
+      weights <- weights / mean(weights)  # normalize to mean = 1
+    }
+  }
+
   # ---- Method dispatch ----
   if (method == "regression") {
     if (regression_type == "beta" &&
@@ -146,7 +176,8 @@ velocity_tna <- function(data,
            "Install it with: install.packages('betareg')",
            call. = FALSE)
     }
-    result <- .velocity_regression(mat_list, delta, order, regression_type)
+    result <- .velocity_regression(mat_list, delta, order, regression_type,
+                                   weights)
 
   } else if (method == "glla") {
     if (n_embed < 3L) {
@@ -238,7 +269,8 @@ velocity_tna <- function(data,
 #' @return List with velocity_mean, velocity_series, acceleration_mean,
 #'   acceleration_series, smoothed_matrices, edge_stats.
 #' @noRd
-.velocity_regression <- function(mat_list, delta, order, regression_type) {
+.velocity_regression <- function(mat_list, delta, order, regression_type,
+                                weights = NULL) {
   n_states <- nrow(mat_list[[1]])
   T_len <- length(mat_list)
   n_edges_total <- n_states * n_states
@@ -279,9 +311,9 @@ velocity_tna <- function(data,
     col_idx <- ((j - 1L) %/% n_states) + 1L
 
     if (regression_type == "beta") {
-      fit_result <- .fit_beta_edge(y, t_vec, order)
+      fit_result <- .fit_beta_edge(y, t_vec, order, weights)
     } else {
-      fit_result <- .fit_ols_edge(y, t_vec, order)
+      fit_result <- .fit_ols_edge(y, t_vec, order, weights)
     }
 
     vel_mat[row_idx, col_idx] <- fit_result$slope
@@ -355,9 +387,267 @@ velocity_tna <- function(data,
 }
 
 
+#' Logistic regression on individual transitions (no matrix aggregation)
+#'
+#' For each edge (i -> j), fits: glm(is_j ~ time_step, family = binomial,
+#' subset = from == i) across all individual transitions. Uses all raw data
+#' for maximum statistical power.
+#'
+#' @param data Wide-format data frame (rows = sequences, cols = time points).
+#' @param delta Numeric. Time interval.
+#' @param order Integer. Polynomial order.
+#'
+#' @return A tna_velocity object.
+#' @noRd
+.velocity_logistic <- function(data, delta, order) {
+  # Detect state columns (T1, T2, ... or V1, V2, ...)
+  if (is.data.frame(data)) {
+    state_cols <- grep("^[TV][0-9]+$", names(data), value = TRUE)
+    if (length(state_cols) < 2L) {
+      state_cols <- names(data)[vapply(data, function(x) {
+        is.character(x) || is.factor(x)
+      }, logical(1))]
+    }
+    if (length(state_cols) < 2L) {
+      stop("Cannot detect time-point columns. Ensure columns are named ",
+           "T1, T2, ... or V1, V2, ...", call. = FALSE)
+    }
+    wide <- data[, state_cols, drop = FALSE]
+  } else {
+    stop("regression_type = 'logistic' requires a wide-format data frame.",
+         call. = FALSE)
+  }
+
+  n_cols <- ncol(wide)
+  n_steps <- n_cols - 1
+
+  # Build flat transition table: from, to, time_step
+  from_vec <- character(0)
+  to_vec <- character(0)
+  time_vec <- integer(0)
+
+  for (s in seq_len(n_steps)) {
+    fr <- wide[[s]]
+    tr <- wide[[s + 1L]]
+    valid <- !is.na(fr) & !is.na(tr)
+    from_vec <- c(from_vec, as.character(fr[valid]))
+    to_vec <- c(to_vec, as.character(tr[valid]))
+    time_vec <- c(time_vec, rep(s, sum(valid)))
+  }
+
+  all_states <- sort(unique(c(from_vec, to_vec)))
+  n_states <- length(all_states)
+  t_scaled <- time_vec * delta
+
+  cat(sprintf("  Logistic regression on %d individual transitions (%d states)\n",
+              length(from_vec), n_states))
+
+  # Per-edge logistic regression
+  vel_mat <- matrix(0, n_states, n_states,
+                    dimnames = list(all_states, all_states))
+  acc_mat <- matrix(0, n_states, n_states,
+                    dimnames = list(all_states, all_states))
+
+  edge_from <- character(0)
+  edge_to <- character(0)
+  edge_slope <- numeric(0)
+  edge_se <- numeric(0)
+  edge_z <- numeric(0)
+  edge_p <- numeric(0)
+  edge_n <- integer(0)
+  edge_or <- numeric(0)
+
+  for (i_state in all_states) {
+    mask_from <- from_vec == i_state
+    n_from <- sum(mask_from)
+    if (n_from < 5L) {
+      # Too few transitions from this state
+      for (j_state in all_states) {
+        edge_from <- c(edge_from, i_state)
+        edge_to <- c(edge_to, j_state)
+        edge_slope <- c(edge_slope, 0)
+        edge_se <- c(edge_se, 0)
+        edge_z <- c(edge_z, 0)
+        edge_p <- c(edge_p, 1)
+        edge_n <- c(edge_n, 0L)
+        edge_or <- c(edge_or, 1)
+      }
+      next
+    }
+
+    t_sub <- t_scaled[mask_from]
+    to_sub <- to_vec[mask_from]
+
+    for (j_state in all_states) {
+      y_binary <- as.integer(to_sub == j_state)
+
+      # Skip if no variation in outcome
+      if (all(y_binary == 0) || all(y_binary == 1)) {
+        edge_from <- c(edge_from, i_state)
+        edge_to <- c(edge_to, j_state)
+        edge_slope <- c(edge_slope, 0)
+        edge_se <- c(edge_se, 0)
+        edge_z <- c(edge_z, 0)
+        edge_p <- c(edge_p, 1)
+        edge_n <- c(edge_n, n_from)
+        edge_or <- c(edge_or, 1)
+        next
+      }
+
+      fit <- tryCatch({
+        if (order == 1L) {
+          stats::glm(y_binary ~ t_sub, family = stats::binomial())
+        } else {
+          stats::glm(y_binary ~ stats::poly(t_sub, degree = order,
+                                             raw = TRUE),
+                     family = stats::binomial())
+        }
+      }, warning = function(w) {
+        suppressWarnings(
+          if (order == 1L) {
+            stats::glm(y_binary ~ t_sub, family = stats::binomial())
+          } else {
+            stats::glm(y_binary ~ stats::poly(t_sub, degree = order,
+                                               raw = TRUE),
+                       family = stats::binomial())
+          }
+        )
+      }, error = function(e) NULL)
+
+      if (is.null(fit)) {
+        edge_from <- c(edge_from, i_state)
+        edge_to <- c(edge_to, j_state)
+        edge_slope <- c(edge_slope, 0)
+        edge_se <- c(edge_se, 0)
+        edge_z <- c(edge_z, 0)
+        edge_p <- c(edge_p, 1)
+        edge_n <- c(edge_n, n_from)
+        edge_or <- c(edge_or, 1)
+        next
+      }
+
+      sm <- suppressWarnings(summary(fit))
+      coefs <- sm$coefficients
+
+      b1 <- coefs[2, 1]      # log-odds slope
+      se1 <- coefs[2, 2]
+      z1 <- coefs[2, 3]
+      p1 <- coefs[2, 4]
+
+      # Average marginal effect: mean(p_hat * (1 - p_hat)) * b1
+      p_hat <- stats::predict(fit, type = "response")
+      ame <- mean(p_hat * (1 - p_hat)) * b1
+
+      vel_mat[i_state, j_state] <- ame
+      if (order >= 2L && nrow(coefs) >= 3) {
+        b2 <- coefs[3, 1]
+        acc_mat[i_state, j_state] <- mean(p_hat * (1 - p_hat)) * 2 * b2
+      }
+
+      edge_from <- c(edge_from, i_state)
+      edge_to <- c(edge_to, j_state)
+      edge_slope <- c(edge_slope, ame)
+      edge_se <- c(edge_se, se1)
+      edge_z <- c(edge_z, z1)
+      edge_p <- c(edge_p, p1)
+      edge_n <- c(edge_n, n_from)
+      edge_or <- c(edge_or, exp(b1))
+    }
+  }
+
+  # Build edge_stats
+  edge_stats <- data.frame(
+    from = edge_from,
+    to = edge_to,
+    slope = edge_slope,
+    se = edge_se,
+    z_value = edge_z,
+    p_value = edge_p,
+    odds_ratio = edge_or,
+    n_transitions = edge_n,
+    stringsAsFactors = FALSE
+  )
+
+  # Add standardized / pct_change / total_change
+  # For logistic, baseline = mean predicted probability
+  edge_baseline <- vapply(seq_len(nrow(edge_stats)), function(k) {
+    i_st <- edge_stats$from[k]
+    j_st <- edge_stats$to[k]
+    mask <- from_vec == i_st
+    if (sum(mask) == 0) return(0)
+    mean(to_vec[mask] == j_st)
+  }, numeric(1))
+
+  total_span <- n_steps * delta
+  edge_stats$standardized <- ifelse(
+    edge_baseline > 0 & edge_baseline < 1,
+    edge_stats$slope / sqrt(edge_baseline * (1 - edge_baseline)), 0)
+  edge_stats$pct_change <- ifelse(
+    abs(edge_baseline) > .Machine$double.eps,
+    edge_stats$slope / edge_baseline * 100, 0)
+  edge_stats$total_change <- edge_stats$slope * total_span
+  edge_stats$r_squared <- NA_real_  # not meaningful for logistic
+
+  edge_stats <- edge_stats[order(-abs(edge_stats$slope)), ]
+  rownames(edge_stats) <- NULL
+
+  # Build velocity series (predicted probabilities at each time step)
+  vel_series <- lapply(seq_len(n_steps), function(s) {
+    vel_mat  # constant for linear model
+  })
+
+  # Build smoothed matrices (predicted P at each time step from logistic)
+  smoothed <- lapply(seq_len(n_steps), function(s) {
+    # For simplicity, use the per-step observed frequencies
+    mask <- time_vec == s
+    if (sum(mask) == 0) return(matrix(0, n_states, n_states,
+                                       dimnames = list(all_states, all_states)))
+    m <- matrix(0, n_states, n_states,
+                dimnames = list(all_states, all_states))
+    fr <- from_vec[mask]
+    tr <- to_vec[mask]
+    for (st in all_states) {
+      st_mask <- fr == st
+      if (sum(st_mask) > 0) {
+        tab <- table(factor(tr[st_mask], levels = all_states))
+        m[st, ] <- tab / sum(tab)
+      }
+    }
+    m
+  })
+
+  edges <- .extract_edges_from_matrix(vel_mat, directed = TRUE)
+
+  structure(
+    list(
+      velocity_matrix     = vel_mat,
+      velocity_series     = vel_series,
+      acceleration_matrix = if (order >= 2L) acc_mat else NULL,
+      acceleration_series = NULL,
+      smoothed_matrices   = smoothed,
+      original_matrices   = smoothed,
+      edge_stats          = edge_stats,
+      nodes               = all_states,
+      n_timepoints        = n_steps,
+      n_embedded          = n_steps,
+      method              = "regression",
+      regression_type     = "logistic",
+      n_embed             = NULL,
+      delta               = delta,
+      order               = order,
+      directed            = TRUE,
+      n_nodes             = n_states,
+      n_edges             = nrow(edges),
+      edges               = edges
+    ),
+    class = "tna_velocity"
+  )
+}
+
+
 #' Fit OLS regression for a single edge
 #' @noRd
-.fit_ols_edge <- function(y, t_vec, order) {
+.fit_ols_edge <- function(y, t_vec, order, weights = NULL) {
   # Handle constant edges
   if (stats::var(y) < .Machine$double.eps) {
     n <- length(y)
@@ -371,7 +661,7 @@ velocity_tna <- function(data,
   }
 
   if (order == 1L) {
-    fit <- stats::lm(y ~ t_vec)
+    fit <- stats::lm(y ~ t_vec, weights = weights)
     slope <- stats::coef(fit)[2]
     sm <- suppressWarnings(summary(fit))
     se <- sm$coefficients[2, 2]
@@ -383,7 +673,8 @@ velocity_tna <- function(data,
     acc_at_t <- rep(0, length(t_vec))
     acceleration <- 0
   } else {
-    fit <- stats::lm(y ~ stats::poly(t_vec, degree = order, raw = TRUE))
+    fit <- stats::lm(y ~ stats::poly(t_vec, degree = order, raw = TRUE),
+                     weights = weights)
     sm <- suppressWarnings(summary(fit))
     coeffs <- stats::coef(fit)
     # slope = b1 (linear coefficient)
@@ -424,7 +715,7 @@ velocity_tna <- function(data,
 #' 0 or 1 are squeezed using the Smithson-Verkuilen transformation.
 #'
 #' @noRd
-.fit_beta_edge <- function(y, t_vec, order) {
+.fit_beta_edge <- function(y, t_vec, order, weights = NULL) {
   n <- length(y)
 
   # Handle constant or all-zero edges
@@ -448,13 +739,13 @@ velocity_tna <- function(data,
   }
 
   fit <- tryCatch(
-    betareg::betareg(formula),
+    betareg::betareg(formula, weights = weights),
     error = function(e) NULL
   )
 
   # Fall back to OLS if beta regression fails
   if (is.null(fit)) {
-    return(.fit_ols_edge(y, t_vec, order))
+    return(.fit_ols_edge(y, t_vec, order, weights))
   }
 
   sm <- summary(fit)
@@ -773,7 +1064,10 @@ print.tna_velocity <- function(x, ...) {
 
   if (x$method == "regression") {
     reg_label <- if (!is.null(x$regression_type) &&
-                     x$regression_type == "beta") "Beta" else "OLS"
+                     x$regression_type == "beta") "Beta"
+                 else if (!is.null(x$regression_type) &&
+                     x$regression_type == "logistic") "Logistic"
+                 else "OLS"
     cat(sprintf("  Method: %s Regression (order=%d)\n", reg_label, x$order))
   } else if (x$method == "glla") {
     cat(sprintf("  Method: GLLA (n_embed=%d, delta=%g, order=%d)\n",

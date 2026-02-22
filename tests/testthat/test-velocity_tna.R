@@ -557,6 +557,95 @@ test_that("Missing states in raw data windows are expanded", {
 })
 
 
+# ---- Logistic regression tests ----
+
+test_that("Logistic regression works on wide-format data", {
+  set.seed(42)
+  n_seq <- 200
+  n_cols <- 10
+  states <- c("A", "B", "C")
+  wide <- as.data.frame(matrix(
+    sample(states, n_seq * n_cols, replace = TRUE),
+    nrow = n_seq, ncol = n_cols,
+    dimnames = list(NULL, paste0("T", seq_len(n_cols)))
+  ), stringsAsFactors = FALSE)
+
+  vel <- velocity_tna(wide, method = "regression", regression_type = "logistic")
+  expect_s3_class(vel, "tna_velocity")
+  expect_equal(vel$regression_type, "logistic")
+  expect_equal(vel$n_nodes, 3)
+  expect_equal(sort(vel$nodes), c("A", "B", "C"))
+})
+
+test_that("Logistic regression returns edge_stats with correct columns", {
+  set.seed(42)
+  n_seq <- 200
+  states <- c("A", "B")
+  wide <- as.data.frame(matrix(
+    sample(states, n_seq * 8, replace = TRUE),
+    nrow = n_seq, ncol = 8,
+    dimnames = list(NULL, paste0("T", 1:8))
+  ), stringsAsFactors = FALSE)
+
+  vel <- velocity_tna(wide, method = "regression", regression_type = "logistic")
+  es <- vel$edge_stats
+  expect_true(all(c("from", "to", "slope", "se", "z_value",
+                     "p_value", "odds_ratio", "n_transitions",
+                     "standardized", "pct_change", "total_change") %in% names(es)))
+})
+
+test_that("Logistic regression detects known trend in synthetic data", {
+  # Create data where A->B becomes more likely over time
+  set.seed(123)
+  n_seq <- 500
+  n_cols <- 15
+  wide <- matrix(NA_character_, nrow = n_seq, ncol = n_cols)
+  for (i in seq_len(n_seq)) {
+    for (t in seq_len(n_cols)) {
+      if (t == 1) {
+        wide[i, t] <- sample(c("A", "B"), 1)
+      } else {
+        prev <- wide[i, t - 1]
+        if (prev == "A") {
+          p_b <- 0.3 + 0.02 * t  # increasing P(A->B)
+          wide[i, t] <- sample(c("A", "B"), 1, prob = c(1 - p_b, p_b))
+        } else {
+          wide[i, t] <- sample(c("A", "B"), 1, prob = c(0.4, 0.6))
+        }
+      }
+    }
+  }
+  wide <- as.data.frame(wide, stringsAsFactors = FALSE)
+  names(wide) <- paste0("T", seq_len(n_cols))
+
+  vel <- velocity_tna(wide, method = "regression", regression_type = "logistic")
+  es <- vel$edge_stats
+  # A->B should have positive slope and be significant
+  ab <- es[es$from == "A" & es$to == "B", ]
+  expect_true(ab$slope > 0)
+  expect_true(ab$p_value < 0.05)
+})
+
+test_that("Logistic regression errors on non-dataframe input", {
+  mats <- .make_linear_matrices(T_len = 5)
+  expect_error(
+    velocity_tna(mats, method = "regression", regression_type = "logistic"),
+    "wide-format data frame"
+  )
+})
+
+test_that("Logistic print shows Logistic label", {
+  set.seed(42)
+  wide <- as.data.frame(matrix(
+    sample(c("A", "B"), 100 * 6, replace = TRUE),
+    nrow = 100, ncol = 6,
+    dimnames = list(NULL, paste0("T", 1:6))
+  ), stringsAsFactors = FALSE)
+  vel <- velocity_tna(wide, method = "regression", regression_type = "logistic")
+  expect_output(print(vel), "Logistic")
+})
+
+
 # ---- S3 method tests ----
 
 test_that("print.tna_velocity works for regression", {
