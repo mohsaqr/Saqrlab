@@ -57,3 +57,9 @@
 
 ### 2026-02-17
 - [replication guide]: Comprehensive 7-file technical report written to `tmp/replication_guide/`. Covers architecture, all 6 estimators, build_network, bootstrap, permutation test, registry/S3, and testing strategy. Total ~2600 lines. All code snippets cross-referenced against actual source files with line numbers.
+
+### 2026-02-22
+- [GLLA factorial scaling]: The GLLA Vandermonde basis `t^k` gives Taylor coefficients, not derivatives. Row k of the weight matrix must be multiplied by `k!` to get the actual k-th derivative. Without this, velocity (k=1) is correct (1!=1), but acceleration (k=2) is off by factor 2.
+- [.count_transitions_long time=NULL]: Passing `time = NULL` to `.count_transitions_long()` causes an error because `NULL %in% names(dt)` returns `logical(0)` which can't be used in `if()`. When calling from within `.matrices_from_raw_data()` (where data is already split by time), pass the actual `time_col` name instead of NULL.
+- [velocity_tna]: Implemented as `velocity_tna()` in `R/velocity_tna.R`. Supports three methods: `"regression"` (default, OLS or beta), `"glla"`, `"finite_difference"`. Three input formats: list of matrices, `cograph::tna_windows()` output, raw data frame. Returns `tna_velocity` S3 class with print/summary/plot methods. Plot supports "network" (cograph::splot with green/red edges), "series" (matplot with regression fit lines), and "heatmap" (image with diverging palette). Regression returns edge_stats with slope, SE, t-value, p-value, R² per edge.
+- [as.vector column-major]: `as.vector(matrix)` in R flattens column-major. When iterating over flattened edge indices j=1..n², the correct mapping is `row_idx = ((j-1) %% n) + 1`, `col_idx = ((j-1) %/% n) + 1`. Swapping `%%` and `%/%` transposes the result silently — a subtle bug that passes dimension checks but puts values in wrong cells.

@@ -1,0 +1,6 @@
+# Saqrlab Changes
+
+### 2026-02-22 — Add velocity_tna() with regression, GLLA, and finite difference methods
+- R/velocity_tna.R: New file. Main function `velocity_tna()` with three methods: `"regression"` (default, OLS + beta regression), `"glla"`, `"finite_difference"`. Regression provides per-edge slopes, SEs, t-values, p-values, R². Internal helpers: `.velocity_regression()`, `.fit_ols_edge()`, `.fit_beta_edge()`, `.glla_weight_matrix()`, `.velocity_glla()`, `.velocity_finite_diff()`, `.detect_and_extract_matrices()`, `.validate_matrix_list()`, `.matrices_from_raw_data()`. S3 methods: `print.tna_velocity`, `summary.tna_velocity`, `plot.tna_velocity` (network/series/heatmap). Fixed column-major indexing bug in `.velocity_regression()`.
+- tests/testthat/test-velocity_tna.R: New file. 101 tests covering input validation, regression (slope recovery, edge_stats, p-values, R², acceleration, constant series), GLLA weight matrix correctness, linear/quadratic trend recovery, finite differences (forward/central/backward), input format dispatch (list/tna_windows/data.frame), S3 methods, method agreement, edge cases.
+- Tests: all 101 pass. devtools::check: 0 errors, 0 warnings, 3 notes (all pre-existing).
