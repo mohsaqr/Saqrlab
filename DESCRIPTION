@@ -30,6 +30,7 @@ Suggests:
     network,
     sna,
     ggridges,
-    cograph
+    cograph,
+    glmnet
 VignetteBuilder: knitr
 Config/testthat/edition: 3

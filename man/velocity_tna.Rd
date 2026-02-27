@@ -8,6 +8,7 @@ velocity_tna(
   data,
   method = "regression",
   regression_type = "ols",
+  weights = NULL,
   n_embed = 5L,
   delta = 1,
   order = 1L,
@@ -32,9 +33,17 @@ velocity_tna(
 \code{"glla"}, or \code{"finite_difference"}.}
 
 \item{regression_type}{Character. For \code{method = "regression"}: type of
-regression. \code{"ols"} (default) or \code{"beta"} (requires the
-\pkg{betareg} package). Beta regression is appropriate for bounded \link{0,1}
-transition probabilities.}
+regression. \code{"ols"} (default), \code{"beta"} (requires the
+\pkg{betareg} package), or \code{"logistic"} (per-edge logistic
+regression on individual transitions --- requires wide-format data,
+bypasses matrix aggregation, uses all raw transitions for maximum
+statistical power).}
+
+\item{weights}{Numeric vector or NULL. Regression weights per time point
+(e.g., number of transitions per matrix). If \code{NULL} (default),
+weights are auto-computed from the matrix element sums, giving more
+influence to matrices based on larger samples. Set to \code{rep(1, T)}
+for unweighted regression. Only used when \code{method = "regression"}.}
 
 \item{n_embed}{Integer. GLLA embedding dimension (must be odd, >= 3).
 Default: \code{5L}.}

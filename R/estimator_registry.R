@@ -153,4 +153,7 @@ remove_estimator <- function(name) {
   register_estimator("glasso", .estimator_glasso,
                      "EBICglasso regularized partial correlations",
                      directed = FALSE)
+  register_estimator("ising", .estimator_ising,
+                     "Ising model (L1-penalized logistic regression)",
+                     directed = FALSE)
 }

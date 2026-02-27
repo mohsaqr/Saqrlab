@@ -17,7 +17,21 @@ knitr::opts_chunk$set(
 ```
 
 ```{r setup, message = FALSE}
-library(Saqrlab)
+remotes::install_github("mohsaqr/Sonnet@cograph_merged")
+
+Data <- Saqrlab::simulate_onehot_data()
+
+library(tna)
+prepare_data(group_regulation_long, Action="Action", )
+
+
+
+
+onehot(Data, cols =6:14)
+
+tna::import_onehot(Data, cols =6:14, window_size = 3, )
+
+  
 ```
 
 ## Overview

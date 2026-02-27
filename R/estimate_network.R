@@ -52,7 +52,8 @@ estimate_network <- function(data,
     tna         = "relative",
     counts      = "frequency",
     ftna        = "frequency",
-    cna         = "co_occurrence"
+    cna         = "co_occurrence",
+    isingfit    = "ising"
   )
   if (method %in% names(aliases)) {
     aliases[[method]]

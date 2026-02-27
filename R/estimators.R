@@ -784,3 +784,314 @@
     p = p
   )
 }
+
+
+# ---- Ising model estimator ----
+
+#' Prepare input for Ising model estimation
+#'
+#' Validates and cleans a data frame for Ising model estimation.
+#' Drops non-numeric, ID, non-syntactic, zero-variance, and all-NA columns.
+#' Validates that remaining values are all binary (0 or 1).
+#'
+#' @param data Data frame of binary (0/1) variables.
+#' @param id_col Character or NULL. ID column(s) to exclude.
+#'
+#' @return A list with:
+#'   \describe{
+#'     \item{mat}{Numeric matrix of binary values (complete cases).}
+#'     \item{n}{Number of observations (rows).}
+#'     \item{p}{Number of variables (columns).}
+#'     \item{nodes}{Character vector of variable names.}
+#'   }
+#' @noRd
+.prepare_ising_input <- function(data, id_col = NULL) {
+  stopifnot(is.data.frame(data))
+
+  # Exclude id columns and "rid"
+
+  exclude <- c(id_col, "rid")
+  numeric_cols <- vapply(data, is.numeric, logical(1))
+  keep <- setdiff(names(data)[numeric_cols], exclude)
+
+  # Drop columns with non-syntactic names
+  syntactic <- make.names(keep) == keep
+  if (any(!syntactic)) {
+    dropped <- keep[!syntactic]
+    message("Dropping non-syntactic columns: ",
+            paste(dropped, collapse = ", "))
+    keep <- keep[syntactic]
+  }
+
+  if (length(keep) < 2L) {
+    stop("At least 2 numeric columns are required after cleaning.")
+  }
+
+  mat <- as.matrix(data[, keep, drop = FALSE])
+
+  # Drop all-NA columns
+  all_na <- apply(mat, 2, function(x) all(is.na(x)))
+  if (any(all_na)) {
+    message("Dropping all-NA columns: ",
+            paste(colnames(mat)[all_na], collapse = ", "))
+    mat <- mat[, !all_na, drop = FALSE]
+  }
+
+  # Drop rows with any NA
+  complete <- complete.cases(mat)
+  if (!all(complete)) {
+    n_dropped <- sum(!complete)
+    message("Dropping ", n_dropped, " rows with NA values.")
+    mat <- mat[complete, , drop = FALSE]
+  }
+
+  if (nrow(mat) < 3L) {
+    stop("Fewer than 3 complete rows remain after removing NAs.")
+  }
+
+  # Drop zero-variance columns
+  col_vars <- apply(mat, 2, stats::var)
+  zero_var <- colnames(mat)[col_vars == 0]
+  if (length(zero_var) > 0L) {
+    message("Dropping zero-variance columns: ",
+            paste(zero_var, collapse = ", "))
+    mat <- mat[, col_vars > 0, drop = FALSE]
+  }
+
+  if (ncol(mat) < 2L) {
+    stop("At least 2 variable columns are required after cleaning.")
+  }
+
+  # Validate binary: all values must be 0 or 1
+  unique_vals <- unique(as.vector(mat))
+  if (!all(unique_vals %in% c(0, 1))) {
+    bad <- setdiff(unique_vals, c(0, 1))
+    stop("Ising model requires binary (0/1) data. Found non-binary values: ",
+         paste(head(bad, 5), collapse = ", "))
+  }
+
+  list(
+    mat = mat,
+    n = nrow(mat),
+    p = ncol(mat),
+    nodes = colnames(mat)
+  )
+}
+
+
+#' Numerically stable log(1 + exp(x))
+#'
+#' Avoids overflow for large x and precision loss for small x.
+#'
+#' @param x Numeric vector.
+#' @return Numeric vector of log(1 + exp(x)).
+#' @noRd
+.log1pexp <- function(x) {
+  out <- numeric(length(x))
+  big <- x > 20
+  small <- x < -20
+  mid <- !big & !small
+  out[big] <- x[big]
+  out[small] <- exp(x[small])
+  out[mid] <- log1p(exp(x[mid]))
+  out
+}
+
+
+#' Nodewise L1-penalized logistic regression with EBIC selection
+#'
+#' Core algorithm for Ising model estimation (IsingFit approach).
+#' For each node j, fits L1-penalized logistic regression of X[,j] on X[,-j]
+#' using glmnet, then selects lambda via EBIC.
+#'
+#' @param mat Numeric matrix of binary (0/1) values (n x p).
+#' @param gamma Numeric. EBIC hyperparameter (0 = BIC, higher = sparser).
+#' @param nlambda Integer. Number of lambda values in the regularization path.
+#'
+#' @return A list with:
+#'   \describe{
+#'     \item{coef_matrix}{p x p asymmetric coefficient matrix (row j = regression
+#'       of node j on others).}
+#'     \item{thresholds}{Numeric vector of intercepts (length p).}
+#'     \item{lambda_selected}{Numeric vector of selected lambda per node.}
+#'   }
+#' @noRd
+.ising_nodewise_ebic <- function(mat, gamma = 0.25, nlambda = 100L) {
+  n <- nrow(mat)
+  p <- ncol(mat)
+  n_predictors <- p - 1L
+  node_names <- colnames(mat)
+
+  coef_matrix <- matrix(0, nrow = p, ncol = p,
+                         dimnames = list(node_names, node_names))
+  thresholds <- numeric(p)
+  names(thresholds) <- node_names
+  lambda_selected <- numeric(p)
+  names(lambda_selected) <- node_names
+
+  for (j in seq_len(p)) {
+    y <- mat[, j]
+    X <- mat[, -j, drop = FALSE]
+
+    # Fit L1-penalized logistic regression
+    fit <- glmnet::glmnet(X, y, family = "binomial", nlambda = nlambda)
+
+    # Compute EBIC for each lambda in the path
+    # Nodewise EBIC (IsingFit): -2*loglik + k*log(n) + 2*gamma*k*log(p-1)
+    n_lam <- length(fit$lambda)
+    ebic_vals <- numeric(n_lam)
+
+    for (k in seq_len(n_lam)) {
+      beta_k <- fit$beta[, k]
+      intercept_k <- fit$a0[k]
+
+      # Linear predictor
+      eta <- as.vector(X %*% beta_k) + intercept_k
+
+      # Log-likelihood: sum(y * eta - log(1 + exp(eta)))
+      loglik <- sum(y * eta - .log1pexp(eta))
+
+      # Number of nonzero coefficients (excluding intercept)
+      n_edges <- sum(abs(beta_k) > 0)
+
+      # Nodewise EBIC = -2*loglik + k*log(n) + 2*gamma*k*log(p-1)
+      ebic_vals[k] <- -2 * loglik + n_edges * log(n) +
+        2 * n_edges * gamma * log(n_predictors)
+    }
+
+    # Select lambda minimizing EBIC
+    best_idx <- which.min(ebic_vals)
+    best_beta <- fit$beta[, best_idx]
+    best_intercept <- fit$a0[best_idx]
+
+    # Place coefficients in the row for node j
+    other_idx <- seq_len(p)[-j]
+    coef_matrix[j, other_idx] <- as.vector(best_beta)
+    thresholds[j] <- best_intercept
+    lambda_selected[j] <- fit$lambda[best_idx]
+  }
+
+  list(
+    coef_matrix = coef_matrix,
+    thresholds = thresholds,
+    lambda_selected = lambda_selected
+  )
+}
+
+
+#' Symmetrize asymmetric Ising coefficient matrix
+#'
+#' @param coef_matrix p x p asymmetric coefficient matrix from nodewise
+#'   regression.
+#' @param rule Character. Symmetrization rule: \code{"AND"} (default) or
+#'   \code{"OR"}.
+#'
+#' @return Symmetric p x p weight matrix with zero diagonal.
+#' @noRd
+.symmetrize_ising <- function(coef_matrix, rule = "AND") {
+  p <- nrow(coef_matrix)
+  sym <- matrix(0, nrow = p, ncol = p,
+                dimnames = dimnames(coef_matrix))
+
+  if (rule == "AND") {
+    # Edge only if BOTH directions nonzero; weight = average
+    both_nonzero <- (coef_matrix != 0) & (t(coef_matrix) != 0)
+    sym[both_nonzero] <- (coef_matrix[both_nonzero] +
+                            t(coef_matrix)[both_nonzero]) / 2
+  } else if (rule == "OR") {
+    # Simple average of both directions (matches IsingFit)
+    sym <- (coef_matrix + t(coef_matrix)) / 2
+  }
+
+  diag(sym) <- 0
+  sym
+}
+
+
+#' Ising Model Network Estimator
+#'
+#' Estimates an Ising model network using nodewise L1-penalized logistic
+#' regression with EBIC model selection (van Borkulo et al., 2014). Produces
+#' an undirected weighted network of conditional dependencies between binary
+#' (0/1) variables.
+#'
+#' @param data Data frame of binary (0/1) variables.
+#' @param id_col Character or NULL. ID column(s) to exclude.
+#' @param gamma Numeric. EBIC hyperparameter. Higher values produce sparser
+#'   networks. Default: 0.25 (IsingFit convention).
+#' @param nlambda Integer. Number of lambda values for the regularization path.
+#'   Default: 100.
+#' @param rule Character. Symmetrization rule: \code{"AND"} (conservative,
+#'   edge only if both directions nonzero) or \code{"OR"} (liberal, edge if
+#'   either direction nonzero). Default: \code{"AND"}.
+#' @param ... Additional arguments (ignored).
+#'
+#' @return A list with:
+#'   \describe{
+#'     \item{matrix}{Symmetric weighted adjacency matrix.}
+#'     \item{nodes}{Character vector of variable names.}
+#'     \item{directed}{Logical: always FALSE.}
+#'     \item{cleaned_data}{Cleaned binary data matrix.}
+#'     \item{thresholds}{Numeric vector of node thresholds (intercepts).}
+#'     \item{asymm_weights}{Asymmetric coefficient matrix before symmetrization.}
+#'     \item{rule}{Symmetrization rule used.}
+#'     \item{gamma}{EBIC hyperparameter used.}
+#'     \item{n}{Sample size.}
+#'     \item{p}{Number of variables.}
+#'     \item{lambda_selected}{Per-node selected lambda values.}
+#'   }
+#'
+#' @references
+#' van Borkulo, C. D., Borsboom, D., Epskamp, S., Blanken, T. F.,
+#' Boschloo, L., Schoevers, R. A., & Waldorp, L. J. (2014). A new method
+#' for constructing networks from binary data. \emph{Scientific Reports},
+#' 4, 5918. \doi{10.1038/srep05918}
+#'
+#' @noRd
+.estimator_ising <- function(data,
+                              id_col = NULL,
+                              gamma = 0.25,
+                              nlambda = 100L,
+                              rule = "AND",
+                              ...) {
+  if (!requireNamespace("glmnet", quietly = TRUE)) {
+    stop(
+      "Package 'glmnet' is required for Ising model estimation. ",
+      "Install it with: install.packages('glmnet')",
+      call. = FALSE
+    )
+  }
+
+  # Validate parameters
+  stopifnot(is.numeric(gamma), length(gamma) == 1, gamma >= 0)
+  nlambda <- as.integer(nlambda)
+  stopifnot(is.integer(nlambda), length(nlambda) == 1, nlambda >= 2L)
+  rule <- match.arg(rule, c("AND", "OR"))
+
+  # Prepare input
+  prepared <- .prepare_ising_input(data, id_col = id_col)
+  mat <- prepared$mat
+  n <- prepared$n
+  p <- prepared$p
+  nodes <- prepared$nodes
+
+  # Run nodewise logistic regression with EBIC
+  nodewise <- .ising_nodewise_ebic(mat, gamma = gamma, nlambda = nlambda)
+
+  # Symmetrize
+  sym_matrix <- .symmetrize_ising(nodewise$coef_matrix, rule = rule)
+
+  list(
+    matrix = sym_matrix,
+    nodes = nodes,
+    directed = FALSE,
+    cleaned_data = mat,
+    thresholds = nodewise$thresholds,
+    asymm_weights = nodewise$coef_matrix,
+    rule = rule,
+    gamma = gamma,
+    n = n,
+    p = p,
+    lambda_selected = nodewise$lambda_selected
+  )
+}

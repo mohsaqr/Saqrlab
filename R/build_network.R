@@ -239,7 +239,8 @@ print.netobject <- function(x, ...) {
     co_occurrence = "Co-occurrence Network",
     glasso        = "Partial Correlation Network (EBICglasso)",
     pcor          = "Partial Correlation Network (unregularised)",
-    cor           = "Correlation Network"
+    cor           = "Correlation Network",
+    ising         = "Ising Model Network"
   )
 
   label <- if (x$method %in% names(method_labels)) {
@@ -269,6 +270,14 @@ print.netobject <- function(x, ...) {
   if (x$method == "glasso" && !is.null(x$gamma)) {
     cat(sprintf("  Gamma: %.2f  |  Lambda: %.4f\n",
                 x$gamma, x$lambda_selected))
+  }
+
+  if (x$method == "ising") {
+    cat(sprintf("  Gamma: %.2f  |  Rule: %s\n", x$gamma, x$rule))
+    if (!is.null(x$thresholds)) {
+      thr_rng <- range(x$thresholds)
+      cat(sprintf("  Thresholds: [%.3f, %.3f]\n", thr_rng[1], thr_rng[2]))
+    }
   }
 
   if (!is.null(x$scaling)) {
