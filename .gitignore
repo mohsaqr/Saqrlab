@@ -3,6 +3,8 @@
 .RData
 .Ruserdata
 *.Rproj.user
-docs/
+docs/*
+!docs/mlvar-technical-report.Rmd
+!docs/mlvar-technical-report.html
 tmp/
 ..Rcheck/
