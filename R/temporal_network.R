@@ -893,7 +893,8 @@ plot.temporal_network <- function(x, type = "degree", ...) {
   type <- match.arg(type, c(
     "degree", "formation", "reachability", "centrality",
     "burstiness", "duration", "iet", "snapshot",
-    "reciprocity", "centralization", "eigenvector", "dyad_census"
+    "reciprocity", "centralization", "eigenvector", "dyad_census",
+    "proximity"
   ))
 
   switch(type,
@@ -908,7 +909,8 @@ plot.temporal_network <- function(x, type = "degree", ...) {
     reciprocity = .plot_reciprocity(x, ...),
     centralization = .plot_centralization_ts(x, ...),
     eigenvector = .plot_eigenvector_ts(x, ...),
-    dyad_census = .plot_dyad_census(x, ...)
+    dyad_census = .plot_dyad_census(x, ...),
+    proximity = .plot_proximity_timeline(x, ...)
   )
 }
 
@@ -1229,6 +1231,439 @@ plot.temporal_network <- function(x, type = "degree", ...) {
     ) +
     ggplot2::theme_minimal()
   p
+}
+
+
+# ===========================================================================
+# Internal: proximity timeline plot
+# ===========================================================================
+
+#' @keywords internal
+.resolve_proximity_metric <- function(x, metric) {
+  metric <- match.arg(metric, c(
+    "eigenvector", "degree", "closeness", "betweenness",
+    "page_rank", "hub_score", "authority_score", "proximity"
+  ))
+
+  metric_map <- list(
+    eigenvector      = "eigenvector",
+    degree           = "degree",
+    closeness        = "closeness_snapshot",
+    betweenness      = "betweenness_snapshot",
+    page_rank        = "page_rank",
+    hub_score        = "hub_score",
+    authority_score  = "authority_score"
+  )
+
+  if (metric == "proximity") {
+    return(.compute_proximity_mds(x))
+  }
+
+  field <- metric_map[[metric]]
+  mat <- x[[field]]
+  if (is.null(mat)) {
+    stop(sprintf("Metric '%s' (field '%s') not found in temporal_network object",
+                 metric, field))
+  }
+  mat
+}
+
+
+#' @keywords internal
+.compute_proximity_mds <- function(x) {
+  n_v <- x$n_vertices
+  n_bins <- length(x$snapshots)
+  mds_mat <- matrix(0, nrow = n_v, ncol = n_bins)
+  rownames(mds_mat) <- x$vertex_names
+
+  vapply(seq_len(n_bins), function(k) {
+    g <- x$snapshots[[k]]
+    ne <- igraph::ecount(g)
+
+    if (ne == 0L || n_v < 2L) {
+      mds_mat[, k] <<- rep(0, n_v)
+      return(0L)
+    }
+
+    d <- igraph::distances(g, mode = "all")
+    d[is.infinite(d)] <- n_v
+
+    fit <- tryCatch(
+      stats::cmdscale(d, k = 1L),
+      error = function(e) matrix(0, nrow = n_v, ncol = 1L)
+    )
+    mds_mat[, k] <<- as.numeric(fit)
+    0L
+  }, integer(1L))
+
+  # Sign alignment: flip each snapshot to maximize correlation with previous
+  # Prevents arbitrary ±1 reflections in 1D MDS
+  if (n_bins >= 2L) {
+    for (k in seq.int(2L, n_bins)) {
+      prev <- mds_mat[, k - 1L]
+      curr <- mds_mat[, k]
+      # Only align if both have variance (not all zeros)
+      if (stats::var(prev) > 0 && stats::var(curr) > 0) {
+        if (stats::cor(prev, curr) < 0) {
+          mds_mat[, k] <- -curr
+        }
+      }
+    }
+  }
+
+  mds_mat
+}
+
+
+#' Spline-interpolate a metric matrix to higher temporal resolution.
+#' @param metric_mat n_vertices x n_bins matrix
+#' @param bin_mids  numeric vector of original time points (length n_bins)
+#' @param fine_times numeric vector of target time points
+#' @return n_vertices x length(fine_times) matrix
+#' @keywords internal
+.interpolate_metric <- function(metric_mat, bin_mids, fine_times) {
+  n_v <- nrow(metric_mat)
+  n_bins <- ncol(metric_mat)
+
+  # Need >= 4 bins for cubic spline; fall back to linear for fewer
+  method <- if (n_bins >= 4L) "natural" else "linear"
+
+  fine_mat <- vapply(seq_len(n_v), function(i) {
+    y <- metric_mat[i, ]
+    # If all identical (zero variance), return constant
+    if (max(y) == min(y)) return(rep(y[1L], length(fine_times)))
+    if (method == "linear") {
+      stats::approx(bin_mids, y, xout = fine_times, rule = 2L)$y
+    } else {
+      stats::spline(bin_mids, y, xout = fine_times, method = "natural")$y
+    }
+  }, numeric(length(fine_times)))
+
+  # vapply returns n_fine x n_v; transpose to n_v x n_fine
+  t(fine_mat)
+}
+
+
+#' @keywords internal
+.plot_proximity_timeline <- function(x,
+                                     metric = "eigenvector",
+                                     size_metric = "degree",
+                                     vertex_group = NULL,
+                                     vertex_color = NULL,
+                                     vertex_label = NULL,
+                                     labels_at = NULL,
+                                     label_size = 3,
+                                     line_width = c(0.3, 3),
+                                     alpha = 0.8,
+                                     smooth = FALSE,
+                                     render_edges = FALSE,
+                                     n_slices = NULL,
+                                     spline = TRUE,
+                                     ...) {
+  # --- Resolve metric matrices ---
+  metric_mat <- .resolve_proximity_metric(x, metric)
+  n_v <- nrow(metric_mat)
+  n_bins <- ncol(metric_mat)
+  bin_mids <- x$time_bins[seq_len(n_bins)] + x$time_interval / 2
+  vnames <- x$vertex_names
+
+  # Resolve thickness metric (can differ from Y-axis metric)
+  has_size <- !(is.null(size_metric) || identical(size_metric, FALSE))
+  if (has_size) {
+    size_mat <- .resolve_proximity_metric(x, size_metric)
+  } else {
+    size_mat <- NULL
+  }
+
+  # --- Interpolate to high-resolution time series ---
+  if (is.null(n_slices)) {
+    n_slices <- max(200L, n_bins * 10L)
+  }
+
+  do_spline <- spline && n_bins >= 3L && n_slices > n_bins
+  if (do_spline) {
+    fine_times <- seq(min(bin_mids), max(bin_mids), length.out = n_slices)
+    plot_mat <- .interpolate_metric(metric_mat, bin_mids, fine_times)
+    rownames(plot_mat) <- vnames
+    if (has_size) {
+      size_fine <- .interpolate_metric(size_mat, bin_mids, fine_times)
+      # Clamp negative interpolation artifacts to zero
+      size_fine[size_fine < 0] <- 0
+    }
+    plot_times <- fine_times
+    n_plot <- n_slices
+  } else {
+    plot_times <- bin_mids
+    plot_mat <- metric_mat
+    if (has_size) size_fine <- size_mat
+    n_plot <- n_bins
+  }
+
+  # --- Default labels: vertex names ---
+  if (is.null(vertex_label)) vertex_label <- vnames
+
+  # --- Build segment data (consecutive point pairs per vertex) ---
+  # Each segment: (time_k, y_k) -> (time_k+1, y_k+1) with thickness from size
+  seg_list <- lapply(seq_len(n_v), function(i) {
+    n_seg <- n_plot - 1L
+    if (n_seg < 1L) return(NULL)
+    seg <- data.frame(
+      x    = plot_times[-n_plot],
+      xend = plot_times[-1L],
+      y    = plot_mat[i, -n_plot],
+      yend = plot_mat[i, -1L],
+      vertex = vnames[i],
+      label  = vertex_label[i],
+      stringsAsFactors = FALSE
+    )
+    if (has_size) {
+      # Use average thickness of the two endpoints for each segment
+      seg$thickness <- (size_fine[i, -n_plot] + size_fine[i, -1L]) / 2
+    }
+    seg
+  })
+  seg_df <- do.call(rbind, seg_list)
+
+  # --- Grouping (for color) ---
+  if (!is.null(vertex_group)) {
+    stopifnot(length(vertex_group) == n_v)
+    grp_map <- stats::setNames(as.character(vertex_group), vnames)
+    seg_df$group <- grp_map[seg_df$vertex]
+  } else {
+    seg_df$group <- seg_df$vertex
+  }
+
+  # --- Vertex color palette ---
+  unique_groups <- unique(seg_df$group)
+  n_groups <- length(unique_groups)
+
+  if (!is.null(vertex_color)) {
+    if (length(vertex_color) == n_v && is.null(vertex_group)) {
+      color_map <- stats::setNames(vertex_color, vnames)
+      seg_df$color_key <- seg_df$vertex
+    } else {
+      stopifnot(length(vertex_color) == n_groups)
+      color_map <- stats::setNames(vertex_color, unique_groups)
+      seg_df$color_key <- seg_df$group
+    }
+  } else {
+    default_pal <- c(
+      "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+      "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf",
+      "#aec7e8", "#ffbb78", "#98df8a", "#ff9896", "#c5b0d5"
+    )
+    pal <- rep_len(default_pal, n_groups)
+    color_map <- stats::setNames(pal, unique_groups)
+    seg_df$color_key <- seg_df$group
+  }
+
+  # --- Build ggplot ---
+  p <- ggplot2::ggplot()
+
+  # --- Optional: render edges as vertical connectors ---
+  if (render_edges) {
+    edge_df <- .build_edge_segments(x, metric_mat, bin_mids)
+    if (!is.null(edge_df) && nrow(edge_df) > 0L) {
+      p <- p + ggplot2::geom_segment(
+        data = edge_df,
+        ggplot2::aes(
+          x = .data$time, xend = .data$time,
+          y = .data$y_from, yend = .data$y_to
+        ),
+        color = "grey80", linewidth = 0.3, alpha = 0.3
+      )
+    }
+  }
+
+  # --- Variable-width line segments ---
+  if (has_size) {
+    if (smooth) {
+      # For smooth mode: draw thin line + variable-width overlay
+      # Build a long-format df for geom_smooth
+      long_df <- data.frame(
+        time   = rep(plot_times, each = n_v),
+        vertex = rep(vnames, times = n_plot),
+        y      = as.vector(plot_mat),
+        stringsAsFactors = FALSE
+      )
+      if (!is.null(vertex_group)) {
+        long_df$group <- rep(as.character(vertex_group), times = n_plot)
+      } else {
+        long_df$group <- long_df$vertex
+      }
+      long_df$color_key <- if (!is.null(vertex_group) && !is.null(vertex_color)) {
+        grp_map2 <- stats::setNames(unique_groups, unique_groups)
+        long_df$group
+      } else {
+        long_df$group
+      }
+      p <- p + ggplot2::geom_smooth(
+        data = long_df,
+        ggplot2::aes(
+          x = .data$time, y = .data$y,
+          group = .data$vertex, color = .data$color_key
+        ),
+        method = "loess", formula = y ~ x, se = FALSE,
+        linewidth = mean(line_width), alpha = alpha
+      )
+    } else {
+      p <- p + ggplot2::geom_segment(
+        data = seg_df,
+        ggplot2::aes(
+          x = .data$x, xend = .data$xend,
+          y = .data$y, yend = .data$yend,
+          color = .data$color_key,
+          linewidth = .data$thickness,
+          group = .data$vertex
+        ),
+        alpha = alpha,
+        lineend = "round"
+      ) +
+        ggplot2::scale_linewidth_continuous(
+          range = line_width,
+          guide = ggplot2::guide_legend(
+            title = .proximity_size_label(size_metric)
+          )
+        )
+    }
+  } else {
+    # Uniform-width lines (no size metric)
+    lw <- if (length(line_width) == 2L) mean(line_width) else line_width[1L]
+    if (smooth) {
+      long_df <- data.frame(
+        time   = rep(plot_times, each = n_v),
+        vertex = rep(vnames, times = n_plot),
+        y      = as.vector(plot_mat),
+        stringsAsFactors = FALSE
+      )
+      long_df$color_key <- seg_df$color_key[match(long_df$vertex, seg_df$vertex)]
+      p <- p + ggplot2::geom_smooth(
+        data = long_df,
+        ggplot2::aes(
+          x = .data$time, y = .data$y,
+          group = .data$vertex, color = .data$color_key
+        ),
+        method = "loess", formula = y ~ x, se = FALSE,
+        linewidth = lw, alpha = alpha
+      )
+    } else {
+      p <- p + ggplot2::geom_segment(
+        data = seg_df,
+        ggplot2::aes(
+          x = .data$x, xend = .data$xend,
+          y = .data$y, yend = .data$yend,
+          color = .data$color_key,
+          group = .data$vertex
+        ),
+        linewidth = lw, alpha = alpha,
+        lineend = "round"
+      )
+    }
+  }
+
+  # --- Labels at specific time bins ---
+  if (!is.null(labels_at)) {
+    labels_at <- labels_at[labels_at >= 1L & labels_at <= n_bins]
+    if (length(labels_at) > 0L) {
+      label_times <- bin_mids[labels_at]
+      # Build label data from original metric_mat at bin resolution
+      lbl_list <- lapply(labels_at, function(k) {
+        data.frame(
+          time   = bin_mids[k],
+          y      = metric_mat[, k],
+          label  = vertex_label,
+          vertex = vnames,
+          stringsAsFactors = FALSE
+        )
+      })
+      label_df <- do.call(rbind, lbl_list)
+      label_df$color_key <- seg_df$color_key[match(label_df$vertex, seg_df$vertex)]
+      p <- p + ggplot2::geom_text(
+        data = label_df,
+        ggplot2::aes(
+          x = .data$time, y = .data$y, label = .data$label,
+          color = .data$color_key
+        ),
+        size = label_size, hjust = -0.2, vjust = 0.5,
+        show.legend = FALSE
+      )
+    }
+  }
+
+  # --- Color scale ---
+  p <- p + ggplot2::scale_color_manual(values = color_map)
+
+  # --- Axis labels ---
+  metric_labels <- c(
+    eigenvector     = "Eigenvector Centrality",
+    degree          = "Degree",
+    closeness       = "Closeness Centrality",
+    betweenness     = "Betweenness Centrality",
+    page_rank       = "PageRank",
+    hub_score       = "Hub Score",
+    authority_score = "Authority Score",
+    proximity       = "Proximity (1D MDS)"
+  )
+  y_label <- metric_labels[[metric]]
+  title <- sprintf("Proximity Timeline (%s)", y_label)
+
+  # --- Hide legend when many vertices and no grouping ---
+  show_legend <- !is.null(vertex_group) || n_v <= 15L
+
+  p <- p +
+    ggplot2::labs(title = title, x = "Time", y = y_label, color = "") +
+    ggplot2::theme_minimal() +
+    ggplot2::theme(
+      legend.position = if (show_legend) "right" else "none"
+    )
+
+  p
+}
+
+
+#' @keywords internal
+.proximity_size_label <- function(size_metric) {
+  labels <- c(
+    eigenvector     = "Eigenvector",
+    degree          = "Degree",
+    closeness       = "Closeness",
+    betweenness     = "Betweenness",
+    page_rank       = "PageRank",
+    hub_score       = "Hub Score",
+    authority_score = "Authority",
+    proximity       = "Proximity"
+  )
+  labels[[size_metric]]
+}
+
+
+#' @keywords internal
+.build_edge_segments <- function(x, metric_mat, bin_mids) {
+  n_bins <- length(bin_mids)
+  vnames <- x$vertex_names
+
+  segments <- lapply(seq_len(n_bins), function(k) {
+    g <- x$snapshots[[k]]
+    if (igraph::ecount(g) == 0L) return(NULL)
+
+    el <- igraph::as_edgelist(g, names = TRUE)
+    from_idx <- match(el[, 1L], vnames)
+    to_idx <- match(el[, 2L], vnames)
+    valid <- !is.na(from_idx) & !is.na(to_idx)
+    if (!any(valid)) return(NULL)
+
+    from_idx <- from_idx[valid]
+    to_idx <- to_idx[valid]
+
+    data.frame(
+      time   = bin_mids[k],
+      y_from = metric_mat[from_idx, k],
+      y_to   = metric_mat[to_idx, k],
+      stringsAsFactors = FALSE
+    )
+  })
+
+  do.call(rbind, segments)
 }
 
 

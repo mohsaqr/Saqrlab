@@ -1,35 +1,43 @@
-# Session Handoff — 2026-02-27
+# Session Handoff — 2026-03-05
 
 ## Completed
-- **mlvar()**: New exported function in `R/mlvar.R` (~400 lines) implementing multilevel vector autoregression for ESM/EMA panel data. Estimates 3 networks: temporal (directed, within-person OLS with df correction), contemporaneous (undirected, EBIC-GLASSO on residuals), between-subjects (undirected, EBIC-GLASSO on person means). Six internal helpers. S3 class `mlvar_result` with `print` and `summary` methods.
-- **simulate_data("mlvar")**: Added to `R/simulate_data.R` with `.simulate_mlvar()` generator producing panel EMA data with known temporal B matrix, contemporaneous noise, and person means.
-- **Tests**: 121 tests in `tests/testthat/test-mlvar.R` covering input validation, lag pairs, centering, OLS, contemporaneous/between networks, S3 methods, simulation, recovery, and mlVAR package equivalence (25 seeds).
-- **mlVAR equivalence**: Temporal coefficients **exactly match** mlVAR (`estimator="lmer"`, `temporal="fixed"`, `scale=FALSE`) across 25 seeds (max diff ~1e-15). P-values <0.002 diff. Residual correlations r>0.9999. Person mean correlations r>0.999. Significance agreement >95%.
-- **Documentation**: `devtools::document()` rebuilt NAMESPACE and generated `man/mlvar.Rd`, `man/print.mlvar_result.Rd`, `man/summary.mlvar_result.Rd`, updated `man/simulate_data.Rd`.
+- **Rewrite `build_mcml()`** — Uses Saqrlab's own `build_network()` for between/within estimation
+  - Between: recodes states to cluster labels → collapses consecutive same-cluster repetitions → `build_network()` on collapsed data → zero diagonal by construction
+  - Within: filters non-member states to NA → `build_network()` per cluster
+  - Fallback for pre-computed inputs: off-diagonal matrix block aggregation + row-normalize (diagonal always zero)
+  - `cograph::cluster_summary()` only used for `plot_mcml()` compatibility
+  - 6 data input formats, 5 cluster formats, enriched `$edges` field
+- **`bootstrap_mcml()`** — Same recode/collapse/filter approach via `bootstrap_network()`
+  - Between + within bootstrap using identical estimation logic as `build_mcml()`
+  - S3 class `mcml_bootstrap` with print, summary, plot
+- **Documentation** — Two reference docs in `docs/`
 
 ## Current State
-- All code works: 1522 full suite tests pass, 0 failures, 0 warnings
-- New files: `R/mlvar.R`, `tests/testthat/test-mlvar.R`, `man/mlvar.Rd`, `man/print.mlvar_result.Rd`, `man/summary.mlvar_result.Rd`
-- Modified files: `R/simulate_data.R` (added mlvar type), `NAMESPACE` (exports), `man/simulate_data.Rd`
-- NAMESPACE updated with `export(mlvar)`, `S3method(print,mlvar_result)`, `S3method(summary,mlvar_result)`
+- `devtools::load_all()` succeeds
+- **101 tests pass** in test-mcml.R
+- **56 tests pass** in test-bootstrap_mcml.R
+- `$between` and `$within` are plain matrices (not tna objects)
+- Between-cluster matrix has zero diagonal (only actual cluster switches counted)
+
+### Files Modified
+- `R/mcml.R` — rewritten with native estimation pipeline + `.collapse_consecutive()` helper
+- `tests/testthat/test-mcml.R` — 101 tests (updated for new return structure + zero diagonal)
+- `NAMESPACE` — exports unchanged
+
+### Files Created
+- `tests/testthat/test-bootstrap_mcml.R` — 56 tests
+- `docs/build_mcml-for-cograph.md` — short cograph developer reference
+- `docs/mcml-technical-reference.md` — full technical reference
 
 ## Key Decisions
-- **Reused existing GLASSO pipeline**: `.compute_lambda_path()`, `.select_ebic()`, `.precision_to_pcor()` from `R/estimators.R` — no code duplication.
-- **No new dependencies**: Pure base R + stats + existing `glasso` import.
-- **Within-centering absorbs intercept**: OLS on centered Y ~ centered X - 1 is equivalent to fixed-effects panel estimator. Both Y and X are centered.
-- **df correction**: SE inflation by `sqrt(df_ols / df_correct)` where `df_correct = n_obs - d - n_subjects`.
-- **Force symmetry**: `(pcor + t(pcor)) / 2` after `.precision_to_pcor()` to handle glasso floating-point asymmetry.
-- **Between-subjects guard**: Returns zero matrix when `n_subjects < d + 1` (insufficient for estimation).
-
-## Open Issues
-- None
+- **Native estimation over cluster_summary**: Between/within built by recode/collapse/filter + build_network, not post-hoc aggregation.
+- **Collapse consecutive**: `.collapse_consecutive()` replaces consecutive same-cluster values with NA before counting, so between diagonal is always zero. Only actual cluster switches are counted.
+- **cluster_summary kept for plotting only**: `$cluster_summary` field still populated for `cograph::plot_mcml()` compatibility.
+- **Plain matrices**: `$between` and `$within` are matrices, not tna objects. Simpler, consistent interface.
 
 ## Next Steps
-1. Consider adding `plot.mlvar_result` method for visualizing the 3 networks side-by-side
-2. Could add random slopes (lmer-equivalent) for more flexible estimation
-3. Potential validation against `mlVAR` package for numerical equivalence
+1. Git commit when ready
 
 ## Context
-- Package: Saqrlab (R package)
-- Branch: main
-- Key new files: `R/mlvar.R` (~400 lines), `tests/testthat/test-mlvar.R` (~350 lines)
+- Package: Saqrlab (R package), branch: main
+- cograph in Imports (for plotting + edge list conversion)

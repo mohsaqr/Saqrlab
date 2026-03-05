@@ -1,5 +1,50 @@
 # Saqrlab Changes
 
+### 2026-03-05 — Rewrite build_mcml() with native estimation + add bootstrap_mcml()
+- R/mcml.R: Rewritten `build_mcml()` to use Saqrlab's own `build_network()` pipeline for between/within estimation instead of `cograph::cluster_summary()`. Between: recodes states to cluster labels, collapses consecutive same-cluster repetitions (via `.collapse_consecutive()`), then calls `build_network()` — produces zero diagonal by construction (only actual cluster switches are counted). Within: filters non-member states to NA then calls `build_network()` per cluster. Fallback for pre-computed inputs (matrix, tna, netobject, edge list, cograph_network): aggregates off-diagonal matrix blocks only (diagonal always zero). `cluster_summary` still computed for `plot_mcml()` compatibility only. 6 data input formats, 5 cluster formats. Added `bootstrap_mcml()` using the same recode/collapse/filter approach via `bootstrap_network()`. S3 class `mcml_bootstrap` with print, summary(level=), plot(type=). `$between` and `$within` are now plain matrices (not tna objects).
+- tests/testthat/test-mcml.R: Extended from 61 to 101 tests. Updated section 2 (matrix types), section 7 (sequence vs matrix paths + zero diagonal + collapse behavior), added sections 10-12 (multi-format data, clusters, edge list).
+- tests/testthat/test-bootstrap_mcml.R: New file. 56 tests across 10 sections. All pass.
+- docs/build_mcml-for-cograph.md: Short reference for cograph developer — clarifies cograph is only used for plotting, not core estimation. Documents collapse-consecutive approach.
+- docs/mcml-technical-reference.md: Full technical reference for both functions.
+
+### 2026-03-05 — Add build_mcml() for multi-cluster multi-layer networks
+- tmp/test_mcml.Rmd: Visual verification report.
+
+### 2026-02-28 — Add proximity timeline plot for temporal_network
+- R/temporal_network.R: Added `.plot_proximity_timeline()` — per-vertex time series plot with configurable Y-axis metric (eigenvector, degree, closeness, betweenness, page_rank, hub_score, authority_score, or 1D MDS proximity). Supports vertex_group coloring, custom vertex_color, labels_at specific bins, smooth (LOESS), render_edges (vertical segments between connected vertices), and auto-hidden legend for >15 vertices. Added `.resolve_proximity_metric()` dispatcher, `.compute_proximity_mds()` for geodesic-distance MDS, and `.build_edge_segments()` helper. Updated `plot.temporal_network()` dispatch to include `"proximity"` type.
+- tests/testthat/test-temporal_network.R: Added 12 tests (Section 19) covering all metrics, MDS mode, vertex groups/colors, labels, smooth, edge rendering, legend behavior, and edge cases.
+- tmp/test_proximity_timeline.Rmd: Visual verification report rendered to HTML with 16 plot variants.
+- Tests: 1793 pass, 0 fail.
+
+### 2026-02-27 — Add technical reports for all modules (FA-style markdown)
+- docs/ising-TECHNICAL-REPORT.md: Ising model estimator — nodewise L1-logistic regression, EBIC selection, AND/OR symmetrization, IsingFit exact equivalence (diff=0 across 50+ configs), 15 sections.
+- docs/core-architecture-TECHNICAL-REPORT.md: Core architecture — estimator registry pattern, build_network() pipeline, 7 built-in estimators, scaling (4 methods), multilevel decomposition, netobject S3 class, predictability, 15 sections.
+- docs/bootstrap-network-TECHNICAL-REPORT.md: Universal bootstrap — fast transition path (pre-computed), full association path, stability/threshold inference, percentile CIs, model pruning, 15 sections.
+- docs/permutation-test-TECHNICAL-REPORT.md: Permutation test — edge-level comparison, paired/unpaired, 8 p-value adjustments, Cohen's d effect size, fast transition path, 13 sections.
+- docs/temporal-network-TECHNICAL-REPORT.md: Temporal network — temporal BFS, reachability, 21 snapshot metrics, 12 plot types, tsna equivalence across 20+ configs (1e-10), 22 sections.
+- docs/velocity-tna-TECHNICAL-REPORT.md: Velocity TNA — regression (OLS/beta/logistic), GLLA, finite difference, effect-size metrics, 3 method agreement within 1e-6, 15 sections.
+- docs/simulate-data-TECHNICAL-REPORT.md: Simulate data — 7 dataset types, seed-based variation, base R only, ground truth attributes, 17 sections.
+- All rendered to HTML with flatly theme, floating TOC, numbered sections.
+
+### 2026-02-27 — Add mlvar and boot_glasso technical reports (FA-style markdown)
+- docs/mlvar-TECHNICAL-REPORT.md: Comprehensive technical report covering 7-step pipeline, fixed-effects OLS with df correction, within-centering equivalence to lmer, EBIC-GLASSO for contemporaneous/between networks, mlVAR cross-validation results (temporal B < 1e-10, p-values < 0.01, residual r > 0.999), 15 sections.
+- docs/boot-glasso-TECHNICAL-REPORT.md: Comprehensive technical report covering 4-phase bootstrap pipeline, glassopath optimization, case-dropping CS-coefficient, edge/centrality difference tests, predictability from precision matrix, bootnet cross-validation results (edge CI r > 0.99, CS within 0.15, 3.2x speedup), 19 sections.
+
+### 2026-02-27 — Add boot_glasso scientific technical report
+- docs/boot-glasso-technical-report.Rmd: New scientific report matching mlvar style. cograph::splot network visualizations with custom node colors, pie-chart predictability, circular layout, side-by-side original vs thresholded. Dark theme variant. All bootstrap inference plots (edge CIs, inclusion, stability, diff tests). Bootnet equivalence with scatter plots and correlation table. Speed comparison. Code hidden, narrative-focused.
+- docs/boot-glasso-technical-report.html: Rendered output.
+
+### 2026-02-27 — Improve boot_glasso diff plots + AKA bootnet equivalence report
+- R/boot_glasso.R: Rewrote `.bg_plot_edge_diff()` and `.bg_plot_centrality_diff()` to match bootnet's visual style. Full matrix (both triangles + diagonal) instead of upper-triangle only. Discrete 3-color fill (black = significant, light gray = non-significant, white = diagonal) instead of continuous red→white p-value gradient. Added `order` parameter: `"sample"` (default, sorted by value ascending) or `"id"` (alphabetical). Clean theme with white grid lines between tiles.
+- tests/testthat/test-boot_glasso.R: Added 16 new tests for diff plot order parameter, discrete fill, and full matrix dimensions. Total: 244 tests, all pass.
+- tmp/test_boot_glasso_aka.Rmd: Added `## Bootnet Equivalence` section comparing boot_glasso vs bootnet on AKA 8-variable real data: original network match, edge CI correlation, strength CI correlation, CS-coefficient comparison, inclusion probability correlation, difference test agreement, speed comparison.
+
+### 2026-02-27 — Add boot_glasso() with bootnet equivalence
+- R/boot_glasso.R: New file (~650 lines). Exported `boot_glasso(x, iter, cs_iter, cs_drop, alpha, gamma, nlambda, centrality, cor_method, ncores, seed)` — single-call bootstrap for EBICglasso partial correlation networks. Combines nonparametric edge/centrality CIs, case-dropping CS-coefficient, edge inclusion probabilities, thresholded network, edge/centrality difference tests, and predictability CIs. Accepts data frame, matrix, or glasso netobject. Ten internal helpers. S3 class `boot_glasso` with `print`, `summary(type=)`, and `plot(type=)` methods. 6 plot types: edges, stability, edge_diff, centrality_diff, inclusion, network. Reuses existing GLASSO pipeline. Supports parallel via `mclapply`. No new dependencies.
+- R/boot_glasso.R (bootnet equivalence): Rewrote `.bg_case_drop()` to match bootnet's random-per-iteration approach (each iteration randomly picks ONE drop proportion, not fixed iterations per proportion). Changed `.bg_cs_coefficient()` to use `mean(cors > 0.7) > 0.95` (matching bootnet's proportion-above-threshold, not quantile-based). Changed case-dropping correlation from Spearman to Pearson to match bootnet's `cor0()`.
+- tests/testthat/test-boot_glasso.R: 228 tests total. Original 217 tests plus 11 new bootnet equivalence tests: original network matches bootnet across 5 seeds (max diff < 0.01), edge CIs r > 0.99, strength CIs r > 0.99, CS-coefficient matches corStability within 0.15, strength matches qgraph::centrality()$InDegree.
+- Tests: 1750 full suite, 0 failures, 0 warnings.
+
 ### 2026-02-27 — Add mlvar() multilevel vector autoregression
 - R/mlvar.R: New file (~400 lines). Exported `mlvar(data, vars, id, day, beep, lag, standardize, gamma, nlambda)` estimates 3 networks from ESM/EMA panel data: temporal (directed, within-person OLS with df correction), contemporaneous (undirected, EBIC-GLASSO on residuals), between-subjects (undirected, EBIC-GLASSO on person means). Six internal helpers: `.mlvar_prepare_data()`, `.mlvar_build_lag_pairs()`, `.mlvar_within_center()`, `.mlvar_temporal_ols()`, `.mlvar_contemporaneous()`, `.mlvar_between()`. S3 class `mlvar_result` with `print` and `summary` methods. Reuses existing `.compute_lambda_path()`, `.select_ebic()`, `.precision_to_pcor()` from estimators.R. No new dependencies.
 - R/simulate_data.R: Added `"mlvar"` type with `.simulate_mlvar()` generator. Produces panel EMA data with known temporal B matrix, contemporaneous noise structure, and person-specific means. Attributes: `true_temporal`, `true_contemporaneous`, `vars`.
