@@ -1,43 +1,44 @@
-# Session Handoff — 2026-03-05
+# Session Handoff — 2026-03-06
 
 ## Completed
-- **Rewrite `build_mcml()`** — Uses Saqrlab's own `build_network()` for between/within estimation
-  - Between: recodes states to cluster labels → collapses consecutive same-cluster repetitions → `build_network()` on collapsed data → zero diagonal by construction
-  - Within: filters non-member states to NA → `build_network()` per cluster
-  - Fallback for pre-computed inputs: off-diagonal matrix block aggregation + row-normalize (diagonal always zero)
-  - `cograph::cluster_summary()` only used for `plot_mcml()` compatibility
-  - 6 data input formats, 5 cluster formats, enriched `$edges` field
-- **`bootstrap_mcml()`** — Same recode/collapse/filter approach via `bootstrap_network()`
-  - Between + within bootstrap using identical estimation logic as `build_mcml()`
-  - S3 class `mcml_bootstrap` with print, summary, plot
-- **Documentation** — Two reference docs in `docs/`
+- **build_gimme()** — Full GIMME implementation in `R/gimme.R` (~780 lines)
+  - lavaan-backed SEM: group search (MI > prop_cutoff), pruning, individual search (Bonferroni)
+  - Simple API: `build_gimme(data, vars, id, time, ar, standardize, groupcutoff, seed)`
+  - Returns `saqr_gimme` S3 class with temporal/contemporaneous matrices, per-person coefs, fit indices
+  - S3 methods: print, summary, plot (5 types using cograph for mixed networks)
+  - Path selection identical to gimme R package
+- **78 tests pass** in test-gimme.R (10 sections including gimme equivalence)
+- **MCML TNA alignment** — Removed `.collapse_consecutive()`, between-cluster includes self-loops
+- **103 tests pass** in test-mcml.R, **56 tests pass** in test-bootstrap_mcml.R
 
 ## Current State
-- `devtools::load_all()` succeeds
-- **101 tests pass** in test-mcml.R
-- **56 tests pass** in test-bootstrap_mcml.R
-- `$between` and `$within` are plain matrices (not tna objects)
-- Between-cluster matrix has zero diagonal (only actual cluster switches counted)
-
-### Files Modified
-- `R/mcml.R` — rewritten with native estimation pipeline + `.collapse_consecutive()` helper
-- `tests/testthat/test-mcml.R` — 101 tests (updated for new return structure + zero diagonal)
-- `NAMESPACE` — exports unchanged
+- `devtools::load_all()` succeeds — all functions available
+- Version: Saqrlab 0.3.0
+- lavaan in Suggests (not Imports)
+- `devtools::document()` and `devtools::install()` not yet run for gimme additions
 
 ### Files Created
-- `tests/testthat/test-bootstrap_mcml.R` — 56 tests
-- `docs/build_mcml-for-cograph.md` — short cograph developer reference
-- `docs/mcml-technical-reference.md` — full technical reference
+- `R/gimme.R` — full GIMME implementation
+- `tests/testthat/test-gimme.R` — 78 tests
+
+### Files Modified
+- `NAMESPACE` — export(build_gimme), S3 methods for saqr_gimme
+- `DESCRIPTION` — lavaan in Suggests
+- `R/mcml.R` — removed .collapse_consecutive(), self-loops preserved
+- `tests/testthat/test-mcml.R` — updated diagonal tests
 
 ## Key Decisions
-- **Native estimation over cluster_summary**: Between/within built by recode/collapse/filter + build_network, not post-hoc aggregation.
-- **Collapse consecutive**: `.collapse_consecutive()` replaces consecutive same-cluster values with NA before counting, so between diagonal is always zero. Only actual cluster switches are counted.
-- **cluster_summary kept for plotting only**: `$cluster_summary` field still populated for `cograph::plot_mcml()` compatibility.
-- **Plain matrices**: `$between` and `$within` are matrices, not tna objects. Simpler, consistent interface.
+- **lavaan backend**: User initially wanted to avoid lavaan, then approved it for pragmatic reasons (MI calculation, SEM fit indices)
+- **Simple interface**: No gimme-style problematic arguments (subgroups, VAR, header, etc.)
+- **cograph for plots**: Mixed network support (different edge types for temporal vs contemporaneous)
+- **Exact equivalence**: Path counts AND standardized coefficients are identical to gimme (diff=0 across 8 tested seeds, 3-var and 4-var). Achieved via testWeights stability check + standardized betas.
 
 ## Next Steps
-1. Git commit when ready
+1. Run `devtools::document()` to generate man pages for gimme
+2. Run `devtools::install()` to install updated package
+3. Git commit + push when ready
+4. Optional: test with more variable counts / edge cases
 
 ## Context
 - Package: Saqrlab (R package), branch: main
-- cograph in Imports (for plotting + edge list conversion)
+- Dependencies: lavaan (Suggests), cograph (Suggests)

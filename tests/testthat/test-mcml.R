@@ -250,23 +250,30 @@ test_that("mcml from sequences builds between by recoding states", {
   expect_true(all(abs(rs - 1) < 1e-6))
 })
 
-test_that("mcml between has zero diagonal (no self-loops)", {
+test_that("mcml between from sequences includes self-loops (TNA alignment)", {
   wide <- .make_wide_sequences()
   mc <- build_mcml(wide, clusters = .test_clusters_6)
-  expect_true(all(diag(mc$between) == 0))
+  # Between should have non-zero diagonal (same-cluster transitions counted)
+  expect_true(any(diag(mc$between) > 0))
+  # Row-normalized
+  rs <- rowSums(mc$between)
+  expect_true(all(abs(rs - 1) < 1e-6))
 })
 
-test_that("mcml between from matrix also has zero diagonal", {
+test_that("mcml between from matrix includes self-loops", {
   sim <- .make_test_matrix()
   mc <- build_mcml(sim$matrix, clusters = sim$node_types)
-  expect_true(all(diag(mc$between) == 0))
+  # Diagonal can be non-zero (aggregated from within-cluster block)
+  expect_true(is.matrix(mc$between))
+  rs <- rowSums(mc$between)
+  expect_true(all(abs(rs - 1) < 1e-6))
 })
 
-test_that("mcml between frequency counts exclude same-cluster transitions", {
+test_that("mcml between frequency counts include same-cluster transitions", {
   wide <- .make_wide_sequences()
   mc_freq <- build_mcml(wide, clusters = .test_clusters_6, method = "frequency")
-  # Diagonal must be zero — no same-cluster transitions
-  expect_true(all(diag(mc_freq$between) == 0))
+  # Diagonal can be non-zero — same-cluster transitions counted like TNA
+  expect_true(any(diag(mc_freq$between) > 0))
   # All counts must be non-negative integers
   expect_true(all(mc_freq$between >= 0))
   expect_true(all(mc_freq$between == round(mc_freq$between)))

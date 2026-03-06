@@ -198,15 +198,14 @@ build_mcml <- function(data,
 
 #' Build between-cluster network by recoding states to cluster labels
 #'
-#' Recodes states to cluster labels, then collapses consecutive same-cluster
-#' repetitions within each sequence so that only actual cluster switches are
-#' counted. This produces a between-cluster network with zero diagonal.
+#' Recodes all states to their cluster labels and estimates transitions
+#' via build_network(). This preserves all transitions including self-loops
+#' (same-cluster to same-cluster), matching TNA behavior exactly.
 #' @noRd
 .build_between_from_sequences <- function(data, clusters, method, params,
                                            scaling, threshold) {
   recoded <- .recode_to_clusters(data, clusters, params)
-  collapsed <- .collapse_consecutive(recoded, params)
-  net <- build_network(collapsed, method = method, params = params,
+  net <- build_network(recoded, method = method, params = params,
                        scaling = scaling, threshold = threshold)
   net$matrix
 }
@@ -233,8 +232,8 @@ build_mcml <- function(data,
 
 #' Build between-cluster matrix by aggregating node-level blocks
 #'
-#' Only aggregates off-diagonal blocks (i != j). Diagonal is always zero
-#' because between-cluster means transitions between different clusters.
+#' Aggregates all blocks including diagonal (self-loops within same cluster).
+#' Matches TNA behavior: all transitions are counted.
 #' @noRd
 .build_between_from_matrix <- function(mat, clusters, aggregation) {
   cl_names <- names(clusters)
@@ -252,7 +251,6 @@ build_mcml <- function(data,
 
   for (i in seq_len(n_cl)) {
     for (j in seq_len(n_cl)) {
-      if (i == j) next
       block <- mat[clusters[[i]], clusters[[j]], drop = FALSE]
       vals <- as.vector(block)
       vals <- vals[vals != 0]
@@ -260,7 +258,7 @@ build_mcml <- function(data,
     }
   }
 
-  # Row-normalize (diagonal stays 0)
+  # Row-normalize
   rs <- rowSums(bw)
   nz <- rs > 0
   bw[nz, ] <- bw[nz, ] / rs[nz]
@@ -608,9 +606,7 @@ bootstrap_mcml <- function(data,
   }
 
   # --- Between-cluster bootstrap ---
-  between_data <- .collapse_consecutive(
-    .recode_to_clusters(data, clusters, params), params
-  )
+  between_data <- .recode_to_clusters(data, clusters, params)
   boot_between <- bootstrap_network(
     data = between_data,
     method = method,
@@ -698,39 +694,6 @@ bootstrap_mcml <- function(data,
     vals[!vals %in% states] <- NA_character_
     vals
   })
-  result
-}
-
-
-#' Collapse consecutive same-value repetitions within each row
-#'
-#' For each sequence (row), replaces consecutive duplicate values with NA
-#' after the first occurrence. E.g., Social Social Cognitive Cognitive Meta
-#' becomes Social NA Cognitive NA Meta. This ensures only actual switches
-#' between distinct values are counted as transitions.
-#'
-#' @param data Wide-format data.frame (already recoded to cluster labels).
-#' @param params Params list (to detect state columns).
-#' @return Data.frame with consecutive duplicates replaced by NA.
-#' @noRd
-.collapse_consecutive <- function(data, params = list()) {
-  id_col <- params$id %||% params$id_col
-  cols <- params$cols
-  state_cols <- .select_state_cols(data, id_col, cols)
-
-  mat <- as.matrix(data[, state_cols, drop = FALSE])
-  nc <- ncol(mat)
-
-  if (nc < 2L) return(data)
-
-  # For each column after the first, set to NA where it equals the previous
-  for (j in seq(2L, nc)) {
-    same <- !is.na(mat[, j]) & !is.na(mat[, j - 1L]) & mat[, j] == mat[, j - 1L]
-    mat[same, j] <- NA_character_
-  }
-
-  result <- data
-  result[, state_cols] <- as.data.frame(mat, stringsAsFactors = FALSE)
   result
 }
 
