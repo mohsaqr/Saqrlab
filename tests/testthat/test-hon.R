@@ -408,7 +408,7 @@ test_that("pyHON equivalence: simple 4-state trajectories", {
     c("A", "B", "C", "D", "B", "A")
   )
   py <- .run_pyhon(trajs, max_order = 5L, min_freq = 1L)
-  r <- build_hon(trajs, max_order = 5L, min_freq = 1L)
+  r <- build_hon(trajs, max_order = 5L, min_freq = 1L, method = "hon")
 
   expect_equal(r$n_edges, py$n_edges,
     info = sprintf("Edge count: R=%d, Python=%d", r$n_edges, py$n_edges))
@@ -436,7 +436,7 @@ test_that("pyHON equivalence: higher-order dependency dataset", {
     c("D", "B", "A", "D", "B", "A", "D")
   )
   py <- .run_pyhon(trajs, max_order = 5L, min_freq = 1L)
-  r <- build_hon(trajs, max_order = 5L, min_freq = 1L)
+  r <- build_hon(trajs, max_order = 5L, min_freq = 1L, method = "hon")
 
   expect_equal(r$n_edges, py$n_edges,
     info = sprintf("Edge count: R=%d, Python=%d", r$n_edges, py$n_edges))
@@ -467,7 +467,7 @@ test_that("pyHON equivalence: 5-state diverse trajectories", {
     c("D", "C", "B", "A", "D", "C", "B")
   )
   py <- .run_pyhon(trajs, max_order = 5L, min_freq = 1L)
-  r <- build_hon(trajs, max_order = 5L, min_freq = 1L)
+  r <- build_hon(trajs, max_order = 5L, min_freq = 1L, method = "hon")
 
   expect_equal(r$n_edges, py$n_edges,
     info = sprintf("Edge count: R=%d, Python=%d", r$n_edges, py$n_edges))
@@ -493,7 +493,7 @@ test_that("pyHON equivalence: with min_freq = 3", {
     c("C", "B", "A", "D")
   )
   py <- .run_pyhon(trajs, max_order = 5L, min_freq = 3L)
-  r <- build_hon(trajs, max_order = 5L, min_freq = 3L)
+  r <- build_hon(trajs, max_order = 5L, min_freq = 3L, method = "hon")
 
   expect_equal(r$n_edges, py$n_edges,
     info = sprintf("Edge count: R=%d, Python=%d", r$n_edges, py$n_edges))
@@ -518,7 +518,7 @@ test_that("pyHON equivalence: max_order = 2", {
     c("A", "B", "D", "A", "B", "C")
   )
   py <- .run_pyhon(trajs, max_order = 2L, min_freq = 1L)
-  r <- build_hon(trajs, max_order = 2L, min_freq = 1L)
+  r <- build_hon(trajs, max_order = 2L, min_freq = 1L, method = "hon")
 
   expect_equal(r$n_edges, py$n_edges,
     info = sprintf("Edge count: R=%d, Python=%d", r$n_edges, py$n_edges))
@@ -709,4 +709,352 @@ test_that("honp_extract_rules produces rules from trajectories", {
 
   expect_false(is.null(rules[[.hon_encode("A")]]))
   expect_false(is.null(rules[[.hon_encode("B")]]))
+})
+
+# ===========================================================================
+# Section 8: build_hon() method parameter
+# ===========================================================================
+test_that("build_hon accepts method parameter", {
+  trajs <- list(c("A", "B", "C", "D"), c("A", "B", "D", "C"))
+  r1 <- build_hon(trajs, max_order = 2L, min_freq = 1L, method = "hon")
+  expect_s3_class(r1, "saqr_hon")
+
+  r2 <- build_hon(trajs, max_order = 2L, min_freq = 1L, method = "hon+")
+  expect_s3_class(r2, "saqr_hon")
+})
+
+test_that("build_hon default method is hon+", {
+  trajs <- list(c("A", "B", "C"))
+  r <- build_hon(trajs, max_order = 1L, min_freq = 1L)
+  expect_s3_class(r, "saqr_hon")
+})
+
+test_that("build_hon rejects invalid method", {
+  trajs <- list(c("A", "B", "C"))
+  expect_error(build_hon(trajs, method = "invalid"), "arg")
+})
+
+# ===========================================================================
+# Section 9: HON vs HON+ equivalence
+# ===========================================================================
+test_that("hon and hon+ produce identical networks on simple data", {
+  trajs <- list(
+    c("A", "B", "C", "D"), c("A", "B", "D", "C"),
+    c("A", "C", "B", "D"), c("D", "C", "B", "A")
+  )
+  r_hon  <- build_hon(trajs, max_order = 3L, min_freq = 1L, method = "hon")
+  r_honp <- build_hon(trajs, max_order = 3L, min_freq = 1L, method = "hon+")
+
+  expect_equal(nrow(r_hon$edges), nrow(r_honp$edges))
+
+  e1 <- r_hon$edges[order(r_hon$edges$from, r_hon$edges$to), c("from", "to", "weight")]
+  e2 <- r_honp$edges[order(r_honp$edges$from, r_honp$edges$to), c("from", "to", "weight")]
+  rownames(e1) <- rownames(e2) <- NULL
+  expect_equal(e1$from, e2$from)
+  expect_equal(e1$to, e2$to)
+  expect_equal(e1$weight, e2$weight, tolerance = 1e-10)
+})
+
+test_that("hon and hon+ match on higher-order dependency data", {
+  trajs <- list(
+    c("X", "A", "C"), c("X", "A", "C"), c("X", "A", "C"), c("X", "A", "C"),
+    c("Y", "A", "D"), c("Y", "A", "D"), c("Y", "A", "D"), c("Y", "A", "D"),
+    c("A", "B", "A"), c("B", "A", "B")
+  )
+  r_hon  <- build_hon(trajs, max_order = 3L, min_freq = 1L, method = "hon")
+  r_honp <- build_hon(trajs, max_order = 3L, min_freq = 1L, method = "hon+")
+
+  e1 <- r_hon$edges[order(r_hon$edges$from, r_hon$edges$to), ]
+  e2 <- r_honp$edges[order(r_honp$edges$from, r_honp$edges$to), ]
+  expect_equal(nrow(e1), nrow(e2))
+  expect_equal(e1$weight, e2$weight, tolerance = 1e-10)
+})
+
+test_that("hon and hon+ match on 5-state data with min_freq filtering", {
+  set.seed(42)
+  states <- c("A", "B", "C", "D", "E")
+  trajs <- lapply(1:50, function(i) sample(states, sample(5:15, 1), replace = TRUE))
+  r_hon  <- build_hon(trajs, max_order = 3L, min_freq = 3L, method = "hon")
+  r_honp <- build_hon(trajs, max_order = 3L, min_freq = 3L, method = "hon+")
+
+  e1 <- r_hon$edges[order(r_hon$edges$from, r_hon$edges$to), c("from", "to", "weight")]
+  e2 <- r_honp$edges[order(r_honp$edges$from, r_honp$edges$to), c("from", "to", "weight")]
+  rownames(e1) <- rownames(e2) <- NULL
+  expect_equal(e1, e2, tolerance = 1e-10)
+})
+
+# ===========================================================================
+# Section 10: pyHON+ (BuildRulesFastParameterFree) equivalence
+# ===========================================================================
+
+.run_pyhon_plus <- function(trajectories, max_order, min_freq) {
+  skip_if_not_installed("reticulate")
+  Sys.setenv(RETICULATE_PYTHON = "/opt/homebrew/bin/python3")
+  skip_if_not(reticulate::py_available(initialize = TRUE),
+              "Python not available")
+
+  # Write Python code for HON+ algorithm inline
+  reticulate::py_run_string("
+import math
+from collections import defaultdict
+
+def run_hon_plus(trajectories, max_order, min_freq):
+    Count = defaultdict(lambda: defaultdict(int))
+    Distribution = defaultdict(dict)
+    Rules = defaultdict(dict)
+    SourceToExtSource = defaultdict(set)
+    StartingPoints = defaultdict(set)
+
+    # Build order 1
+    for ti in range(len(trajectories)):
+        traj = trajectories[ti]
+        for index in range(len(traj) - 1):
+            Source = tuple(traj[index:index+1])
+            Target = traj[index+1]
+            Count[Source][Target] += 1
+            StartingPoints[Source].add((ti, index))
+
+    for Source in list(Count.keys()):
+        if len(Source) == 1:
+            for Target in list(Count[Source].keys()):
+                if Count[Source][Target] < min_freq:
+                    Count[Source][Target] = 0
+            total = sum(Count[Source].values())
+            if total > 0:
+                for Target in Count[Source]:
+                    if Count[Source][Target] > 0:
+                        Distribution[Source][Target] = 1.0 * Count[Source][Target] / total
+
+    def KLD(a, b):
+        d = 0
+        for t in a:
+            pa = a.get(t, 0)
+            pb = b.get(t, 0)
+            if pa > 0 and pb > 0:
+                d += pa * math.log(pa / pb, 2)
+            elif pa > 0:
+                d = float('inf')
+        return d
+
+    def KLDThreshold(no, es):
+        total = sum(Count[es].values())
+        if total == 0:
+            return float('inf')
+        return no / math.log(1 + total, 2)
+
+    def MaxDivergence(Distr):
+        mk = sorted(Distr, key=Distr.__getitem__)
+        return {mk[0]: 1}
+
+    def ExtendObservation(Source):
+        if len(Source) > 1:
+            if Source[1:] not in Count or len(Count[Source]) == 0:
+                ExtendObservation(Source[1:])
+        order = len(Source)
+        C = defaultdict(lambda: defaultdict(int))
+        for ti, index in StartingPoints[Source]:
+            traj = trajectories[ti]
+            if index - 1 >= 0 and index + order < len(traj):
+                ExtSource = tuple(traj[index-1:index+order])
+                Target = traj[index+order]
+                C[ExtSource][Target] += 1
+                StartingPoints[ExtSource].add((ti, index - 1))
+        if len(C) == 0:
+            return
+        for s in C:
+            for t in C[s]:
+                if C[s][t] < min_freq:
+                    C[s][t] = 0
+                Count[s][t] += C[s][t]
+            total = sum(C[s].values())
+            if total > 0:
+                for t in C[s]:
+                    if C[s][t] > 0:
+                        Distribution[s][t] = 1.0 * C[s][t] / total
+                        SourceToExtSource[s[1:]].add(s)
+
+    def ExtendSourceFast(Curr):
+        if Curr in SourceToExtSource:
+            return SourceToExtSource[Curr]
+        else:
+            ExtendObservation(Curr)
+            if Curr in SourceToExtSource:
+                return SourceToExtSource[Curr]
+            else:
+                return []
+
+    def AddToRules(Source):
+        for order in range(1, len(Source)+1):
+            s = Source[0:order]
+            if s not in Distribution or len(Distribution[s]) == 0:
+                ExtendSourceFast(s[1:])
+            Rules[s] = Distribution[s]
+
+    def ExtendRule(Valid, Curr, order):
+        if order >= max_order:
+            AddToRules(Valid)
+        else:
+            Distr = Distribution[Valid]
+            CurrDistr = Distribution.get(Curr, {})
+            if len(CurrDistr) == 0:
+                AddToRules(Valid)
+                return
+            if KLD(MaxDivergence(CurrDistr), Distr) < KLDThreshold(order+1, Curr):
+                AddToRules(Valid)
+            else:
+                Extended = ExtendSourceFast(Curr)
+                if len(Extended) == 0:
+                    AddToRules(Valid)
+                else:
+                    for ext in Extended:
+                        ed = Distribution.get(ext, {})
+                        if len(ed) > 0 and KLD(ed, Distr) > KLDThreshold(order+1, ext):
+                            ExtendRule(ext, ext, order+1)
+                        else:
+                            ExtendRule(Valid, ext, order+1)
+
+    for Source in tuple(Distribution.keys()):
+        AddToRules(Source)
+        ExtendRule(Source, Source, 1)
+
+    # Build network (same as BuildNetwork.py)
+    Graph = defaultdict(dict)
+
+    def SequenceToNode(seq):
+        l = seq[-1]
+        if len(seq) == 1:
+            return l + '|'
+        return l + '|' + '.'.join(reversed(seq[:-1]))
+
+    def Rewire(source, target):
+        ps = source[:-1]
+        pt = (source[-1],)
+        if ps in Graph and source not in Graph[ps]:
+            if pt in Graph.get(ps, {}):
+                Graph[ps][source] = Graph[ps][pt]
+                del Graph[ps][pt]
+
+    SortedSource = sorted(Rules, key=lambda x: len(x))
+    for source in SortedSource:
+        for target in Rules[source]:
+            Graph[source][(target,)] = Rules[source][target]
+            if len(source) > 1:
+                Rewire(source, (target,))
+
+    # Tail rewiring
+    ta = []
+    tr = []
+    for source in Graph:
+        for target in list(Graph[source].keys()):
+            if len(target) == 1:
+                nt = source + target
+                while len(nt) > 1:
+                    if nt in Graph:
+                        ta.append((source, nt, Graph[source][target]))
+                        tr.append((source, target))
+                        break
+                    nt = nt[1:]
+    for s, t, w in ta:
+        Graph[s][t] = w
+    for s, t in tr:
+        if t in Graph.get(s, {}):
+            del Graph[s][t]
+
+    return [{'from': SequenceToNode(s), 'to': SequenceToNode(t), 'weight': Graph[s][t]}
+            for s in Graph for t in Graph[s]]
+")
+
+  reticulate::py_set_attr(reticulate::py, "trajectories", trajectories)
+  reticulate::py_run_string(sprintf(
+    "edges = run_hon_plus(trajectories, %d, %d)", max_order, min_freq))
+  py_edges <- reticulate::py_to_r(
+    reticulate::py_get_attr(reticulate::py, "edges"))
+
+  if (length(py_edges) == 0L) {
+    return(data.frame(from = character(0L), to = character(0L),
+                      weight = numeric(0L), stringsAsFactors = FALSE))
+  }
+
+  do.call(rbind, lapply(py_edges, function(e) {
+    data.frame(from = e[["from"]], to = e[["to"]], weight = e[["weight"]],
+               stringsAsFactors = FALSE)
+  }))
+}
+
+test_that("hon+ matches pyHON+ on 4-state data", {
+  trajs <- list(
+    c("A", "B", "C", "D"), c("A", "B", "D", "C"),
+    c("B", "C", "A", "D"), c("D", "A", "B", "C")
+  )
+  r <- build_hon(trajs, max_order = 99L, min_freq = 1L, method = "hon+")
+  py <- .run_pyhon_plus(trajs, 99L, 1L)
+
+  expect_equal(nrow(r$edges), nrow(py),
+    info = sprintf("Edge count: R=%d, Python=%d", nrow(r$edges), nrow(py)))
+  merged <- merge(
+    r$edges[, c("from", "to", "weight")],
+    py, by = c("from", "to"), suffixes = c("_r", "_py"))
+  expect_equal(nrow(merged), nrow(r$edges),
+    info = "Not all edges matched by from/to")
+  expect_equal(merged$weight_r, merged$weight_py, tolerance = 1e-10)
+})
+
+test_that("hon+ matches pyHON+ on higher-order dependency data", {
+  trajs <- list(
+    c("X", "A", "C"), c("X", "A", "C"), c("X", "A", "C"), c("X", "A", "C"),
+    c("Y", "A", "D"), c("Y", "A", "D"), c("Y", "A", "D"), c("Y", "A", "D"),
+    c("A", "B", "A"), c("B", "A", "B")
+  )
+  r <- build_hon(trajs, max_order = 99L, min_freq = 1L, method = "hon+")
+  py <- .run_pyhon_plus(trajs, 99L, 1L)
+
+  expect_equal(nrow(r$edges), nrow(py),
+    info = sprintf("Edge count: R=%d, Python=%d", nrow(r$edges), nrow(py)))
+  merged <- merge(
+    r$edges[, c("from", "to", "weight")],
+    py, by = c("from", "to"), suffixes = c("_r", "_py"))
+  expect_equal(nrow(merged), nrow(r$edges),
+    info = "Not all edges matched by from/to")
+  expect_equal(merged$weight_r, merged$weight_py, tolerance = 1e-10)
+})
+
+test_that("hon+ matches pyHON+ with min_freq filtering", {
+  trajs <- list(
+    c("A", "B", "C", "D"), c("A", "B", "D", "C"),
+    c("A", "B", "C", "D"), c("D", "C", "B", "A"),
+    c("A", "B", "C", "D"), c("C", "B", "A", "D")
+  )
+  r <- build_hon(trajs, max_order = 99L, min_freq = 3L, method = "hon+")
+  py <- .run_pyhon_plus(trajs, 99L, 3L)
+
+  expect_equal(nrow(r$edges), nrow(py),
+    info = sprintf("Edge count: R=%d, Python=%d", nrow(r$edges), nrow(py)))
+  merged <- merge(
+    r$edges[, c("from", "to", "weight")],
+    py, by = c("from", "to"), suffixes = c("_r", "_py"))
+  expect_equal(nrow(merged), nrow(r$edges),
+    info = "Not all edges matched by from/to")
+  expect_equal(merged$weight_r, merged$weight_py, tolerance = 1e-10)
+})
+
+test_that("hon+ matches pyHON+ on group_regulation subset", {
+  skip_if_not_installed("tna")
+  data(group_regulation, package = "tna")
+  gr <- group_regulation[1:100, ]
+  trajs <- lapply(seq_len(nrow(gr)), function(i) {
+    row <- as.character(gr[i, ])
+    row[!is.na(row)]
+  })
+
+  r <- build_hon(trajs, max_order = 3L, min_freq = 5L, method = "hon+")
+  py <- .run_pyhon_plus(trajs, 3L, 5L)
+
+  expect_equal(nrow(r$edges), nrow(py),
+    info = sprintf("Edge count: R=%d, Python=%d", nrow(r$edges), nrow(py)))
+  merged <- merge(
+    r$edges[, c("from", "to", "weight")],
+    py, by = c("from", "to"), suffixes = c("_r", "_py"))
+  expect_equal(nrow(merged), nrow(r$edges),
+    info = "Not all edges matched by from/to")
+  expect_equal(merged$weight_r, merged$weight_py, tolerance = 1e-10)
 })
