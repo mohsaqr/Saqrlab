@@ -143,8 +143,10 @@
 
   for (source_key in ls(count)) {
     counts <- count[[source_key]]
-    # Zero out below min_freq
+    # Zero out below min_freq — modify count in place so KLDThreshold
+    # uses filtered totals (matching pyHON's BuildDistributions behavior)
     counts[counts < min_freq] <- 0L
+    count[[source_key]] <- counts
     total <- sum(counts)
     if (total > 0L) {
       # Keep only positive entries
@@ -262,6 +264,367 @@
   order_key <- as.character(new_order)
   if (is.null(order_env[[order_key]])) return(character(0L))
   order_env[[order_key]]
+}
+
+# ---------------------------------------------------------------------------
+# HON+ helpers (parameter-free, lazy observation building)
+# ---------------------------------------------------------------------------
+
+#' HON+: maximum-divergence singleton distribution
+#'
+#' Returns a named numeric(1) that places all probability mass on the least
+#' probable target in \code{distr_vec}.  This is the distribution that would
+#' maximally diverge from \code{distr_vec}, used as a pre-check in
+#' \code{.honp_extend_rule()} to prune branches that cannot possibly exceed the
+#' KLD threshold.
+#'
+#' @param distr_vec Named numeric vector of probabilities.
+#' @return Named numeric(1) with value 1.0, named after the least probable
+#'   target.
+#' @noRd
+.honp_max_divergence <- function(distr_vec) {
+  min_target <- names(which.min(distr_vec))
+  result <- 1.0
+  names(result) <- min_target
+  result
+}
+
+#' HON+: build order-1 counts, distributions, and starting points
+#'
+#' Scans all trajectories once to collect order-1 transition counts together
+#' with the (trajectory-index, position) pairs needed for lazy higher-order
+#' extension.
+#'
+#' @param trajectories List of character vectors.
+#' @param min_freq Integer.  Minimum count to retain a transition.
+#' @return List with three environments: \code{count}, \code{distr}, and
+#'   \code{starting_points}.
+#' @noRd
+.honp_build_order1 <- function(trajectories, min_freq) {
+  count <- new.env(hash = TRUE, parent = emptyenv())
+  starting_points <- new.env(hash = TRUE, parent = emptyenv())
+
+  for (ti in seq_along(trajectories)) {
+    traj <- trajectories[[ti]]
+    n <- length(traj)
+    for (pos in seq_len(n - 1L)) {
+      source_key <- .hon_encode(traj[pos])
+      target <- traj[pos + 1L]
+
+      # Count
+      cur <- count[[source_key]]
+      if (is.null(cur)) {
+        cur <- integer(0L)
+        names(cur) <- character(0L)
+      }
+      idx <- match(target, names(cur))
+      if (is.na(idx)) {
+        cur[target] <- 1L
+      } else {
+        cur[idx] <- cur[idx] + 1L
+      }
+      count[[source_key]] <- cur
+
+      # StartingPoints: store (traj_index, position) pairs
+      sp <- starting_points[[source_key]]
+      if (is.null(sp)) sp <- list()
+      sp[[length(sp) + 1L]] <- c(ti, pos)
+      starting_points[[source_key]] <- sp
+    }
+  }
+
+  # Build distributions (apply min_freq filtering then normalise)
+  distr <- new.env(hash = TRUE, parent = emptyenv())
+  for (source_key in ls(count)) {
+    counts <- count[[source_key]]
+    counts[counts < min_freq] <- 0L
+    count[[source_key]] <- counts  # zero in place (for threshold calc)
+    total <- sum(counts)
+    if (total > 0L) {
+      pos_counts <- counts[counts > 0L]
+      distr[[source_key]] <- pos_counts / total
+    } else {
+      distr[[source_key]] <- numeric(0L)
+    }
+  }
+
+  list(count = count, distr = distr, starting_points = starting_points)
+}
+
+#' HON+: lazily build higher-order counts for a source key
+#'
+#' For each starting point stored under \code{source_key}, looks one step back
+#' in the trajectory to discover extended sources of order
+#' \code{length(source) + 1}.  Populates \code{count}, \code{distr},
+#' \code{starting_points}, and \code{source_to_ext} in place.
+#'
+#' @param source_key Encoded source key whose extensions are needed.
+#' @param source_to_ext Environment mapping suffix keys to environments of
+#'   extended source keys (set-like).
+#' @param count Environment of observation counts (modified in place).
+#' @param distr Environment of distributions (modified in place).
+#' @param starting_points Environment of starting-point lists (modified in
+#'   place).
+#' @param trajectories List of character vectors.
+#' @param min_freq Integer minimum frequency.
+#' @return \code{NULL} invisibly.
+#' @noRd
+.honp_extend_observation <- function(source_key, source_to_ext,
+                                     count, distr, starting_points,
+                                     trajectories, min_freq) {
+  source <- .hon_decode(source_key)
+  order <- length(source)
+
+  # Ensure the suffix order is already extended before going deeper
+  if (order > 1L) {
+    suffix_key <- .hon_encode(source[-1L])
+    if (is.null(count[[suffix_key]]) || length(count[[suffix_key]]) == 0L) {
+      .honp_extend_observation(suffix_key, source_to_ext, count, distr,
+                               starting_points, trajectories, min_freq)
+    }
+  }
+
+  sp <- starting_points[[source_key]]
+  if (is.null(sp) || length(sp) == 0L) return(invisible(NULL))
+
+  # Accumulate counts for extended sources in a local environment
+  local_count <- new.env(hash = TRUE, parent = emptyenv())
+
+  for (point in sp) {
+    ti <- point[1L]
+    pos <- point[2L]
+    traj <- trajectories[[ti]]
+
+    # Look one step back and one step forward
+    if (pos > 1L && (pos + order) <= length(traj)) {
+      ext_source <- traj[(pos - 1L):(pos + order - 1L)]
+      target <- traj[pos + order]
+      ext_key <- .hon_encode(ext_source)
+
+      # Accumulate count
+      cur <- local_count[[ext_key]]
+      if (is.null(cur)) {
+        cur <- integer(0L)
+        names(cur) <- character(0L)
+      }
+      idx <- match(target, names(cur))
+      if (is.na(idx)) {
+        cur[target] <- 1L
+      } else {
+        cur[idx] <- cur[idx] + 1L
+      }
+      local_count[[ext_key]] <- cur
+
+      # Record starting point for the extended source
+      esp <- starting_points[[ext_key]]
+      if (is.null(esp)) esp <- list()
+      esp[[length(esp) + 1L]] <- c(ti, pos - 1L)
+      starting_points[[ext_key]] <- esp
+    }
+  }
+
+  # Apply min_freq, build distributions, register in source_to_ext
+  for (ext_key in ls(local_count)) {
+    lc <- local_count[[ext_key]]
+    lc[lc < min_freq] <- 0L
+    count[[ext_key]] <- lc
+    total <- sum(lc)
+    if (total > 0L) {
+      pos_counts <- lc[lc > 0L]
+      distr[[ext_key]] <- pos_counts / total
+
+      # Map suffix -> ext_source in source_to_ext
+      suffix_key <- .hon_encode(.hon_decode(ext_key)[-1L])
+      s2e <- source_to_ext[[suffix_key]]
+      if (is.null(s2e)) {
+        s2e <- new.env(hash = TRUE, parent = emptyenv())
+        source_to_ext[[suffix_key]] <- s2e
+      }
+      s2e[[ext_key]] <- TRUE
+    }
+  }
+
+  invisible(NULL)
+}
+
+#' HON+: lazy cache lookup for extended sources
+#'
+#' Returns the character vector of encoded extended-source keys for
+#' \code{curr_key}.  If the cache has not been populated yet, calls
+#' \code{.honp_extend_observation()} first.
+#'
+#' @param curr_key Encoded key of the current source.
+#' @param source_to_ext Extension cache environment.
+#' @param count Count environment.
+#' @param distr Distribution environment.
+#' @param starting_points Starting-points environment.
+#' @param trajectories List of character vectors.
+#' @param min_freq Integer minimum frequency.
+#' @return Character vector of extended source keys that have non-empty
+#'   distributions.
+#' @noRd
+.honp_extend_source_fast <- function(curr_key, source_to_ext,
+                                      count, distr, starting_points,
+                                      trajectories, min_freq) {
+  s2e <- source_to_ext[[curr_key]]
+  if (!is.null(s2e)) {
+    ext_keys <- ls(s2e)
+    has_distr <- vapply(ext_keys, function(k) {
+      d <- distr[[k]]
+      !is.null(d) && length(d) > 0L
+    }, logical(1L))
+    return(ext_keys[has_distr])
+  }
+
+  # Not cached yet — build lazily
+  .honp_extend_observation(curr_key, source_to_ext, count, distr,
+                           starting_points, trajectories, min_freq)
+
+  s2e <- source_to_ext[[curr_key]]
+  if (is.null(s2e)) return(character(0L))
+
+  ext_keys <- ls(s2e)
+  has_distr <- vapply(ext_keys, function(k) {
+    d <- distr[[k]]
+    !is.null(d) && length(d) > 0L
+  }, logical(1L))
+  ext_keys[has_distr]
+}
+
+#' HON+: add a source and all its prefixes to the rules (HON+ variant)
+#'
+#' Mirrors pyHON+'s \code{AddToRules()}: for each prefix of \code{source_key},
+#' if the prefix is not yet in \code{distr} (or has an empty distribution),
+#' triggers \code{.honp_extend_source_fast()} on the prefix's suffix to
+#' populate it lazily before writing to \code{rules}.
+#'
+#' @param source_key Encoded source key.
+#' @param distr Distribution environment.
+#' @param rules Rules environment.
+#' @param source_to_ext Extension cache environment.
+#' @param count Count environment.
+#' @param starting_points Starting-points environment.
+#' @param trajectories List of character vectors.
+#' @param min_freq Integer minimum frequency.
+#' @noRd
+.honp_add_to_rules <- function(source_key, distr, rules,
+                                source_to_ext, count, starting_points,
+                                trajectories, min_freq) {
+  source <- .hon_decode(source_key)
+  for (ord in seq_along(source)) {
+    prefix <- source[seq_len(ord)]
+    prefix_key <- .hon_encode(prefix)
+    d <- distr[[prefix_key]]
+    if (is.null(d) || length(d) == 0L) {
+      if (ord > 1L) {
+        suffix_key <- .hon_encode(prefix[-1L])
+        .honp_extend_source_fast(suffix_key, source_to_ext, count, distr,
+                                  starting_points, trajectories, min_freq)
+      }
+    }
+    rules[[prefix_key]] <- distr[[prefix_key]]
+  }
+}
+
+#' HON+: recursively extend a rule with MaxDivergence pre-check
+#'
+#' Extends rules to higher orders.  Before attempting to extend, checks whether
+#' even the maximum-possible divergence from \code{curr_distr} would exceed the
+#' KLD threshold.  If not, the current \code{valid_key} is accepted and no
+#' further extension is tried (pruning).
+#'
+#' @param valid_key Encoded key of the currently accepted (valid) source.
+#' @param curr_key Encoded key of the source being evaluated for extension.
+#' @param order Current order level.
+#' @param max_order Maximum allowed order.
+#' @param distr Distribution environment.
+#' @param count Count environment.
+#' @param source_to_ext Extension cache environment.
+#' @param starting_points Starting-points environment.
+#' @param trajectories List of character vectors.
+#' @param min_freq Integer minimum frequency.
+#' @param rules Rules environment (modified in place).
+#' @noRd
+.honp_extend_rule <- function(valid_key, curr_key, order, max_order,
+                              distr, count, source_to_ext, starting_points,
+                              trajectories, min_freq, rules) {
+  if (order >= max_order) {
+    .honp_add_to_rules(valid_key, distr, rules, source_to_ext, count,
+                        starting_points, trajectories, min_freq)
+    return(invisible(NULL))
+  }
+
+  valid_distr <- distr[[valid_key]]
+  curr_distr  <- distr[[curr_key]]
+
+  # HON+ MaxDivergence pre-check
+  if (!is.null(curr_distr) && length(curr_distr) > 0L) {
+    max_div <- .honp_max_divergence(curr_distr)
+    if (.hon_kld(max_div, valid_distr) <
+        .hon_kld_threshold(order + 1L, curr_key, count)) {
+      .honp_add_to_rules(valid_key, distr, rules, source_to_ext, count,
+                          starting_points, trajectories, min_freq)
+      return(invisible(NULL))
+    }
+  } else {
+    .honp_add_to_rules(valid_key, distr, rules, source_to_ext, count,
+                        starting_points, trajectories, min_freq)
+    return(invisible(NULL))
+  }
+
+  new_order <- order + 1L
+  extended <- .honp_extend_source_fast(curr_key, source_to_ext, count,
+                                        distr, starting_points,
+                                        trajectories, min_freq)
+
+  if (length(extended) == 0L) {
+    .honp_add_to_rules(valid_key, distr, rules, source_to_ext, count,
+                        starting_points, trajectories, min_freq)
+  } else {
+    for (ext_key in extended) {
+      ext_distr <- distr[[ext_key]]
+      if (length(ext_distr) > 0L &&
+          .hon_kld(ext_distr, valid_distr) >
+          .hon_kld_threshold(new_order, ext_key, count)) {
+        .honp_extend_rule(ext_key, ext_key, new_order, max_order,
+                          distr, count, source_to_ext, starting_points,
+                          trajectories, min_freq, rules)
+      } else {
+        .honp_extend_rule(valid_key, ext_key, new_order, max_order,
+                          distr, count, source_to_ext, starting_points,
+                          trajectories, min_freq, rules)
+      }
+    }
+  }
+}
+
+#' HON+: main rule extraction pipeline
+#'
+#' Builds order-1 observations then iterates over all order-1 sources,
+#' calling \code{.honp_extend_rule()} for each to discover higher-order rules
+#' via the MaxDivergence pre-check.
+#'
+#' @param trajectories List of character vectors.
+#' @param max_order Integer. Maximum order to consider.
+#' @param min_freq Integer. Minimum transition count.
+#' @return Environment of rules (source key -> named probability vector).
+#' @noRd
+.honp_extract_rules <- function(trajectories, max_order, min_freq) {
+  o1 <- .honp_build_order1(trajectories, min_freq)
+  source_to_ext <- new.env(hash = TRUE, parent = emptyenv())
+  rules <- new.env(hash = TRUE, parent = emptyenv())
+
+  for (source_key in ls(o1$distr)) {
+    if (.hon_key_len(source_key) == 1L) {
+      .honp_add_to_rules(source_key, o1$distr, rules, source_to_ext,
+                          o1$count, o1$starting_points, trajectories, min_freq)
+      .honp_extend_rule(source_key, source_key, 1L, max_order,
+                        o1$distr, o1$count, source_to_ext,
+                        o1$starting_points, trajectories, min_freq, rules)
+    }
+  }
+
+  rules
 }
 
 # ---------------------------------------------------------------------------
