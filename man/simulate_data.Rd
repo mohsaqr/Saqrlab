@@ -4,68 +4,56 @@
 \alias{simulate_data}
 \title{Simulate Ready-to-Use Statistical Datasets}
 \usage{
-simulate_data(type, seed = NULL, ...)
+simulate_data(type, seed = NULL, complexity = "clean", ..., n_batch = NULL)
 }
 \arguments{
 \item{type}{Character string specifying the dataset type. One of:
 \describe{
 \item{\code{"ttest"}}{Two-group comparison. Columns: \code{group} (factor),
-\code{score} (numeric). Use with \code{t.test(score ~ group, data = d)}.}
+\code{score} (numeric).}
 \item{\code{"anova"}}{Multi-group comparison (3--5 groups). Columns: \code{group}
-(factor), \code{score} (numeric). Use with \code{aov(score ~ group, data = d)}.}
+(factor), \code{score} (numeric).}
 \item{\code{"correlation"}}{Correlated variables (4--7 columns). All numeric
-columns \code{x1}--\code{xp}. Use with \code{cor(d)} or \code{pairs(d)}.}
-\item{\code{"clusters"}}{Cluster structure (3--5 clusters, 2--5 dimensions).
-Numeric columns \code{x1}--\code{xd} plus integer \code{true_cluster}. Use with
-\code{kmeans(d[, -ncol(d)], centers = max(d$true_cluster))}.}
-\item{\code{"factor_analysis"}}{Latent factor structure (2--4 factors,
-6--16 observed variables). All numeric columns \code{x1}--\code{xp}. Use with
-\code{factanal(d, factors = attr(d, "n_factors"))} or \code{prcomp(d)}.
-Attributes \code{n_factors} and \code{loadings} store the true generating
-parameters.}
-\item{\code{"prediction"}}{Regression dataset. Columns: \code{y} (numeric),
-\code{x1}--\code{x3} (numeric linear), \code{x4} (numeric nonlinear), \code{cat1} and
-\code{cat2} (factors). Use with \code{lm(y ~ ., data = d)}.}
-\item{\code{"mlvar"}}{Multilevel VAR panel data. Columns: \code{id} (integer
-person ID), \code{day} (integer), \code{beep} (integer), \code{V1}--\code{Vd} (numeric).
-Use with \code{mlvar(d, vars = attr(d, "vars"), id = "id", day = "day", beep = "beep")}. Attributes \code{true_temporal} (d x d matrix),
-\code{true_contemporaneous} (d x d matrix), and \code{vars} (variable names)
-store the generating parameters.}
+\code{x1}--\code{xp}.}
+\item{\code{"clusters"}}{Cluster structure. Numeric \code{x1}--\code{xd} plus integer
+\code{true_cluster}.}
+\item{\code{"factor_analysis"}}{Latent factor structure. All numeric
+\code{x1}--\code{xp}. Attributes \code{n_factors} and \code{loadings}.}
+\item{\code{"prediction"}}{Regression dataset. Columns: \code{y}, \code{x1}--\code{x4},
+\code{cat1}, \code{cat2}.}
+\item{\code{"mlvar"}}{Multilevel VAR panel data. Columns: \code{id}, \code{day},
+\code{beep}, \code{V1}--\code{Vd}. Attributes \code{true_temporal}, \code{true_contemporaneous},
+\code{vars}.}
+\item{\code{"batch"}}{Wildcard: generates all 7 types. Returns a named list
+with \code{n_batch} (default 1000) datasets per type.}
 }}
 
-\item{seed}{Integer or NULL. Random seed for reproducibility. When non-NULL,
-the seed also determines dataset characteristics (sample size, effect
-sizes, number of groups/variables). Default: NULL.}
+\item{seed}{Integer or NULL. Random seed. Also determines structural
+parameters (n, effect sizes, etc.). Default: NULL.}
 
-\item{...}{Optional overrides for structural parameters. Any parameter not
-specified is drawn randomly (controlled by seed). Supported parameters
-by type:
+\item{complexity}{Character. Controls edge-case injection for stress testing.
 \describe{
-\item{All types}{\code{n} (integer, 10--500): number of rows.}
-\item{\code{"ttest"}}{\code{effect_size} (numeric, 0.3--1.2): Cohen's d.}
-\item{\code{"anova"}}{\code{n_groups} (integer, 3--5): number of groups.}
-\item{\code{"correlation"}}{\code{n_vars} (integer, 4--7): number of variables.}
-\item{\code{"clusters"}}{\code{n_clusters} (integer, 3--5): number of clusters;
-\code{n_dims} (integer, 2--5): number of dimensions.}
-\item{\code{"factor_analysis"}}{\code{n_factors} (integer, 2--4): number of
-latent factors; \code{items_per_factor} (integer, 3--4): observed
-variables per factor.}
-\item{\code{"prediction"}}{\code{n_cat1} (integer, 2--4): levels for cat1;
-\code{n_cat2} (integer, 2--3): levels for cat2.}
-\item{\code{"mlvar"}}{\code{n_subjects} (integer, 20--80): number of persons;
-\code{d} (integer, 3--6): number of variables;
-\code{n_days} (integer, 3--7): days per person;
-\code{beeps_per_day} (integer, 5--15): beeps per day.}
+\item{\code{"clean"}}{(default for single datasets) No edge cases.}
+\item{\code{"auto"}}{(default in batch mode) Randomly injects 0--3 edge
+cases per dataset (seed-driven, fully reproducible).}
+\item{character vector}{Inject specific cases. One or more of:
+\code{"na"}, \code{"outliers"}, \code{"ties"}, \code{"duplicates"},
+\code{"constant_col"}, \code{"all_na_col"}, \code{"tiny_n"},
+\code{"heavy_tailed"}, \code{"heteroscedastic"},
+\code{"extreme_imbalance"}, \code{"multicollinear"}.}
 }}
+
+\item{...}{Optional overrides for structural parameters (n, n_groups, etc.).}
+
+\item{n_batch}{Integer or NULL. When provided, returns a list of \code{n_batch}
+datasets instead of a single dataset. When \code{type = "batch"}, defaults to
+1000L. Each item has \code{seed}, \code{batch_id}, and \code{complexity} attributes.}
 }
 \value{
-A \code{data.frame} with attributes:
-\describe{
-\item{\code{type}}{The dataset type string.}
-\item{\code{info}}{A usage hint string describing how to analyze the data.}
-}
-For \code{"factor_analysis"} type, additional attributes \code{n_factors} (integer)
-and \code{loadings} (matrix) store the true generating parameters.
+A \code{data.frame} (single dataset) or a list (when \code{n_batch} is
+non-NULL or \code{type = "batch"}). Each dataset has attributes \code{type},
+\code{info}, and \code{complexity}. Batch items additionally have \code{seed} and
+\code{batch_id}.
 }
 \description{
 Generate synthetic datasets suitable for common statistical
@@ -73,51 +61,21 @@ analyses. Each dataset type contains real signal so the intended analysis
 works out of the box. Different seeds produce structurally different
 datasets (varying n, effect sizes, number of groups/variables).
 }
-\details{
-Datasets have 10--500 rows depending on the seed. Signal strength varies
-so that the intended analysis produces significant results for most seeds,
-but specific outcomes depend on the random draw.
-
-No additional packages are required --- all generation uses base R and
-stats functions only.
-}
 \examples{
-# Two-group t-test
+# Single clean dataset
 d <- simulate_data("ttest", seed = 42)
-t.test(score ~ group, data = d)
 
-# One-way ANOVA
-d <- simulate_data("anova", seed = 7)
-summary(aov(score ~ group, data = d))
+# With edge cases
+d <- simulate_data("correlation", seed = 1, complexity = "auto")
+d <- simulate_data("ttest", seed = 1, complexity = c("na", "outliers"))
 
-# Correlation matrix
-d <- simulate_data("correlation", seed = 1)
-round(cor(d), 2)
+# Batch of 100 ttest datasets
+batch <- simulate_data("ttest", seed = 1, n_batch = 100)
 
-# Cluster analysis
-d <- simulate_data("clusters", seed = 99)
-km <- kmeans(d[, -ncol(d)], centers = max(d$true_cluster))
-table(km$cluster, d$true_cluster)
-
-# Factor analysis
-d <- simulate_data("factor_analysis", seed = 12)
-factanal(d, factors = attr(d, "n_factors"))
-
-# Regression
-d <- simulate_data("prediction", seed = 5)
-summary(lm(y ~ ., data = d))
-
-# mlVAR panel data
-d <- simulate_data("mlvar", seed = 1)
-fit <- mlvar(d, vars = attr(d, "vars"), id = "id", day = "day", beep = "beep")
-
-# Override structural parameters
-d <- simulate_data("clusters", seed = 1, n = 200, n_clusters = 4)
-d <- simulate_data("factor_analysis", seed = 1, n_factors = 3)
-d <- simulate_data("anova", n_groups = 4, n = 100)
+# All types, 1000 datasets each
+all_batches <- simulate_data("batch", seed = 1)
 
 }
 \seealso{
-\code{\link[=simulate_sequences]{simulate_sequences()}}, \code{\link[=simulate_long_data]{simulate_long_data()}},
-\code{\link[=simulate_igraph]{simulate_igraph()}}
+\code{\link[=simulate_sequences]{simulate_sequences()}}, \code{\link[=simulate_igraph]{simulate_igraph()}}
 }
