@@ -1,5 +1,10 @@
 # Saqrlab Project Learnings
 
+### 2026-03-17
+- [package split cleanup]: When splitting packages, check for (1) functions called by remaining code that were moved, (2) test files for moved functions, (3) unused DESCRIPTION Imports. All three bit us after the Saqrlab/Nestimate split.
+- [internal helper pattern]: When a dependency function is in another package not yet wired up, copy it as a private `.fn()` helper into the calling file. Keeps the package standalone; document the source clearly.
+- [package structural review]: Run `grep -rn "function_name" R/` across both packages to verify every called function is defined somewhere. Don't rely on git history or memory.
+
 ### 2026-03-16
 - [matrix() with list input]: `matrix(list_of_vectors, nrow=..., byrow=TRUE)` creates a list-matrix (each cell holds a vector), NOT a numeric matrix. Use `matrix(unlist(list_of_vectors), nrow=..., byrow=TRUE)` to get a numeric matrix. `rowSums()` will error on a list-matrix with "'x' must be numeric".
 - [Reduce accumulate for Markov chains]: `Reduce(f, x=seq_len(T-1), accumulate=TRUE, init=s0)` generates T states (init + T-1 more), perfect for Markov chain simulation without for loops. Returns a list; use `unlist()` if all states are scalar strings.

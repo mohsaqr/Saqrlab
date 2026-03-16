@@ -1,57 +1,59 @@
-# Session Handoff — 2026-03-16
+# Session Handoff — 2026-03-17
 
 ## Completed This Session
-- Added `simulate_seq_clusters()` to `R/simulate_latent.R` (TDD: 31 assertions, all green)
-- Fixed `.make_trans()` test helper bug (`matrix(unlist(...))` not `matrix(list(...))`)
-- `devtools::document()` → exported function, generated `man/simulate_seq_clusters.Rd`
-- Added full `simulate_seq_clusters` manual to `docs/simulate_data-cookbook.md`
-- All changes committed and pushed (commits `ce19f35`, `ca8b69e`)
 
-## Current State — simulate_latent.R
+### simulate_seq_clusters() (from previous session context)
+- Implemented `simulate_seq_clusters()` in `R/simulate_latent.R` (TDD, 31 assertions green)
+- Added full manual to `docs/simulate_data-cookbook.md`
 
-Five exported functions, all returning `list(data, params)`:
+### Post-split structural review and fixes
+- Ran comprehensive structural audit of Saqrlab after Nestimate split
+- **Deleted 18 orphaned test files** for Nestimate functions (active copies in Nestimate; sidelined copies archived there too)
+- **Fixed `simulate_onehot_data()`** — `action_to_onehot()` was moved to Nestimate, breaking the function. Added private `.action_to_onehot()` helper in `simulate_onehot_data.R`
+- **Removed `glasso` and `data.table`** from DESCRIPTION Imports (unused since split)
+- **Updated DESCRIPTION description** to reflect simulation-only scope
+- **Added `.superpowers/` and `Rplots.pdf`** to `.gitignore`
 
-| Function | Tests | Purpose |
-|---|---|---|
-| `simulate_lpa()` | 20 | LPA with known profile means/SDs |
-| `simulate_lca()` | 20 | LCA with known item response probs |
-| `simulate_regression()` | 15 | Regression with known coefficients |
-| `simulate_fa()` | 30 | FA with known loadings/phi/psi/sigma |
-| `simulate_seq_clusters()` | 31 | Markov chain sequences with known cluster structure |
+## Current State
 
-All return `list(data, params)` — JSON-serializable, no `attr()`.
+### What works
+- 275 simulation tests passing: 169 (simulate_data) + 75 (simulate_latent) + 31 (simulate_seq_clusters)
+- `simulate_onehot_data()` works correctly
+- DESCRIPTION is accurate (no false dependencies)
+- `.gitignore` covers tool artifacts
+- All changes committed and pushed (latest: `518b973`)
 
-## simulate_seq_clusters Signature
-
-```r
-simulate_seq_clusters(
-  trans_list  = NULL,    # list of K square row-stochastic matrices, or NULL for auto
-  props       = NULL,    # mixing proportions (normalised), default equal
-  n           = 300L,    # total sequences
-  seq_length  = 20L,     # time points per sequence (T1…T{seq_length})
-  init_probs  = NULL,    # initial state dist: shared vector, per-cluster list, or NULL (uniform)
-  n_clusters  = 3L,      # clusters in auto mode
-  n_states    = 10L,     # states in auto mode (default 10 per user req)
-  states      = NULL,    # state names in auto mode (default "S1"…"S{n_states}")
-  seed        = NULL
-)
-# Returns:
-#   $data        — data.frame: T1..T{seq_length} (chr) + true_cluster (int)
-#   $params      — list: trans_list, props, init_probs (per-cluster list)
+### Test files in Saqrlab (11 active)
+```
+test-global_names.R          test-learning_states.R
+test-simulate_data.R         test-simulate_edge_list.R
+test-simulate_htna.R         test-simulate_igraph.R
+test-simulate_latent.R       test-simulate_matrix.R
+test-simulate_network.R      test-simulate_seq_clusters.R
+test-simulate_sequences.R
 ```
 
-## Open Issues
-- NAMESPACE exports functions moved to Nestimate → `devtools::check()` will error
+### Still broken / pending
+- `devtools::check()` will warn on NAMESPACE exports pointing to Nestimate functions (NAMESPACE not yet cleaned up — deferred until Nestimate is wired as dependency)
 - Nestimate not yet a git repository
-- Saqrlab DESCRIPTION not yet updated to depend on Nestimate
+- `temporal_network.R`, `velocity_tna.R`, `bootstrap_mcml` sidelined in Nestimate
 
-## Next Steps
-1. Initialize git for Nestimate, commit everything
-2. Add Nestimate to Saqrlab Imports / update DESCRIPTION
-3. Update Saqrlab NAMESPACE to re-export Nestimate functions
-4. Run `devtools::check()` to verify clean
+## Key Decisions
+- `action_to_onehot()` kept as private `.action_to_onehot()` in simulate_onehot_data.R rather than adding Nestimate as a dependency — keeps Saqrlab standalone
+- 18 orphaned test files deleted (not moved) — Nestimate already has its own copies, more up-to-date
+
+## Open Issues
+1. Nestimate needs `git init` + push to GitHub
+2. Saqrlab DESCRIPTION needs `Imports: Nestimate` once Nestimate has a remote
+3. NAMESPACE needs regeneration after Nestimate is wired up
+4. Consider un-sidelining `temporal_network.R` and `velocity_tna.R` in Nestimate
+
+## Next Steps (prioritised)
+1. `git init` in `/Users/mohammedsaqr/Documents/Github/Nestimate/`, push to GitHub
+2. Add Nestimate to Saqrlab DESCRIPTION
+3. Update NAMESPACE → `devtools::check()` clean
 
 ## Context
-- Nestimate: `/Users/mohammedsaqr/Documents/Github/Nestimate/`
 - Saqrlab: `/Users/mohammedsaqr/Documents/Github/Saqrlab/`
+- Nestimate: `/Users/mohammedsaqr/Documents/Github/Nestimate/` (not on git)
 - Cookbook: `docs/simulate_data-cookbook.md`

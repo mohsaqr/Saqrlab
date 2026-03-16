@@ -1,5 +1,12 @@
 # Saqrlab Changes
 
+### 2026-03-17 — Post-split structural fixes
+- tests/testthat/: Deleted 18 orphaned test files for Nestimate functions (active copies already in Nestimate/tests/testthat/ with updated class names; sidelined copies in Nestimate/sidelined/)
+- R/simulate_onehot_data.R: Fixed broken `action_to_onehot()` call — function was moved to Nestimate during split. Added private `.action_to_onehot()` internal helper (vectorised with vapply, no for loop). Keeps Saqrlab standalone without Nestimate dependency.
+- DESCRIPTION: Removed `glasso` and `data.table` from Imports (both unused since computation code moved to Nestimate). Updated Description field to reflect simulation-only scope.
+- .gitignore: Added `.superpowers/` and `Rplots.pdf` to prevent tool artifacts entering commits.
+- Tests: 275 passing (169 + 75 + 31), 0 failures.
+
 ### 2026-03-16 — Add simulate_seq_clusters()
 - R/simulate_latent.R: Added simulate_seq_clusters(trans_list, props, n, seq_length, init_probs, n_clusters, n_states, states, seed). Generates wide-format sequences with known cluster structure. Supports explicit mode (supply K transition matrices) and auto mode (random row-stochastic matrices). Returns list(data, params) with T1…T{seq_length} columns + true_cluster, and params containing trans_list, normalised props, per-cluster init_probs. Default n_states=10. Uses Reduce(..., accumulate=TRUE) for Markov chain generation (no for loops).
 - tests/testthat/test-simulate_seq_clusters.R: 24 test blocks, 31 assertions covering return structure, column names, n rows, valid cluster labels, all clusters represented, valid state names, params contents, props normalisation, mixing proportions recovery at large n, seed reproducibility, init_probs (shared + per-cluster + stored), auto mode (generates, 10 states, K matrices, row sums), and 4 validation errors. All 31 pass.
