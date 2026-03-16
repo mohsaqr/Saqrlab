@@ -1,5 +1,10 @@
 # Saqrlab Project Learnings
 
+### 2026-03-16
+- [matrix() with list input]: `matrix(list_of_vectors, nrow=..., byrow=TRUE)` creates a list-matrix (each cell holds a vector), NOT a numeric matrix. Use `matrix(unlist(list_of_vectors), nrow=..., byrow=TRUE)` to get a numeric matrix. `rowSums()` will error on a list-matrix with "'x' must be numeric".
+- [Reduce accumulate for Markov chains]: `Reduce(f, x=seq_len(T-1), accumulate=TRUE, init=s0)` generates T states (init + T-1 more), perfect for Markov chain simulation without for loops. Returns a list; use `unlist()` if all states are scalar strings.
+- [simulate_seq_clusters]: Returns list(data, params). Auto mode generates random row-stochastic matrices with `runif` + `rowSums` normalisation. Explicit mode validates square, numeric, named, row-sums-to-1 constraints.
+
 ### 2026-02-15
 - [tna input formats]: `tna::tna()` accepts both a data frame of sequences (rows=sequences, cols=time points) and a square numeric matrix (transition frequencies). Column prefix can be "T" (as in `group_regulation`) not just "V".
 - [group_regulation_long]: Structure is `Actor` (int), `Achiever` (chr), `Group` (num), `Course` (chr), `Time` (POSIXct), `Action` (chr). Has 27,533 rows, 9 unique actions (adapt, cohesion, consensus, coregulate, discuss, emotion, monitor, plan, synthesis).

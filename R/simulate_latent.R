@@ -325,3 +325,166 @@ simulate_fa <- function(loadings, phi = NULL, psi = NULL, n, seed = NULL) {
     )
   )
 }
+
+# ---------------------------------------------------------------------------
+# simulate_seq_clusters
+# ---------------------------------------------------------------------------
+
+#' Simulate Sequence Data with Known Cluster Structure
+#'
+#' @description Generate wide-format sequence data where each row is drawn from
+#'   one of K Markov chains (clusters), each governed by its own transition
+#'   matrix. Supports explicit matrix supply or automatic random generation.
+#'
+#' @param trans_list Named or unnamed list of square numeric transition matrices,
+#'   or \code{NULL} for automatic generation. When \code{NULL}, \code{n_clusters}
+#'   and \code{n_states} are used to build random row-stochastic matrices.
+#' @param props Numeric vector of mixing proportions (need not sum to 1;
+#'   normalised internally). Length must equal \code{K}. Defaults to equal
+#'   mixing.
+#' @param n Positive integer. Total number of sequences to generate.
+#' @param seq_length Positive integer. Number of time-points per sequence
+#'   (columns \code{T1}…\code{T\{seq_length\}}). Default 20.
+#' @param init_probs Either a numeric vector of initial state probabilities
+#'   shared across clusters, a list of per-cluster vectors, or \code{NULL}
+#'   (uniform). Must be named consistently with the state names derived from
+#'   the transition matrix row/column names.
+#' @param n_clusters Positive integer. Number of clusters when
+#'   \code{trans_list = NULL}. Default 3.
+#' @param n_states Positive integer. Number of states when
+#'   \code{trans_list = NULL}. Default 10.
+#' @param states Character vector of state names when \code{trans_list = NULL}.
+#'   Defaults to \code{paste0("S", seq_len(n_states))}.
+#' @param seed Integer or \code{NULL}. Random seed for reproducibility.
+#'
+#' @return A named list with elements:
+#'   \describe{
+#'     \item{\code{data}}{data.frame with columns \code{T1}…\code{T\{seq_length\}}
+#'       (character state labels) and \code{true_cluster} (integer 1…K).}
+#'     \item{\code{params}}{list with \code{trans_list} (the K matrices used),
+#'       \code{props} (normalised mixing proportions), and \code{init_probs}
+#'       (per-cluster initial probability vectors as a list).}
+#'   }
+#'
+#' @examples
+#' m1 <- matrix(c(0.8, 0.2, 0.3, 0.7), nrow = 2,
+#'              dimnames = list(c("A","B"), c("A","B")))
+#' m2 <- matrix(c(0.2, 0.8, 0.7, 0.3), nrow = 2,
+#'              dimnames = list(c("A","B"), c("A","B")))
+#' r  <- simulate_seq_clusters(trans_list = list(m1, m2), n = 100, seed = 1)
+#' head(r$data)
+#' r$params$props
+#'
+#' @export
+simulate_seq_clusters <- function(
+    trans_list  = NULL,
+    props       = NULL,
+    n           = 300L,
+    seq_length  = 20L,
+    init_probs  = NULL,
+    n_clusters  = 3L,
+    n_states    = 10L,
+    states      = NULL,
+    seed        = NULL
+) {
+  if (!is.null(seed)) set.seed(seed)
+
+  # ------------------------------------------------------------------
+  # Build or validate trans_list
+  # ------------------------------------------------------------------
+  if (is.null(trans_list)) {
+    if (is.null(states)) states <- paste0("S", seq_len(n_states))
+    n_st <- length(states)
+    trans_list <- lapply(seq_len(n_clusters), function(k) {
+      raw <- matrix(stats::runif(n_st * n_st), nrow = n_st, ncol = n_st)
+      m   <- raw / rowSums(raw)
+      dimnames(m) <- list(states, states)
+      m
+    })
+  } else {
+    # Validate each matrix
+    lapply(seq_along(trans_list), function(i) {
+      m <- trans_list[[i]]
+      stopifnot("Each trans_list element must be a matrix" = is.matrix(m))
+      nr <- nrow(m); nc <- ncol(m)
+      if (nr != nc) stop("Each transition matrix must be square (matrix ", i, " is ", nr, "x", nc, ")")
+      if (is.null(rownames(m))) stop("Each transition matrix must have rownames (matrix ", i, " has none)")
+      rs <- rowSums(m)
+      if (any(abs(rs - 1) > 1e-6)) stop("Each transition matrix must have rows that sum to 1 (matrix ", i, ")")
+    })
+    dims <- vapply(trans_list, nrow, integer(1))
+    if (length(unique(dims)) > 1L)
+      stop("All transition matrices must have the same dimensions")
+  }
+
+  K      <- length(trans_list)
+  states <- rownames(trans_list[[1]])
+
+  # ------------------------------------------------------------------
+  # Normalise props
+  # ------------------------------------------------------------------
+  if (is.null(props)) {
+    props <- rep(1 / K, K)
+  } else {
+    stopifnot(length(props) == K)
+    props <- props / sum(props)
+  }
+
+  # ------------------------------------------------------------------
+  # Resolve init_probs → list of length K
+  # ------------------------------------------------------------------
+  n_st <- length(states)
+  if (is.null(init_probs)) {
+    init_list <- rep(list(setNames(rep(1 / n_st, n_st), states)), K)
+  } else if (is.numeric(init_probs) && !is.list(init_probs)) {
+    init_list <- rep(list(init_probs), K)
+  } else {
+    init_list <- init_probs
+  }
+
+  # ------------------------------------------------------------------
+  # Assign clusters
+  # ------------------------------------------------------------------
+  cluster_ids <- sample.int(K, size = n, replace = TRUE, prob = props)
+
+  # ------------------------------------------------------------------
+  # Generate sequences  — one Markov chain per row
+  # ------------------------------------------------------------------
+  .gen_one_seq <- function(k) {
+    tm   <- trans_list[[k]]
+    init <- init_list[[k]]
+    # Draw initial state
+    s0 <- sample(states, size = 1, prob = init)
+    # Generate remaining T-1 steps using Reduce with accumulate
+    if (seq_length == 1L) return(s0)
+    steps <- Reduce(
+      f           = function(cur_state, .unused) {
+        sample(states, size = 1, prob = tm[cur_state, ])
+      },
+      x           = seq_len(seq_length - 1L),
+      accumulate  = TRUE,
+      init        = s0
+    )
+    # Reduce returns init + seq_length-1 values = seq_length values total
+    steps
+  }
+
+  seqs <- lapply(seq_len(n), function(i) .gen_one_seq(cluster_ids[i]))
+
+  # ------------------------------------------------------------------
+  # Build output data.frame
+  # ------------------------------------------------------------------
+  seq_mat <- do.call(rbind, seqs)
+  colnames(seq_mat) <- paste0("T", seq_len(seq_length))
+  df <- as.data.frame(seq_mat, stringsAsFactors = FALSE)
+  df$true_cluster <- cluster_ids
+
+  list(
+    data   = df,
+    params = list(
+      trans_list = trans_list,
+      props      = props,
+      init_probs = init_list
+    )
+  )
+}

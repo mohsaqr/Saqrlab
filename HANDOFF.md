@@ -1,6 +1,11 @@
 # Session Handoff — 2026-03-16
 
 ## Completed
+- Added simulate_seq_clusters() to R/simulate_latent.R (TDD: 31 assertions, all green)
+- Fixed .make_trans() test helper (matrix(unlist(...)) not matrix(list(...)))
+- devtools::document() exported function + generated man/simulate_seq_clusters.Rd
+
+## Previous Completed
 - Removed 20 computation files from Saqrlab R/ (moved to Nestimate in previous session)
 - Fixed .onLoad in Saqrlab-package.R (removed .register_builtin_estimators() call)
 - Rewrote simulate_data.R with complexity + batch generation features (169 tests pass)
