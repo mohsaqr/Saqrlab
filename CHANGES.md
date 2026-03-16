@@ -1,5 +1,51 @@
 # Saqrlab Changes
 
+### 2026-03-16 — Remove 20 computation files; enhance simulate_data with complexity + batch
+- R/: Removed 20 files moved to Nestimate (boot_glasso, bootstrap_network, build_network, data_conversion, estimate_network, estimator_registry, estimators, extraction, frequencies, gimme, hon, honem, hypa, mcml, mlvar, mogen, permutation_test, utils, temporal_network, velocity_tna)
+- R/Saqrlab-package.R: Fixed .onLoad — removed .register_builtin_estimators() call (function now in Nestimate)
+- R/simulate_data.R: Added `complexity` parameter ("clean"/"auto"/case vector) with 11 edge cases for enterprise-grade stress testing: na, outliers, ties, duplicates, constant_col, all_na_col (post-injection); tiny_n, heavy_tailed, heteroscedastic, extreme_imbalance, multicollinear (generation-time). Added `n_batch` parameter (placed after `...` to avoid R partial matching of `n=`). Added `type = "batch"` wildcard to generate 1000 datasets of all 7 types. Auto-complexity uses Gumbel-max trick for weighted edge-case sampling. Added print.sim_batch_type and print.sim_batch_full S3 methods. Added %||% operator (moved here from utils.R). `.nearest_pd()` retained locally.
+- tests/testthat/test-simulate_data.R: Added 50 new tests (sections: complexity validation, auto complexity, individual edge cases × 11, n_batch single type, type=batch full batch, seed consistency, print methods). All 169 tests pass.
+
+### 2026-03-14 — Package split: computation code → Nestimate
+- Created Nestimate package at /Users/mohammedsaqr/Documents/Github/Nestimate/
+- Moved 22 R source files (estimation, bootstrap, HON, GIMME, MCML, mlVAR, temporal) to Nestimate
+- Moved 18 test files to Nestimate with standalone test helpers
+- Nestimate: 2137/2138 tests pass independently
+- Saqrlab retains: simulation, testing, verification, data resources
+- NOT YET DONE: remove duplicates from Saqrlab, wire up dependency
+
+### 2026-03-14 — Redesign proximity timeline plot
+- R/temporal_network.R: Rewrote `.plot_proximity_timeline()` — smooth variable-width micro-segments, Okabe-Ito palette, direct endpoint labels, highlight parameter, alpha=0.4 default. Removed `render_edges`, `smooth` params and `.build_edge_segments()`.
+- R/temporal_network.R: Rewrote `.compute_proximity_mds()` — strength-based interleaved slot positioning (hub at y=0, rank-spread to ±1, spline interpolation).
+- tests/testthat/test-temporal_network.R: Rewrote Section 19 with 15 tests. All pass.
+
+### 2026-03-11 — Unify HON/HONEM output format with MOGen/HYPA conventions
+- R/hon.R: Changed `.hon_sequence_to_node()` from pipe notation (`"B|A.X"`) to readable arrow notation (`"X -> A -> B"`). Updated `.hon_graph_to_edgelist()` to produce unified columns: `path`, `from` (context), `to` (next state), `count`, `probability` (was `weight`), `from_order`, `to_order`. Modified `.hon_extract_rules()` and `.honp_extract_rules()` to return `list(rules, count)` for raw count recovery. Updated `.hon_assemble_output()` to build matrix from graph directly (not edge columns). Updated `summary.saqr_hon()` to parse arrow notation. Updated `plot.saqr_hon()` to use `igraph::graph_from_adjacency_matrix()`.
+- R/honem.R: No changes needed — automatically inherits clean node names from HON matrix.
+- tests/testthat/test-hon.R: Added `.pipe_to_arrow()` helper for pyHON equivalence tests. Updated all pyHON/pyHON+ equivalence tests to convert Python pipe notation to arrow notation before comparing. Updated column references from `weight` to `probability`. Updated node order parsing from pipe to arrow format. 213 tests pass.
+- tests/testthat/test-honem.R: 28 tests pass (no changes needed).
+- tests/testthat/test-hypa.R: 32 tests pass (no changes needed).
+- Total: 2351 tests pass.
+
+### 2026-03-11 — Add MOGen, HONEM, HYPA higher-order network algorithms
+- R/mogen.R: New file (~400 lines). Implements Multi-Order Generative Model (Scholtes 2017; Gote & Scholtes 2023). Builds higher-order De Bruijn graphs at orders k=0..K from sequential trajectory data. `.mogen_count_kgrams()` extracts k-tuples and transitions, `.mogen_transition_matrix()` builds row-stochastic matrices, `.mogen_log_likelihood()` computes hierarchical likelihood (order j for step j, capping at model order k), `.mogen_layer_dof()` counts free parameters per layer. `build_mogen()` selects optimal Markov order via AIC, BIC, or sequential likelihood ratio tests. S3 class `saqr_mogen` with print/summary/plot (IC comparison + likelihood plots).
+- R/honem.R: New file (~200 lines). Implements HONEM embedding (Saebi et al. 2020). Takes HON adjacency matrix, builds row-stochastic transition matrix, computes neighborhood matrix S = (1/Z)*sum(exp(-k)*D^{k+1}), then truncated SVD for embeddings. Parameter-free — no random walks or skip-gram. S3 class `saqr_honem` with print/summary/plot (2D embedding scatter).
+- R/hypa.R: New file (~250 lines). Implements HYPA path anomaly detection (LaRock et al. 2020). Builds k-th order De Bruijn graph, fits propensity matrix Xi via iterative proportional fitting (Sinkhorn-Knopp) to match observed in/out-strengths, computes hypergeometric CDF p-values per edge. Classifies paths as over/under-represented at user alpha. S3 class `saqr_hypa` with print/summary/plot (expected vs observed scatter).
+- tests/testthat/test-mogen.R: 47 tests across 8 sections. Includes order-1 recovery test (200 paths from known Markov chain → BIC selects order 1) and second-order detection test.
+- tests/testthat/test-honem.R: 28 tests across 6 sections. Includes cluster separation test (within-cluster nodes closer than across in embedding space).
+- tests/testthat/test-hypa.R: 32 tests across 6 sections. Includes IPF convergence test, score bounds, alpha sensitivity test.
+- Total: 2350 tests pass (was 2243).
+
+### 2026-03-11 — Add BuildHON+ as method = "hon+" in build_hon()
+- R/hon.R: Added 7 new internal functions for HON+ pipeline (~290 lines): `.honp_max_divergence()` (MaxDivergence upper-bound for KLD pruning), `.honp_build_order1()` (eager order-1 with StartingPoints index), `.honp_extend_observation()` (lazy higher-order count builder), `.honp_extend_source_fast()` (lazy cache lookup), `.honp_add_to_rules()` (HON+ variant that triggers lazy extension for missing prefixes), `.honp_extend_rule()` (recursive extension with MaxDivergence pre-check), `.honp_extract_rules()` (top-level HON+ pipeline). Added `method` parameter to `build_hon()` with `"hon+"` as default. Updated roxygen docs with new parameter and Saebi et al. 2020 reference.
+- tests/testthat/test-hon.R: Extended from 163 to 212 tests. Added Section 7 (HON+ internals, 13 tests), Section 8 (method parameter, 3 tests), Section 9 (HON vs HON+ equivalence, 3 tests), Section 10 (pyHON+ equivalence via reticulate, 4 tests with exact edge/weight match). Updated Section 6 pyHON tests to use `method = "hon"` explicitly.
+- Performance on group_regulation (2000 trajectories, 9 states): HON 0.64s vs HON+ 2.8s at max_order=3. HON+ advantage is parameter-free operation, not raw speed at this scale. HON+ with max_order=99 auto-discovers max order 6 in 2.2s.
+
+### 2026-03-10 — Add build_hon() for Higher-Order Networks
+- R/hon.R: New file (~820 lines). Implements BuildHON algorithm (Xu, Wickramarathne & Chawla, 2016) for constructing variable-order dependency networks from sequential trajectory data. `build_hon(data, max_order, min_freq, collapse_repeats)` accepts wide data.frame or list of character vectors. Two-stage pipeline: (1) rule extraction via KL-divergence testing with adaptive threshold `order/log2(1+count)`, recursive order extension, source-suffix cache; (2) network wiring with incoming edge rewiring for higher-order nodes and tail rewiring to highest-order targets. Pipe-notation node naming (e.g., "B|A" = at B, came from A). Returns `saqr_hon` S3 class with adjacency matrix, edge list, node names, order stats. S3 methods: print, summary, plot (igraph). No new dependencies. Faithful line-by-line translation of pyHON.
+- R/hon.R (bugfix): `.hon_build_distributions()` now zeros out `count` in place (matching pyHON's `BuildDistributions`), so `.hon_kld_threshold()` uses filtered totals. Previously used unfiltered counts, producing lower thresholds and spurious higher-order rules. Found via group_regulation dataset testing.
+- tests/testthat/test-hon.R: New file. 163 tests across 6 sections: input validation (8), observation counting (4), distributions (3), KL-divergence (4), end-to-end pipeline (10), pyHON equivalence via reticulate (5 datasets — exact edge/weight match on all). All pass.
+
 ### 2026-03-06 — Add build_gimme() for GIMME (Group Iterative Multiple Model Estimation)
 - R/gimme.R: New file. Implements GIMME algorithm using lavaan as SEM backend. `build_gimme()` with simple API: data, vars, id, time, ar, standardize, groupcutoff, seed. Group-level search (modification indices across subjects, prop_cutoff), pruning (remove non-significant group paths), individual-level search (Bonferroni-corrected per person) with testWeights eigenvalue stability check and search-prune-resume cycle. Returns `saqr_gimme` S3 class with temporal/contemporaneous matrices (count + average), per-person standardized coefficients, psi, fit indices, group/individual paths, syntax. S3 methods: print, summary, plot (types: temporal, contemporaneous, individual, counts, fit). Uses cograph for mixed-network plotting. Achieves **exact equivalence** with gimme R package: path counts identical, standardized coefficients diff=0 across 100 randomly generated datasets (70 × 3-var, 30 × 4-var). Three key fixes: standardized betas/z-values (matching gimme's `lavInspect(fit,"std")$beta` and `standardizedSolution()$z`), and resume-after-nonconv in individual search.
 - tests/testthat/test-gimme.R: New file. 78 tests across 10 sections: input validation, basic construction, AR paths, path counts, fit indices, reproducibility, S3 methods, gimme package equivalence (path counts identical, coefficients identical, data prep identical), 4-variable test, config storage. All pass.

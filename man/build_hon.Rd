@@ -4,7 +4,13 @@
 \alias{build_hon}
 \title{Build a Higher-Order Network (HON)}
 \usage{
-build_hon(data, max_order = 5L, min_freq = 1L, collapse_repeats = FALSE)
+build_hon(
+  data,
+  max_order = 5L,
+  min_freq = 1L,
+  collapse_repeats = FALSE,
+  method = "hon+"
+)
 }
 \arguments{
 \item{data}{One of:
@@ -26,6 +32,11 @@ treated as zero. Default 1.}
 
 \item{collapse_repeats}{Logical. If \code{TRUE}, adjacent duplicate states
 within each trajectory are collapsed before analysis. Default \code{FALSE}.}
+
+\item{method}{Character. Algorithm to use: \code{"hon+"} (default,
+parameter-free BuildHON+ with lazy observation building and MaxDivergence
+pruning) or \code{"hon"} (original BuildHON with eager observation
+building).}
 }
 \value{
 An S3 object of class \code{"saqr_hon"} containing:
@@ -94,4 +105,8 @@ hon <- build_hon(df, max_order = 2)
 Xu, J., Wickramarathne, T. L., & Chawla, N. V. (2016). Representing
 higher-order dependencies in networks. \emph{Science Advances},
 2(5), e1600028.
+
+Saebi, M., Xu, J., Kaplan, L. M., Ribeiro, B., & Chawla, N. V. (2020).
+Efficient modeling of higher-order dependencies in networks: from algorithm
+to application for anomaly detection. \emph{EPJ Data Science}, 9(1), 15.
 }

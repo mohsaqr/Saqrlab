@@ -1970,24 +1970,26 @@ test_that("plot.temporal_paths star from hub reaches all", {
 
 
 # ===========================================================================
-# Section 19: Proximity timeline plot (13 tests)
+# Section 19: Proximity timeline plot (redesigned — 15 tests)
 # ===========================================================================
 
-test_that("proximity timeline default returns ggplot with variable-width segments", {
+test_that("proximity timeline returns ggplot with GeomSegment + GeomText", {
   edges <- .make_temporal_random(n_v = 8, n_e = 25, t_max = 15, seed = 1)
   tn <- temporal_network(edges, time_interval = 3)
   p <- plot(tn, type = "proximity")
   expect_s3_class(p, "ggplot")
   layer_classes <- vapply(p$layers, function(l) class(l$geom)[1L], character(1L))
   expect_true("GeomSegment" %in% layer_classes)
+  # Endpoint labels are on by default
+  expect_true("GeomText" %in% layer_classes)
 })
 
-test_that("proximity timeline works for all pre-computed metrics", {
+test_that("proximity timeline works for all 8 metrics", {
   edges <- .make_temporal_random(n_v = 6, n_e = 20, t_max = 12, seed = 2)
   tn <- temporal_network(edges, time_interval = 3)
 
   metrics <- c("eigenvector", "degree", "closeness", "betweenness",
-               "page_rank", "hub_score", "authority_score")
+               "page_rank", "hub_score", "authority_score", "proximity")
   vapply(metrics, function(m) {
     p <- plot(tn, type = "proximity", metric = m)
     expect_s3_class(p, "ggplot")
@@ -1995,110 +1997,118 @@ test_that("proximity timeline works for all pre-computed metrics", {
   }, logical(1L))
 })
 
-test_that("proximity timeline MDS mode returns ggplot", {
-  edges <- .make_temporal_random(n_v = 6, n_e = 20, t_max = 12, seed = 3)
+test_that("proximity timeline uses Okabe-Ito palette by default", {
+  edges <- .make_temporal_random(n_v = 4, n_e = 15, t_max = 10, seed = 3)
   tn <- temporal_network(edges, time_interval = 3)
-  p <- plot(tn, type = "proximity", metric = "proximity")
-  expect_s3_class(p, "ggplot")
+  p <- plot(tn, type = "proximity")
+  built <- ggplot2::ggplot_build(p)
+  okabe_ito <- c("#0072B2", "#D55E00", "#009E73", "#E69F00", "#CC79A7",
+                 "#56B4E9", "#882255", "#332288", "#117733", "#AA4499")
+  seg_colors <- unique(built$data[[1]]$colour)
+  expect_true(all(toupper(seg_colors) %in% toupper(okabe_ito)))
 })
 
 test_that("proximity timeline vertex_group colors by group", {
   edges <- .make_temporal_random(n_v = 6, n_e = 20, t_max = 12, seed = 4)
   tn <- temporal_network(edges, time_interval = 3)
-
   groups <- rep(c("A", "B"), each = 3)
   p <- plot(tn, type = "proximity", metric = "degree", vertex_group = groups)
   expect_s3_class(p, "ggplot")
   built <- ggplot2::ggplot_build(p)
-  expect_true(nrow(built$data[[1]]) > 0L)
+  seg_colors <- unique(built$data[[1]]$colour)
+  expect_equal(length(seg_colors), 2L)
 })
 
-test_that("proximity timeline vertex_color custom palette", {
+test_that("proximity timeline vertex_color overrides palette", {
   edges <- .make_temporal_random(n_v = 4, n_e = 15, t_max = 10, seed = 5)
   tn <- temporal_network(edges, time_interval = 3)
-
-  cols <- c("red", "blue", "green", "orange")
-  p <- plot(tn, type = "proximity", metric = "eigenvector",
-            vertex_color = cols)
-  expect_s3_class(p, "ggplot")
+  cols <- c("#FF0000", "#00FF00", "#0000FF", "#FFFF00")
+  p <- plot(tn, type = "proximity", vertex_color = cols)
+  built <- ggplot2::ggplot_build(p)
+  seg_colors <- unique(toupper(built$data[[1]]$colour))
+  expect_true(all(seg_colors %in% toupper(cols)))
 })
 
 test_that("proximity timeline vertex_color with groups", {
   edges <- .make_temporal_random(n_v = 6, n_e = 20, t_max = 12, seed = 6)
   tn <- temporal_network(edges, time_interval = 3)
-
   groups <- rep(c("G1", "G2"), each = 3)
   group_colors <- c("steelblue", "coral")
-  p <- plot(tn, type = "proximity", metric = "page_rank",
-            vertex_group = groups, vertex_color = group_colors)
+  p <- plot(tn, type = "proximity", vertex_group = groups,
+            vertex_color = group_colors)
   expect_s3_class(p, "ggplot")
 })
 
-test_that("proximity timeline labels_at adds text at specified bins", {
+test_that("proximity timeline labels_at suppresses endpoint labels", {
   edges <- .make_temporal_random(n_v = 5, n_e = 15, t_max = 10, seed = 7)
   tn <- temporal_network(edges, time_interval = 2)
-
   n_bins <- ncol(tn$degree)
-  p <- plot(tn, type = "proximity", metric = "degree",
-            labels_at = c(1L, n_bins), label_size = 2.5)
+  p <- plot(tn, type = "proximity", labels_at = c(1L, n_bins))
   expect_s3_class(p, "ggplot")
   layer_classes <- vapply(p$layers, function(l) class(l$geom)[1L], character(1L))
-  expect_true("GeomText" %in% layer_classes)
+  # Only one GeomText layer (labels_at), not two (no endpoint labels)
+  expect_equal(sum(layer_classes == "GeomText"), 1L)
 })
 
-test_that("proximity timeline smooth option uses geom_smooth", {
-  edges <- .make_temporal_random(n_v = 5, n_e = 20, t_max = 15, seed = 8)
-  tn <- temporal_network(edges, time_interval = 2)
-
-  p <- plot(tn, type = "proximity", metric = "closeness", smooth = TRUE)
-  expect_s3_class(p, "ggplot")
-  layer_classes <- vapply(p$layers, function(l) class(l$geom)[1L], character(1L))
-  expect_true("GeomSmooth" %in% layer_classes)
-})
-
-test_that("proximity timeline render_edges adds extra segments", {
-  edges <- .make_temporal_random(n_v = 5, n_e = 20, t_max = 15, seed = 9)
-  tn <- temporal_network(edges, time_interval = 3)
-
-  p <- plot(tn, type = "proximity", metric = "eigenvector",
-            render_edges = TRUE)
-  expect_s3_class(p, "ggplot")
-  # Should have at least 2 GeomSegment layers (edges + lines)
-  layer_classes <- vapply(p$layers, function(l) class(l$geom)[1L], character(1L))
-  expect_true(sum(layer_classes == "GeomSegment") >= 2L)
-})
-
-test_that("proximity timeline hides legend for many vertices", {
+test_that("proximity timeline legend is always hidden", {
   edges <- .make_temporal_random(n_v = 20, n_e = 60, t_max = 20, seed = 10)
   tn <- temporal_network(edges, time_interval = 5)
-
-  p <- plot(tn, type = "proximity", metric = "degree")
-  expect_s3_class(p, "ggplot")
-  expect_equal(p$theme$legend.position, "none")
-})
-
-test_that("proximity timeline shows legend with vertex_group even for many vertices", {
-  edges <- .make_temporal_random(n_v = 20, n_e = 60, t_max = 20, seed = 11)
-  tn <- temporal_network(edges, time_interval = 5)
+  p1 <- plot(tn, type = "proximity")
+  expect_equal(p1$theme$legend.position, "none")
 
   groups <- rep(c("X", "Y"), each = 10)
-  p <- plot(tn, type = "proximity", metric = "betweenness",
-            vertex_group = groups)
-  expect_s3_class(p, "ggplot")
-  expect_equal(p$theme$legend.position, "right")
+  p2 <- plot(tn, type = "proximity", vertex_group = groups)
+  expect_equal(p2$theme$legend.position, "none")
 })
 
-test_that("proximity timeline size_metric = FALSE gives uniform-width lines", {
+test_that("proximity timeline size_metric=FALSE gives uniform width", {
   edges <- .make_temporal_random(n_v = 5, n_e = 15, t_max = 10, seed = 12)
   tn <- temporal_network(edges, time_interval = 2)
-
-  p <- plot(tn, type = "proximity", metric = "eigenvector",
-            size_metric = FALSE)
+  p <- plot(tn, type = "proximity", size_metric = FALSE)
   expect_s3_class(p, "ggplot")
   built <- ggplot2::ggplot_build(p)
-  # All segment linewidths should be identical (uniform)
   lw <- built$data[[1]]$linewidth
   expect_true(length(unique(lw)) == 1L)
+})
+
+test_that("proximity timeline linewidth stays within line_width bounds", {
+  edges <- .make_temporal_random(n_v = 8, n_e = 25, t_max = 15, seed = 13)
+  tn <- temporal_network(edges, time_interval = 3)
+  lw_range <- c(0.5, 3)
+  p <- plot(tn, type = "proximity", line_width = lw_range)
+  built <- ggplot2::ggplot_build(p)
+  lw <- built$data[[1]]$linewidth
+  expect_true(all(lw >= lw_range[1] - 1e-10))
+  expect_true(all(lw <= lw_range[2] + 1e-10))
+})
+
+test_that("proximity timeline constant degree gives finite linewidth", {
+  edges <- data.frame(
+    from = rep("hub", 4),
+    to = paste0("leaf", 1:4),
+    onset = rep(c(0, 5), each = 4),
+    terminus = rep(c(5, 10), each = 4),
+    stringsAsFactors = FALSE
+  )
+  tn <- temporal_network(edges, time_interval = 5)
+  p <- plot(tn, type = "proximity", line_width = c(1, 4))
+  built <- ggplot2::ggplot_build(p)
+  lw <- built$data[[1]]$linewidth
+  expect_true(all(is.finite(lw)))
+})
+
+test_that("proximity timeline highlight fades non-highlighted vertices", {
+  edges <- .make_temporal_random(n_v = 6, n_e = 20, t_max = 12, seed = 14)
+  tn <- temporal_network(edges, time_interval = 3)
+  vnames <- tn$vertex_names
+
+  p <- plot(tn, type = "proximity", highlight = vnames[1])
+  built <- ggplot2::ggplot_build(p)
+  seg_data <- built$data[[1]]
+  alphas <- unique(round(seg_data$alpha, 2))
+  expect_true(length(alphas) == 2L)
+  expect_true(min(alphas) <= 0.15)
+  expect_true(max(alphas) >= 0.35)
 })
 
 test_that("proximity timeline on chain network (small/simple)", {
@@ -2108,4 +2118,17 @@ test_that("proximity timeline on chain network (small/simple)", {
   expect_s3_class(p, "ggplot")
   built <- ggplot2::ggplot_build(p)
   expect_true(nrow(built$data[[1]]) > 0L)
+})
+
+test_that("proximity timeline single time bin returns valid plot", {
+  edges <- data.frame(
+    from = c("A", "B", "C"),
+    to = c("B", "C", "A"),
+    onset = c(0, 0, 0),
+    terminus = c(5, 5, 5),
+    stringsAsFactors = FALSE
+  )
+  tn <- temporal_network(edges, time_interval = 10)
+  p <- plot(tn, type = "proximity")
+  expect_s3_class(p, "ggplot")
 })

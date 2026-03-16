@@ -388,3 +388,268 @@ test_that("prediction n_cat1 and n_cat2 overrides work", {
   expect_equal(nlevels(d$cat1), 3L)
   expect_equal(nlevels(d$cat2), 2L)
 })
+
+# ---- complexity parameter validation ----
+
+test_that("complexity rejects non-character", {
+  expect_error(simulate_data("ttest", seed = 1, complexity = 123))
+  expect_error(simulate_data("ttest", seed = 1, complexity = TRUE))
+})
+
+test_that("complexity rejects empty character vector", {
+  expect_error(simulate_data("ttest", seed = 1, complexity = character(0)))
+})
+
+test_that("complexity rejects unknown case names", {
+  expect_error(simulate_data("ttest", seed = 1, complexity = "not_a_case"))
+  expect_error(simulate_data("ttest", seed = 1, complexity = c("na", "bogus")))
+})
+
+test_that("complexity = 'clean' is backward compatible with default", {
+  d1 <- simulate_data("ttest", seed = 42)
+  d2 <- simulate_data("ttest", seed = 42, complexity = "clean")
+  expect_identical(d1, d2)
+})
+
+test_that("type = 'batch' is accepted as valid type", {
+  expect_no_error(simulate_data("batch", seed = 1, n_batch = 2L))
+})
+
+# ---- complexity = "auto" single datasets ----
+
+test_that("auto complexity returns data.frame with complexity attribute", {
+  d <- simulate_data("ttest", seed = 7, complexity = "auto")
+  expect_s3_class(d, "data.frame")
+  expect_true(is.character(attr(d, "complexity")))
+})
+
+test_that("auto complexity is reproducible with same seed", {
+  d1 <- simulate_data("ttest", seed = 99, complexity = "auto")
+  d2 <- simulate_data("ttest", seed = 99, complexity = "auto")
+  expect_identical(d1, d2)
+  expect_identical(attr(d1, "complexity"), attr(d2, "complexity"))
+})
+
+test_that("auto complexity varies across seeds", {
+  complexities <- vapply(1:10, function(s) {
+    d <- simulate_data("ttest", seed = s, complexity = "auto")
+    paste(attr(d, "complexity"), collapse = "+")
+  }, character(1L))
+  # Not all 10 should have the exact same complexity profile
+  expect_gt(length(unique(complexities)), 1L)
+})
+
+test_that("clean dataset has empty complexity attribute", {
+  d <- simulate_data("ttest", seed = 1, complexity = "clean")
+  expect_equal(attr(d, "complexity"), character(0L))
+})
+
+# ---- individual edge cases ----
+
+test_that("na complexity injects NAs into ttest data", {
+  d <- simulate_data("ttest", seed = 5, complexity = "na")
+  expect_true(anyNA(d$score))
+})
+
+test_that("na complexity injects NAs into correlation data", {
+  d <- simulate_data("correlation", seed = 5, n = 100, complexity = "na")
+  expect_true(anyNA(d))
+})
+
+test_that("outliers complexity injects extreme values into ttest data", {
+  # Check that some value is more than 5 MAD from median (robust outlier check)
+  found <- vapply(1:5, function(s) {
+    d <- simulate_data("ttest", seed = s, n = 200, complexity = "outliers")
+    med <- stats::median(d$score, na.rm = TRUE)
+    mad <- stats::mad(d$score, na.rm = TRUE)
+    any(abs(d$score - med) > 5 * mad, na.rm = TRUE)
+  }, logical(1L))
+  expect_gte(sum(found), 3L)
+})
+
+test_that("ties complexity creates tied values in ttest score", {
+  # Ties means many repeated values: fewer unique than total rows
+  found_ties <- vapply(1:5, function(s) {
+    d <- simulate_data("ttest", seed = s, n = 100, complexity = "ties")
+    length(unique(d$score)) < 0.5 * nrow(d)
+  }, logical(1L))
+  expect_gte(sum(found_ties), 3L)
+})
+
+test_that("duplicates complexity increases row count", {
+  original <- simulate_data("ttest", seed = 10, n = 80, complexity = "clean")
+  with_dups <- simulate_data("ttest", seed = 10, n = 80, complexity = "duplicates")
+  expect_gt(nrow(with_dups), nrow(original))
+})
+
+test_that("constant_col complexity creates a zero-variance column in correlation data", {
+  d <- simulate_data("correlation", seed = 3, n = 50, n_vars = 5, complexity = "constant_col")
+  col_vars <- vapply(d, function(v) stats::var(v, na.rm = TRUE), numeric(1L))
+  expect_true(any(col_vars == 0 | is.na(col_vars)))
+})
+
+test_that("tiny_n complexity produces small datasets", {
+  found_small <- vapply(1:5, function(s) {
+    d <- simulate_data("ttest", seed = s, complexity = "tiny_n")
+    nrow(d) < 30L
+  }, logical(1L))
+  expect_gte(sum(found_small), 3L)
+})
+
+test_that("heavy_tailed complexity generates data without error", {
+  expect_no_error(simulate_data("ttest", seed = 1, n = 50, complexity = "heavy_tailed"))
+  expect_no_error(simulate_data("anova", seed = 1, n = 60, complexity = "heavy_tailed"))
+  expect_no_error(simulate_data("correlation", seed = 1, n = 50, complexity = "heavy_tailed"))
+})
+
+test_that("heteroscedastic complexity produces unequal group variances in ttest", {
+  found_hetero <- vapply(1:10, function(s) {
+    d <- simulate_data("ttest", seed = s, n = 100, complexity = "heteroscedastic")
+    vars <- tapply(d$score, d$group, stats::var)
+    ratio <- max(vars) / min(vars)
+    ratio > 4
+  }, logical(1L))
+  expect_gte(sum(found_hetero), 6L)
+})
+
+test_that("extreme_imbalance complexity creates very unequal group sizes in ttest", {
+  found_imbal <- vapply(1:5, function(s) {
+    d <- simulate_data("ttest", seed = s, n = 100, complexity = "extreme_imbalance")
+    tab <- table(d$group)
+    min(tab) < 0.15 * nrow(d)
+  }, logical(1L))
+  expect_gte(sum(found_imbal), 3L)
+})
+
+test_that("multicollinear complexity produces near-perfect correlation in correlation data", {
+  found_mc <- vapply(1:5, function(s) {
+    d <- simulate_data("correlation", seed = s, n = 100, complexity = "multicollinear")
+    R <- cor(d)
+    diag(R) <- 0
+    max(abs(R)) > 0.90
+  }, logical(1L))
+  expect_gte(sum(found_mc), 4L)
+})
+
+test_that("complexity attribute records applied cases", {
+  d <- simulate_data("ttest", seed = 1, complexity = c("na", "outliers"))
+  expect_equal(sort(attr(d, "complexity")), c("na", "outliers"))
+})
+
+# ---- n_batch single type ----
+
+test_that("n_batch returns a list of the correct length", {
+  result <- simulate_data("ttest", seed = 1, n_batch = 10L)
+  expect_type(result, "list")
+  expect_length(result, 10L)
+})
+
+test_that("n_batch result has sim_batch_type class", {
+  result <- simulate_data("ttest", seed = 1, n_batch = 5L)
+  expect_s3_class(result, "sim_batch_type")
+})
+
+test_that("n_batch result attributes are correct", {
+  result <- simulate_data("ttest", seed = 42, n_batch = 8L)
+  expect_equal(attr(result, "type"), "ttest")
+  expect_equal(attr(result, "n_batch"), 8L)
+  expect_equal(attr(result, "seed"), 42L)
+})
+
+test_that("n_batch all elements are data.frames", {
+  result <- simulate_data("ttest", seed = 1, n_batch = 5L)
+  all_df <- vapply(result, is.data.frame, logical(1L))
+  expect_true(all(all_df))
+})
+
+test_that("n_batch elements have batch_id and seed attributes", {
+  result <- simulate_data("ttest", seed = 1, n_batch = 5L)
+  ids  <- vapply(result, function(d) attr(d, "batch_id"), integer(1L))
+  seeds <- vapply(result, function(d) attr(d, "seed"), integer(1L))
+  expect_equal(ids, 1:5)
+  expect_true(all(!is.na(seeds)))
+})
+
+test_that("n_batch is reproducible with same seed", {
+  r1 <- simulate_data("ttest", seed = 77, n_batch = 3L)
+  r2 <- simulate_data("ttest", seed = 77, n_batch = 3L)
+  expect_identical(r1, r2)
+})
+
+test_that("n_batch differs with different seeds", {
+  r1 <- simulate_data("ttest", seed = 10, n_batch = 3L)
+  r2 <- simulate_data("ttest", seed = 20, n_batch = 3L)
+  expect_false(identical(r1[[1]], r2[[1]]))
+})
+
+test_that("n_batch datasets vary across batch items", {
+  result <- simulate_data("ttest", seed = 1, n_batch = 5L)
+  # Not all datasets should be identical
+  identical_pairs <- vapply(2:5, function(i) identical(result[[1]], result[[i]]), logical(1L))
+  expect_false(all(identical_pairs))
+})
+
+# ---- type = "batch" full batch ----
+
+test_that("type batch returns named list of all types", {
+  result <- simulate_data("batch", seed = 1, n_batch = 3L)
+  expect_type(result, "list")
+  expect_equal(length(result), 7L)
+  expected_names <- c("ttest", "anova", "correlation", "clusters",
+                      "factor_analysis", "prediction", "mlvar")
+  expect_equal(sort(names(result)), sort(expected_names))
+})
+
+test_that("type batch has sim_batch_full class", {
+  result <- simulate_data("batch", seed = 1, n_batch = 3L)
+  expect_s3_class(result, "sim_batch_full")
+})
+
+test_that("type batch n_batch attribute is correct", {
+  result <- simulate_data("batch", seed = 1, n_batch = 4L)
+  expect_equal(attr(result, "n_batch"), 4L)
+})
+
+test_that("type batch each type element has correct length", {
+  result <- simulate_data("batch", seed = 1, n_batch = 5L)
+  lengths <- vapply(result, length, integer(1L))
+  expect_true(all(lengths == 5L))
+})
+
+test_that("type batch ttest element has correct structure", {
+  result <- simulate_data("batch", seed = 1, n_batch = 3L)
+  ttest_batch <- result[["ttest"]]
+  expect_true(all(vapply(ttest_batch, function(d) {
+    all(c("group", "score") %in% names(d))
+  }, logical(1L))))
+})
+
+test_that("type batch is reproducible with same seed", {
+  r1 <- simulate_data("batch", seed = 5, n_batch = 3L)
+  r2 <- simulate_data("batch", seed = 5, n_batch = 3L)
+  expect_identical(r1, r2)
+})
+
+# ---- seed consistency between batch types ----
+
+test_that("ttest item 1 from n_batch matches item 1 from full batch", {
+  single_batch <- simulate_data("ttest", seed = 42, n_batch = 3L)
+  full_batch   <- simulate_data("batch", seed = 42, n_batch = 3L)
+  # Strip batch_id attribute difference — seeds and data should be identical
+  expect_identical(
+    single_batch[[1]][, c("group", "score")],
+    full_batch$ttest[[1]][, c("group", "score")]
+  )
+})
+
+# ---- print methods ----
+
+test_that("print.sim_batch_type works without error", {
+  result <- simulate_data("ttest", seed = 1, n_batch = 3L)
+  expect_output(print(result), regexp = "ttest")
+})
+
+test_that("print.sim_batch_full works without error", {
+  result <- simulate_data("batch", seed = 1, n_batch = 3L)
+  expect_output(print(result), regexp = "batch")
+})

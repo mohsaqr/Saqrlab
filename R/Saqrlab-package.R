@@ -12,6 +12,4 @@ utils::globalVariables(c(
 
 
 #' @noRd
-.onLoad <- function(libname, pkgname) {
-  .register_builtin_estimators()
-}
+.onLoad <- function(libname, pkgname) invisible(NULL)
