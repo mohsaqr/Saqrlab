@@ -4,6 +4,18 @@ A task-oriented reference for AI assistants generating test data with `simulate_
 
 ---
 
+## Standalone Usage
+
+The file is fully self-contained. No package installation required — just source it:
+
+```r
+source("R/simulate_data.R")   # only dependency: base R + stats (always available)
+```
+
+All helpers (`%||%`, `.nearest_pd()`) and generators are defined in the file itself.
+
+---
+
 ## Quick Start
 
 ```r
