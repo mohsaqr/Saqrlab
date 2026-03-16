@@ -426,3 +426,194 @@ test_suite <- simulate_data("batch", seed = 42, n_batch = 50)
 # Save once, reuse across test runs — attr(d, "seed") allows exact replay
 saveRDS(test_suite, "tests/fixtures/test_suite.rds")
 ```
+
+---
+
+## Parameter-Recovery Functions
+
+Four companion functions generate data with **fully specified ground-truth parameters** so that statistical models can be tested for correct recovery.
+
+```r
+source("R/simulate_latent.R")   # only dependency: base R + stats
+```
+
+All four functions return `list(data, params)` — both the observations and the ground truth are directly accessible fields, with no R-specific `attr()` needed.
+
+```r
+r <- simulate_fa(loadings, n = 500, seed = 1)
+r$data    # data.frame of observations
+r$params  # ground-truth parameters — plain R list, JSON-serializable
+
+# Export for JavaScript / CLI consumption
+jsonlite::write_json(r, "output.json", auto_unbox = TRUE)
+```
+
+---
+
+### `simulate_lpa()` — Latent Profile Analysis
+
+Generates continuous-indicator data where each observation belongs to one of K latent profiles.
+
+```r
+simulate_lpa(means, sds, props, n, seed = NULL)
+```
+
+| Argument | Type | Description |
+|---|---|---|
+| `means` | matrix (n_vars × n_profiles) | Column means per profile per variable |
+| `sds` | matrix OR scalar | SDs per variable per profile (recycled if scalar) |
+| `props` | numeric vector length K | Mixing proportions (normalised internally) |
+| `n` | integer | Total sample size |
+| `seed` | integer or NULL | Reproducibility |
+
+**Returns:** `list(data, params)`.
+- `$data`: `data.frame` with columns `y1`…`yp` + `true_profile` (integer).
+- `$params`: `list(means, sds, props)`.
+
+```r
+means <- matrix(c(0, 0, 10, 10), nrow = 2, ncol = 2)  # profile 1: (0,0), profile 2: (10,10)
+r <- simulate_lpa(means = means, sds = 0.5, props = c(0.5, 0.5), n = 500, seed = 1)
+
+table(r$data$true_profile)                          # should be ~250 / 250
+tapply(r$data$y1, r$data$true_profile, mean)        # should be near 0 and 10
+
+# Recovery check
+grp_means <- vapply(1:2, function(k) {
+  colMeans(r$data[r$data$true_profile == k, c("y1","y2")])
+}, numeric(2))
+stopifnot(all(abs(grp_means - r$params$means) < 0.5))
+```
+
+---
+
+### `simulate_lca()` — Latent Class Analysis
+
+Generates binary-indicator data where each observation belongs to one of K latent classes.
+
+```r
+simulate_lca(item_probs, class_probs, n, seed = NULL)
+```
+
+| Argument | Type | Description |
+|---|---|---|
+| `item_probs` | matrix (n_items × n_classes) | P(item = 1 \| class) for each item × class |
+| `class_probs` | numeric vector length K | Class mixing proportions |
+| `n` | integer | Total sample size |
+| `seed` | integer or NULL | Reproducibility |
+
+**Returns:** `list(data, params)`.
+- `$data`: `data.frame` with binary columns `item1`…`itemm` + `true_class` (integer).
+- `$params`: `list(item_probs, class_probs)`.
+
+```r
+item_probs <- matrix(c(0.9, 0.1, 0.9, 0.1,
+                       0.1, 0.9, 0.1, 0.9), nrow = 4, ncol = 2)
+r <- simulate_lca(item_probs = item_probs, class_probs = c(0.5, 0.5),
+                  n = 1000, seed = 1)
+
+table(r$data$true_class)                              # should be ~500 / 500
+tapply(r$data$item1, r$data$true_class, mean)         # should be near 0.9 and 0.1
+
+# Recovery check
+cl1 <- r$data[r$data$true_class == 1L, ]
+stopifnot(abs(mean(cl1$item1) - r$params$item_probs[1, 1]) < 0.05)
+```
+
+---
+
+### `simulate_regression()` — Linear Regression
+
+Generates a regression dataset where `lm(y ~ ., data = r$data)` recovers the true coefficients at large n.
+
+```r
+simulate_regression(coefs, predictor_sds, error_sd, n, seed = NULL)
+```
+
+| Argument | Type | Description |
+|---|---|---|
+| `coefs` | named numeric vector | True coefficients including `"(Intercept)"` |
+| `predictor_sds` | named numeric vector | SD of each predictor (generated as N(0, sd)) |
+| `error_sd` | positive numeric | Residual SD |
+| `n` | integer | Sample size |
+| `seed` | integer or NULL | Reproducibility |
+
+**Returns:** `list(data, params)`.
+- `$data`: `data.frame` with `y` + one column per predictor.
+- `$params`: `list(coefs, predictor_sds, error_sd)`.
+
+```r
+coefs <- c("(Intercept)" = 2, x1 = 3, x2 = -1, x3 = 0.5)
+r <- simulate_regression(
+  coefs         = coefs,
+  predictor_sds = c(x1 = 1, x2 = 1, x3 = 1),
+  error_sd      = 0.5, n = 1000, seed = 42
+)
+
+fit <- lm(y ~ ., data = r$data)
+est <- coef(fit)
+stopifnot(all(abs(est - r$params$coefs[names(est)]) < 0.2))
+```
+
+---
+
+### `simulate_fa()` — Factor Analysis
+
+Generates multivariate normal data from an explicit factor model. The model-implied covariance matrix `Sigma = loadings %*% phi %*% t(loadings) + diag(psi)` is returned directly for cross-checking.
+
+```r
+simulate_fa(loadings, phi = NULL, psi = NULL, n, seed = NULL)
+```
+
+| Argument | Type | Description |
+|---|---|---|
+| `loadings` | matrix (p × m) | Factor loading matrix. Must be a matrix. Zero = no path. |
+| `phi` | matrix (m × m) | Factor correlation matrix. Defaults to `diag(m)` (orthogonal). |
+| `psi` | numeric vector (length p) | Unique variances. Defaults to `1 - diag(L %*% phi %*% t(L))`. |
+| `n` | integer | Sample size |
+| `seed` | integer or NULL | Reproducibility |
+
+**Returns:** `list(data, params)`.
+- `$data`: `data.frame` with columns `y1`…`yp`.
+- `$params`: `list(loadings, phi, psi, sigma_implied)`.
+
+`sigma_implied` is the exact `p × p` covariance matrix the data were drawn from.
+
+```r
+# Two orthogonal factors, 3 items each
+# matrix() fills column-by-column (default byrow = FALSE):
+# col 1 (F1): 0.8, 0.7, 0.6, 0, 0, 0 — col 2 (F2): 0, 0, 0, 0.8, 0.7, 0.6
+loadings <- matrix(c(0.8, 0.7, 0.6, 0,   0,   0,
+                     0,   0,   0,   0.8, 0.7, 0.6), nrow = 6, ncol = 2)
+
+r <- simulate_fa(loadings = loadings, n = 500, seed = 1)
+r$data              # y1..y6
+r$params$loadings   # input loadings (exact)
+r$params$phi        # diag(2) — orthogonal
+r$params$psi        # unique variances
+r$params$sigma_implied  # 6×6 implied covariance
+
+# Recovery: sample cov ≈ sigma_implied at large n
+r2 <- simulate_fa(loadings = loadings, n = 5000, seed = 1)
+max(abs(cov(r2$data) - r2$params$sigma_implied))  # should be < 0.1
+
+# Oblique model (correlated factors)
+phi <- matrix(c(1, 0.4, 0.4, 1), nrow = 2)
+r3  <- simulate_fa(loadings = loadings, phi = phi, n = 500, seed = 1)
+r3$params$phi   # factor correlation matrix
+
+# JS export from CLI
+# Rscript -e "source('R/simulate_latent.R'); r <- simulate_fa(loadings, n=500, seed=1);
+#             jsonlite::write_json(r, 'fa_data.json', auto_unbox=TRUE)"
+```
+
+---
+
+**What to check:**
+
+| Goal | Assert |
+|---|---|
+| LPA profile means recovered | `abs(colMeans(r$data[r$data$true_profile==k, -ncol(r$data)]) - r$params$means[,k]) < tol` |
+| LCA item probs recovered | `abs(tapply(r$data$item1, r$data$true_class, mean) - r$params$item_probs[1,]) < tol` |
+| Regression coefs recovered | `abs(coef(lm(y~., data=r$data)) - r$params$coefs[names(coef(...))]) < tol` |
+| FA covariance recovered | `max(abs(cov(r$data) - r$params$sigma_implied)) < 0.1` (large n) |
+| Ground truth accessible | `r$params$coefs` / `r$params$means` / `r$params$item_probs` / `r$params$sigma_implied` |

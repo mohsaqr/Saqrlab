@@ -1,5 +1,15 @@
 # Saqrlab Changes
 
+### 2026-03-16 — Add simulate_fa(); refactor all latent functions to list(data, params) return
+- R/simulate_latent.R: Added simulate_fa(loadings, phi, psi, n, seed). Generates MVN data from Sigma = L*Phi*L' + diag(psi) via Cholesky. phi validated via isSymmetric() + chol(). psi auto-computed (1 - communalities) with error on over-factored models. sigma_implied returned in params (raw eigenvalue clamp, no diagonal normalisation). Refactored simulate_lpa(), simulate_lca(), simulate_regression() to return list(data, params) instead of data.frame + attr() — makes ground truth directly accessible to JSON/CLI consumers without R-specific knowledge.
+- tests/testthat/test-simulate_latent.R: Updated all 45 existing tests to use r$data / r$params. Added 30 new tests for simulate_fa (structure, column names, params accuracy, sigma_implied correctness, sample covariance recovery, seed reproducibility, oblique model, user-supplied psi, single-factor, and 5 validation error cases). All 75 tests pass.
+- docs/simulate_data-cookbook.md: Updated Parameter-Recovery Functions section — new return structure, added simulate_fa() with full parameter table and CLI JSON export example.
+
+### 2026-03-16 — Add simulate_lpa(), simulate_lca(), simulate_regression() for parameter recovery
+- R/simulate_latent.R: New file with three parameter-recovery simulation functions. `simulate_lpa(means, sds, props, n, seed)` generates continuous LPA data with explicit profile means (n_vars × n_profiles matrix), SDs, and mixing proportions. `simulate_lca(item_probs, class_probs, n, seed)` generates binary LCA data with explicit item response probability matrix (n_items × n_classes). `simulate_regression(coefs, predictor_sds, error_sd, n, seed)` generates regression data where `lm()` recovers true coefficients. All three store ground truth in `attr(d, "true_params")` and validate inputs strictly. All accept `seed` for reproducibility.
+- tests/testthat/test-simulate_latent.R: 45 TDD tests covering structure, binary/numeric columns, class label validity, true_params attributes, parameter recovery at large n, seed reproducibility, and input validation (dimension mismatches, out-of-range probabilities, missing predictor_sds names, non-positive error_sd). All 45 pass.
+- docs/simulate_data-cookbook.md: Added "Parameter-Recovery Functions" section covering all three new functions with usage examples, parameter tables, and recovery assertion patterns.
+
 ### 2026-03-16 — Remove 20 computation files; enhance simulate_data with complexity + batch
 - R/: Removed 20 files moved to Nestimate (boot_glasso, bootstrap_network, build_network, data_conversion, estimate_network, estimator_registry, estimators, extraction, frequencies, gimme, hon, honem, hypa, mcml, mlvar, mogen, permutation_test, utils, temporal_network, velocity_tna)
 - R/Saqrlab-package.R: Fixed .onLoad — removed .register_builtin_estimators() call (function now in Nestimate)

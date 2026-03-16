@@ -3,20 +3,26 @@
 ## Completed
 - Removed 20 computation files from Saqrlab R/ (moved to Nestimate in previous session)
 - Fixed .onLoad in Saqrlab-package.R (removed .register_builtin_estimators() call)
-- Rewrote simulate_data.R with complexity + batch generation features
-- 169 simulate_data tests pass
+- Rewrote simulate_data.R with complexity + batch generation features (169 tests pass)
+- Added simulate_latent.R: simulate_lpa(), simulate_lca(), simulate_regression(), simulate_fa()
+- Refactored all four to return list(data, params) — JSON-serializable, accessible to JS CLI apps
+- 75 simulate_latent tests pass; 244 total simulation tests pass
 
 ## Current State
-- Saqrlab R/ now only contains simulation, testing, verification, data resource files
-- simulate_data() fully enhanced: complexity parameter, n_batch parameter, type="batch" wildcard
-- Package loads cleanly (after .onLoad fix)
-- NAMESPACE still exports many functions that are now only in Nestimate (will cause warnings but not errors during devtools::load_all)
+- simulate_data.R: 169 tests pass (complexity + batch)
+- simulate_latent.R: 75 tests pass (LPA, LCA, regression, FA with ground-truth params)
+- All functions return list(data, params) — no attr() anywhere
+- docs/simulate_data-cookbook.md fully updated with all four functions + CLI export example
+- NAMESPACE still exports functions now only in Nestimate (warnings on load_all, will error on check)
 - Nestimate: standalone, not yet git repo, not yet wired as dependency
 
 ## Key Decisions
-- `n_batch` placed after `...` in simulate_data() signature to prevent R partial matching of `n=` (common structural override)
-- complexity = "clean" default preserves backward compatibility for all existing tests
-- Auto-complexity uses Gumbel-max trick for weighted no-replacement sampling (vectorized, no for loop)
+- list(data, params) return instead of data.frame + attr(): params visible to JSON/CLI/JS consumers
+- simulate_fa uses raw eigenvalue clamp for Sigma (not .nearest_pd which normalises to correlation)
+- .nearest_pd() used only for phi (correlation matrix); Sigma gets eigenvalue clamp only
+- simulate_fa validates phi via isSymmetric() + tryCatch(chol(phi))
+- psi auto-computed as 1 - communalities; error if any value <= 0 (over-factored model)
+- sigma_implied stored in params for direct JS-side comparison with estimated covariance
 
 ## Open Issues
 - NAMESPACE exports functions not in Saqrlab (moved to Nestimate) → warnings on load_all, will error on check
