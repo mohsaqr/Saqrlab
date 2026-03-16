@@ -1,4 +1,7 @@
 .DS_Store
+.superpowers/
+Rplots.pdf
+tests/testthat/Rplots.pdf
 .Rhistory
 .RData
 .Ruserdata

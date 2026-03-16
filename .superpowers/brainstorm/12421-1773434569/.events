@@ -1,2 +1,0 @@
-{"type":"click","text":"A\n    \n      Yes, add bubble-set edges\n      Add this as an optional layer (e.g., render_edges = \"bubbles\"). More complex to implement but visually powerful.","choice":"yes-bubbles","id":null,"timestamp":1773438322844}
-{"type":"click","text":"B\n    \n      No, keep it clean — lines only\n      Stick with the plan: variable-width lines + endpoint labels + highlight. No edge rendering at all.","choice":"no-bubbles","id":null,"timestamp":1773438324269}
