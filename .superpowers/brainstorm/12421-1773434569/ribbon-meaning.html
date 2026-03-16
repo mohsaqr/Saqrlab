@@ -1,0 +1,97 @@
+<h2>What Should the Ribbon Encode?</h2>
+<p class="subtitle">The ribbon width around each vertex's trajectory line — statistical meaning or pure aesthetics?</p>
+
+<div class="split">
+
+  <div class="card" data-choice="informational" onclick="toggleSelect(this)" style="flex:1;">
+    <div class="card-image" style="background:#fafafa; padding:24px; min-height:200px; display:flex; align-items:center; justify-content:center;">
+      <svg width="260" height="160" viewBox="0 0 260 160">
+        <!-- Axis -->
+        <line x1="30" y1="140" x2="250" y2="140" stroke="#d1d5db" stroke-width="1"/>
+        <line x1="30" y1="10" x2="30" y2="140" stroke="#d1d5db" stroke-width="1"/>
+        <text x="140" y="156" font-size="9" fill="#6b7280" text-anchor="middle">Time</text>
+        <text x="12" y="80" font-size="9" fill="#6b7280" text-anchor="middle" transform="rotate(-90,12,80)">Eigenvector</text>
+
+        <!-- CI ribbon — wide where uncertain, narrow where confident -->
+        <path d="M40,95 C70,80 100,55 140,50 C180,45 210,60 240,55
+                 L240,75 C210,82 180,70 140,78 C100,85 70,108 40,120 Z"
+              fill="#2563eb" fill-opacity="0.12"/>
+        <path d="M40,100 C70,88 100,62 140,58 C180,52 210,65 240,60
+                 L240,70 C210,76 180,62 140,70 C100,78 70,102 40,115 Z"
+              fill="#2563eb" fill-opacity="0.15"/>
+        <!-- Central line -->
+        <path d="M40,107 C70,94 100,68 140,64 C180,58 210,70 240,65"
+              fill="none" stroke="#2563eb" stroke-width="2"/>
+
+        <!-- Second vertex — tighter CI -->
+        <path d="M40,42 C70,48 100,58 140,80 C180,95 210,100 240,108
+                 L240,118 C210,112 180,107 140,92 C100,70 70,58 40,52 Z"
+              fill="#dc2626" fill-opacity="0.10"/>
+        <path d="M40,44 C70,50 100,62 140,83 C180,97 210,102 240,110
+                 L240,116 C210,110 180,105 140,90 C100,68 70,56 40,50 Z"
+              fill="#dc2626" fill-opacity="0.12"/>
+        <path d="M40,47 C70,53 100,65 140,86 C180,100 210,106 240,113"
+              fill="none" stroke="#dc2626" stroke-width="2"/>
+
+        <!-- Annotation -->
+        <line x1="95" y1="55" x2="95" y2="85" stroke="#6b7280" stroke-width="0.5" stroke-dasharray="2,2"/>
+        <text x="98" y="50" font-size="7" fill="#6b7280">narrow = confident</text>
+        <line x1="200" y1="55" x2="200" y2="78" stroke="#6b7280" stroke-width="0.5" stroke-dasharray="2,2"/>
+        <text x="178" y="50" font-size="7" fill="#6b7280">wide = uncertain</text>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>A. Informational Ribbons</h3>
+      <p>Ribbon width = bootstrap CI or rolling variability. Narrow where the metric is stable, wide where uncertain. Carries real statistical meaning you can interpret.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="aesthetic" onclick="toggleSelect(this)" style="flex:1;">
+    <div class="card-image" style="background:#fafafa; padding:24px; min-height:200px; display:flex; align-items:center; justify-content:center;">
+      <svg width="260" height="160" viewBox="0 0 260 160">
+        <!-- Axis -->
+        <line x1="30" y1="140" x2="250" y2="140" stroke="#d1d5db" stroke-width="1"/>
+        <line x1="30" y1="10" x2="30" y2="140" stroke="#d1d5db" stroke-width="1"/>
+        <text x="140" y="156" font-size="9" fill="#6b7280" text-anchor="middle">Time</text>
+        <text x="12" y="80" font-size="9" fill="#6b7280" text-anchor="middle" transform="rotate(-90,12,80)">Eigenvector</text>
+
+        <!-- Uniform gradient fade below line 1 -->
+        <defs>
+          <linearGradient id="fade1" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#2563eb" stop-opacity="0.25"/>
+            <stop offset="100%" stop-color="#2563eb" stop-opacity="0"/>
+          </linearGradient>
+          <linearGradient id="fade2" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#dc2626" stop-opacity="0.25"/>
+            <stop offset="100%" stop-color="#dc2626" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+
+        <!-- Glow area under line 1 — fixed width -->
+        <path d="M40,65 C70,55 100,40 140,35 C180,30 210,42 240,38
+                 L240,78 C210,82 180,70 140,75 C100,80 70,95 40,105 Z"
+              fill="url(#fade1)"/>
+        <path d="M40,65 C70,55 100,40 140,35 C180,30 210,42 240,38"
+              fill="none" stroke="#2563eb" stroke-width="2.5"/>
+
+        <!-- Glow area under line 2 -->
+        <path d="M40,95 C70,100 100,110 140,105 C180,98 210,108 240,112
+                 L240,140 C210,140 180,135 140,138 C100,140 70,135 40,130 Z"
+              fill="url(#fade2)"/>
+        <path d="M40,95 C70,100 100,110 140,105 C180,98 210,108 240,112"
+              fill="none" stroke="#dc2626" stroke-width="2.5"/>
+
+        <!-- Endpoint labels -->
+        <circle cx="240" cy="38" r="3" fill="#2563eb"/>
+        <circle cx="240" cy="112" r="3" fill="#dc2626"/>
+        <text x="236" y="32" font-size="8" fill="#2563eb" text-anchor="end" font-weight="600">A</text>
+        <text x="236" y="126" font-size="8" fill="#dc2626" text-anchor="end" font-weight="600">B</text>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>B. Aesthetic Ribbons</h3>
+      <p>Fixed-width gradient fade around each line. No statistical meaning — purely visual weight. Makes lines distinguishable, gives depth and polish. Simpler to implement.</p>
+    </div>
+  </div>
+
+</div>

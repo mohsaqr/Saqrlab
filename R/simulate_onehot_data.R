@@ -1,3 +1,24 @@
+# Internal helper: convert long-format Action column to one-hot columns.
+# Equivalent to Nestimate::action_to_onehot(); kept here to avoid dependency.
+.action_to_onehot <- function(data, action_col = "Action", states = NULL,
+                               drop_action = TRUE, sort_states = FALSE,
+                               prefix = "") {
+  stopifnot(is.data.frame(data))
+  stopifnot(action_col %in% names(data))
+  if (is.null(states)) {
+    states <- unique(data[[action_col]])
+    states <- states[!is.na(states)]
+  }
+  if (sort_states) states <- sort(states)
+  col_names    <- paste0(prefix, states)
+  new_cols     <- vapply(states, function(s) as.integer(data[[action_col]] == s),
+                         integer(nrow(data)))
+  colnames(new_cols) <- col_names
+  data         <- cbind(data, as.data.frame(new_cols))
+  if (drop_action) data[[action_col]] <- NULL
+  data
+}
+
 #' Simulate One-Hot Encoded Sequence Data
 #'
 #' @description
@@ -23,7 +44,7 @@
 #'
 #' @details
 #' This function internally calls \code{\link{simulate_long_data}} to generate
-#' the base data, then applies \code{\link{action_to_onehot}} to convert the
+#' the base data, then applies an internal one-hot helper to convert the
 #' Action column to one-hot encoded columns.
 #'
 #' Each row will have exactly one state column with value 1, and all others
@@ -58,7 +79,7 @@
 #'
 #' @seealso
 #' \code{\link{simulate_long_data}} for categorical Action format,
-#' \code{\link{action_to_onehot}} for converting existing long data,
+#' \code{Nestimate::action_to_onehot()} for converting existing long data,
 #' \code{\link{simulate_sequences}} for generating wide-format sequences.
 #'
 #' @export
@@ -116,7 +137,7 @@ simulate_onehot_data <- function(
   )
 
   # Convert to one-hot encoding
-  result <- action_to_onehot(
+  result <- .action_to_onehot(
     data = long_data,
     action_col = "Action",
     states = NULL,

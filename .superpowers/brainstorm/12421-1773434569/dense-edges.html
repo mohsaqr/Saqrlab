@@ -1,0 +1,254 @@
+<h2>Dense Networks: How to Show Edges Without Chaos</h2>
+<p class="subtitle">10 nodes, ~30 edges per time bin. Individual edge lines won't work. Here are approaches that survive density.</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="degree-dots" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#ffffff; padding:20px; min-height:240px; display:flex; align-items:center; justify-content:center;">
+      <svg width="320" height="210" viewBox="0 0 320 210">
+        <text x="160" y="14" font-size="10" fill="#6b7280" text-anchor="middle">Dot Size = Degree at Each Time</text>
+        <line x1="40" y1="190" x2="290" y2="190" stroke="#e5e7eb" stroke-width="0.5"/>
+        <line x1="40" y1="25" x2="40" y2="190" stroke="#e5e7eb" stroke-width="0.5"/>
+
+        <!-- Node A: high centrality, high degree throughout -->
+        <path d="M60,45 L120,50 L180,42 L240,48 L280,40" fill="none" stroke="#0072B2" stroke-width="1.5" opacity="0.7"/>
+        <circle cx="60" cy="45" r="7" fill="#0072B2" opacity="0.25"/><circle cx="60" cy="45" r="2" fill="#0072B2"/>
+        <circle cx="120" cy="50" r="8" fill="#0072B2" opacity="0.25"/><circle cx="120" cy="50" r="2" fill="#0072B2"/>
+        <circle cx="180" cy="42" r="6" fill="#0072B2" opacity="0.25"/><circle cx="180" cy="42" r="2" fill="#0072B2"/>
+        <circle cx="240" cy="48" r="9" fill="#0072B2" opacity="0.25"/><circle cx="240" cy="48" r="2" fill="#0072B2"/>
+        <circle cx="280" cy="40" r="7" fill="#0072B2" opacity="0.25"/><circle cx="280" cy="40" r="2" fill="#0072B2"/>
+        <text x="288" y="44" font-size="8" fill="#0072B2" font-weight="600">A</text>
+
+        <!-- Node B: volatile degree -->
+        <path d="M60,85 L120,75 L180,95 L240,70 L280,88" fill="none" stroke="#D55E00" stroke-width="1.5" opacity="0.7"/>
+        <circle cx="60" cy="85" r="4" fill="#D55E00" opacity="0.25"/><circle cx="60" cy="85" r="2" fill="#D55E00"/>
+        <circle cx="120" cy="75" r="6" fill="#D55E00" opacity="0.25"/><circle cx="120" cy="75" r="2" fill="#D55E00"/>
+        <circle cx="180" cy="95" r="3" fill="#D55E00" opacity="0.25"/><circle cx="180" cy="95" r="2" fill="#D55E00"/>
+        <circle cx="240" cy="70" r="8" fill="#D55E00" opacity="0.25"/><circle cx="240" cy="70" r="2" fill="#D55E00"/>
+        <circle cx="280" cy="88" r="5" fill="#D55E00" opacity="0.25"/><circle cx="280" cy="88" r="2" fill="#D55E00"/>
+        <text x="288" y="92" font-size="8" fill="#D55E00" font-weight="600">B</text>
+
+        <!-- Node C: stable mid -->
+        <path d="M60,130 L120,125 L180,135 L240,128 L280,132" fill="none" stroke="#009E73" stroke-width="1.5" opacity="0.7"/>
+        <circle cx="60" cy="130" r="5" fill="#009E73" opacity="0.25"/><circle cx="60" cy="130" r="2" fill="#009E73"/>
+        <circle cx="120" cy="125" r="5" fill="#009E73" opacity="0.25"/><circle cx="120" cy="125" r="2" fill="#009E73"/>
+        <circle cx="180" cy="135" r="4" fill="#009E73" opacity="0.25"/><circle cx="180" cy="135" r="2" fill="#009E73"/>
+        <circle cx="240" cy="128" r="6" fill="#009E73" opacity="0.25"/><circle cx="240" cy="128" r="2" fill="#009E73"/>
+        <circle cx="280" cy="132" r="5" fill="#009E73" opacity="0.25"/><circle cx="280" cy="132" r="2" fill="#009E73"/>
+        <text x="288" y="136" font-size="8" fill="#009E73" font-weight="600">C</text>
+
+        <!-- Node D: low, few edges -->
+        <path d="M60,170 L120,168 L180,172 L240,165 L280,170" fill="none" stroke="#E69F00" stroke-width="1.5" opacity="0.7"/>
+        <circle cx="60" cy="170" r="2.5" fill="#E69F00" opacity="0.25"/><circle cx="60" cy="170" r="1.5" fill="#E69F00"/>
+        <circle cx="120" cy="168" r="3" fill="#E69F00" opacity="0.25"/><circle cx="120" cy="168" r="1.5" fill="#E69F00"/>
+        <circle cx="180" cy="172" r="2" fill="#E69F00" opacity="0.25"/><circle cx="180" cy="172" r="1.5" fill="#E69F00"/>
+        <circle cx="240" cy="165" r="4" fill="#E69F00" opacity="0.25"/><circle cx="240" cy="165" r="1.5" fill="#E69F00"/>
+        <circle cx="280" cy="170" r="2.5" fill="#E69F00" opacity="0.25"/><circle cx="280" cy="170" r="1.5" fill="#E69F00"/>
+        <text x="288" y="174" font-size="8" fill="#E69F00" font-weight="600">D</text>
+
+        <!-- Size legend -->
+        <circle cx="70" cy="200" r="3" fill="#6b7280" opacity="0.2"/><circle cx="70" cy="200" r="1.5" fill="#6b7280"/>
+        <text x="78" y="203" font-size="7" fill="#9ca3af">low deg</text>
+        <circle cx="120" cy="200" r="6" fill="#6b7280" opacity="0.2"/><circle cx="120" cy="200" r="1.5" fill="#6b7280"/>
+        <text x="130" y="203" font-size="7" fill="#9ca3af">mid</text>
+        <circle cx="165" cy="200" r="9" fill="#6b7280" opacity="0.2"/><circle cx="165" cy="200" r="1.5" fill="#6b7280"/>
+        <text x="178" y="203" font-size="7" fill="#9ca3af">high deg</text>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>A. Degree as Dot Size</h3>
+      <p>No individual edges drawn. Each node gets a dot at each time point sized by its degree. You see <em>how connected</em> each node is without drawing any edge lines. Scales to any density.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="highlight-node" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#ffffff; padding:20px; min-height:240px; display:flex; align-items:center; justify-content:center;">
+      <svg width="320" height="210" viewBox="0 0 320 210">
+        <text x="160" y="14" font-size="10" fill="#6b7280" text-anchor="middle">Highlight One Node's Edges</text>
+        <line x1="40" y1="190" x2="290" y2="190" stroke="#e5e7eb" stroke-width="0.5"/>
+        <line x1="40" y1="25" x2="40" y2="190" stroke="#e5e7eb" stroke-width="0.5"/>
+
+        <!-- Background nodes (faded) -->
+        <path d="M60,130 L120,125 L180,135 L240,128 L280,132" fill="none" stroke="#009E73" stroke-width="1.5" opacity="0.15"/>
+        <path d="M60,170 L120,168 L180,172 L240,165 L280,170" fill="none" stroke="#E69F00" stroke-width="1.5" opacity="0.15"/>
+        <text x="288" y="136" font-size="8" fill="#009E73" opacity="0.3">C</text>
+        <text x="288" y="174" font-size="8" fill="#E69F00" opacity="0.3">D</text>
+
+        <!-- Highlighted node A (full color, bold) -->
+        <path d="M60,45 L120,50 L180,42 L240,48 L280,40" fill="none" stroke="#0072B2" stroke-width="2.5"/>
+        <text x="288" y="44" font-size="9" fill="#0072B2" font-weight="700">A</text>
+
+        <!-- A's neighbors shown at full opacity -->
+        <path d="M60,85 L120,75 L180,95 L240,70 L280,88" fill="none" stroke="#D55E00" stroke-width="1.5" opacity="0.7"/>
+        <text x="288" y="92" font-size="8" fill="#D55E00" font-weight="600">B</text>
+
+        <!-- Edges from A only: A-B at t2, A-C at t3, A-B at t4 -->
+        <path d="M120,50 C108,62 108,62 120,75" fill="none" stroke="#0072B2" stroke-width="1" opacity="0.5"/>
+        <path d="M180,42 C165,88 165,88 180,135" fill="none" stroke="#0072B2" stroke-width="1" opacity="0.5"/>
+        <path d="M240,48 C225,58 225,58 240,70" fill="none" stroke="#0072B2" stroke-width="1" opacity="0.5"/>
+
+        <!-- Dots on A at edge times -->
+        <circle cx="120" cy="50" r="3.5" fill="#0072B2"/>
+        <circle cx="180" cy="42" r="3.5" fill="#0072B2"/>
+        <circle cx="240" cy="48" r="3.5" fill="#0072B2"/>
+
+        <!-- "highlight = A" annotation -->
+        <rect x="55" y="195" width="80" height="14" rx="3" fill="#0072B2" opacity="0.1"/>
+        <text x="95" y="205" font-size="8" fill="#0072B2" text-anchor="middle" font-weight="600">highlight = "A"</text>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>B. Highlight Parameter</h3>
+      <p>User picks a node via <code>highlight="A"</code>. That node's trajectory is bold, its neighbors are visible, non-neighbors fade. Edges drawn only for the highlighted node. Works at any density.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="heatmap-strip" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#ffffff; padding:20px; min-height:240px; display:flex; align-items:center; justify-content:center;">
+      <svg width="320" height="210" viewBox="0 0 320 210">
+        <text x="160" y="14" font-size="10" fill="#6b7280" text-anchor="middle">Adjacency Heatmap Strip Below</text>
+
+        <!-- Top: clean lines (compressed) -->
+        <line x1="40" y1="95" x2="290" y2="95" stroke="#e5e7eb" stroke-width="0.5"/>
+        <path d="M60,30 L120,35 L180,28 L240,34 L280,30" fill="none" stroke="#0072B2" stroke-width="1.5"/>
+        <path d="M60,48 L120,42 L180,52 L240,40 L280,48" fill="none" stroke="#D55E00" stroke-width="1.5"/>
+        <path d="M60,65 L120,62 L180,68 L240,64 L280,66" fill="none" stroke="#009E73" stroke-width="1.5"/>
+        <path d="M60,82 L120,80 L180,84 L240,78 L280,82" fill="none" stroke="#E69F00" stroke-width="1.5"/>
+        <text x="288" y="33" font-size="7" fill="#0072B2" font-weight="600">A</text>
+        <text x="288" y="51" font-size="7" fill="#D55E00" font-weight="600">B</text>
+        <text x="288" y="69" font-size="7" fill="#009E73" font-weight="600">C</text>
+        <text x="288" y="85" font-size="7" fill="#E69F00" font-weight="600">D</text>
+
+        <!-- Separator -->
+        <line x1="40" y1="100" x2="290" y2="100" stroke="#d1d5db" stroke-width="1"/>
+        <text x="35" y="107" font-size="7" fill="#9ca3af" text-anchor="end">Edges</text>
+
+        <!-- Heatmap: rows = edge pairs, columns = time bins -->
+        <!-- Row labels on left -->
+        <text x="38" y="117" font-size="6" fill="#6b7280" text-anchor="end">A-B</text>
+        <text x="38" y="130" font-size="6" fill="#6b7280" text-anchor="end">A-C</text>
+        <text x="38" y="143" font-size="6" fill="#6b7280" text-anchor="end">A-D</text>
+        <text x="38" y="156" font-size="6" fill="#6b7280" text-anchor="end">B-C</text>
+        <text x="38" y="169" font-size="6" fill="#6b7280" text-anchor="end">B-D</text>
+        <text x="38" y="182" font-size="6" fill="#6b7280" text-anchor="end">C-D</text>
+
+        <!-- t1 column -->
+        <rect x="52" y="110" width="38" height="11" fill="#1e3a5f" opacity="0.7" rx="1"/>
+        <rect x="52" y="123" width="38" height="11" fill="#1e3a5f" opacity="0.1" rx="1"/>
+        <rect x="52" y="136" width="38" height="11" fill="#1e3a5f" opacity="0.3" rx="1"/>
+        <rect x="52" y="149" width="38" height="11" fill="#1e3a5f" opacity="0.5" rx="1"/>
+        <rect x="52" y="162" width="38" height="11" fill="#1e3a5f" opacity="0.0" rx="1"/>
+        <rect x="52" y="175" width="38" height="11" fill="#1e3a5f" opacity="0.2" rx="1"/>
+        <!-- t2 -->
+        <rect x="92" y="110" width="38" height="11" fill="#1e3a5f" opacity="0.8" rx="1"/>
+        <rect x="92" y="123" width="38" height="11" fill="#1e3a5f" opacity="0.0" rx="1"/>
+        <rect x="92" y="136" width="38" height="11" fill="#1e3a5f" opacity="0.4" rx="1"/>
+        <rect x="92" y="149" width="38" height="11" fill="#1e3a5f" opacity="0.9" rx="1"/>
+        <rect x="92" y="162" width="38" height="11" fill="#1e3a5f" opacity="0.1" rx="1"/>
+        <rect x="92" y="175" width="38" height="11" fill="#1e3a5f" opacity="0.6" rx="1"/>
+        <!-- t3 -->
+        <rect x="132" y="110" width="38" height="11" fill="#1e3a5f" opacity="0.2" rx="1"/>
+        <rect x="132" y="123" width="38" height="11" fill="#1e3a5f" opacity="0.8" rx="1"/>
+        <rect x="132" y="136" width="38" height="11" fill="#1e3a5f" opacity="0.5" rx="1"/>
+        <rect x="132" y="149" width="38" height="11" fill="#1e3a5f" opacity="0.3" rx="1"/>
+        <rect x="132" y="162" width="38" height="11" fill="#1e3a5f" opacity="0.7" rx="1"/>
+        <rect x="132" y="175" width="38" height="11" fill="#1e3a5f" opacity="0.0" rx="1"/>
+        <!-- t4 -->
+        <rect x="172" y="110" width="38" height="11" fill="#1e3a5f" opacity="0.5" rx="1"/>
+        <rect x="172" y="123" width="38" height="11" fill="#1e3a5f" opacity="0.3" rx="1"/>
+        <rect x="172" y="136" width="38" height="11" fill="#1e3a5f" opacity="0.0" rx="1"/>
+        <rect x="172" y="149" width="38" height="11" fill="#1e3a5f" opacity="0.6" rx="1"/>
+        <rect x="172" y="162" width="38" height="11" fill="#1e3a5f" opacity="0.9" rx="1"/>
+        <rect x="172" y="175" width="38" height="11" fill="#1e3a5f" opacity="0.8" rx="1"/>
+        <!-- t5 -->
+        <rect x="212" y="110" width="38" height="11" fill="#1e3a5f" opacity="0.9" rx="1"/>
+        <rect x="212" y="123" width="38" height="11" fill="#1e3a5f" opacity="0.1" rx="1"/>
+        <rect x="212" y="136" width="38" height="11" fill="#1e3a5f" opacity="0.4" rx="1"/>
+        <rect x="212" y="149" width="38" height="11" fill="#1e3a5f" opacity="0.2" rx="1"/>
+        <rect x="212" y="162" width="38" height="11" fill="#1e3a5f" opacity="0.5" rx="1"/>
+        <rect x="212" y="175" width="38" height="11" fill="#1e3a5f" opacity="0.3" rx="1"/>
+
+        <!-- Time labels -->
+        <text x="71" y="198" font-size="7" fill="#9ca3af" text-anchor="middle">t1</text>
+        <text x="111" y="198" font-size="7" fill="#9ca3af" text-anchor="middle">t2</text>
+        <text x="151" y="198" font-size="7" fill="#9ca3af" text-anchor="middle">t3</text>
+        <text x="191" y="198" font-size="7" fill="#9ca3af" text-anchor="middle">t4</text>
+        <text x="231" y="198" font-size="7" fill="#9ca3af" text-anchor="middle">t5</text>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>C. Heatmap Strip</h3>
+      <p>Adjacency heatmap aligned below the trajectory plot. Each row is an edge pair, each column a time bin, intensity = edge weight. Reads all edges at a glance without drawing a single line between nodes.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="combine" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#ffffff; padding:20px; min-height:240px; display:flex; align-items:center; justify-content:center;">
+      <svg width="320" height="210" viewBox="0 0 320 210">
+        <text x="160" y="14" font-size="10" fill="#6b7280" text-anchor="middle">Combine: Dots + Highlight + Heatmap</text>
+        <line x1="40" y1="120" x2="290" y2="120" stroke="#e5e7eb" stroke-width="0.5"/>
+
+        <!-- Lines with degree dots, node A highlighted -->
+        <path d="M60,35 L120,40 L180,32 L240,38 L280,30" fill="none" stroke="#0072B2" stroke-width="2.5"/>
+        <circle cx="60" cy="35" r="6" fill="#0072B2" opacity="0.2"/><circle cx="60" cy="35" r="2" fill="#0072B2"/>
+        <circle cx="120" cy="40" r="8" fill="#0072B2" opacity="0.2"/><circle cx="120" cy="40" r="2" fill="#0072B2"/>
+        <circle cx="180" cy="32" r="5" fill="#0072B2" opacity="0.2"/><circle cx="180" cy="32" r="2" fill="#0072B2"/>
+        <circle cx="240" cy="38" r="9" fill="#0072B2" opacity="0.2"/><circle cx="240" cy="38" r="2" fill="#0072B2"/>
+        <circle cx="280" cy="30" r="7" fill="#0072B2" opacity="0.2"/><circle cx="280" cy="30" r="2" fill="#0072B2"/>
+        <text x="288" y="34" font-size="8" fill="#0072B2" font-weight="700">A</text>
+
+        <!-- B (neighbor of A, shown) -->
+        <path d="M60,60 L120,52 L180,65 L240,50 L280,58" fill="none" stroke="#D55E00" stroke-width="1.5" opacity="0.6"/>
+        <text x="288" y="62" font-size="7" fill="#D55E00" font-weight="600">B</text>
+
+        <!-- C, D faded -->
+        <path d="M60,85 L120,82 L180,88 L240,84 L280,86" fill="none" stroke="#009E73" stroke-width="1" opacity="0.15"/>
+        <path d="M60,108 L120,106 L180,110 L240,104 L280,108" fill="none" stroke="#E69F00" stroke-width="1" opacity="0.15"/>
+
+        <!-- A's edges: arcs to B -->
+        <path d="M120,43 C110,47 110,47 120,49" fill="none" stroke="#0072B2" stroke-width="1" opacity="0.4"/>
+        <path d="M240,41 C230,45 230,45 240,47" fill="none" stroke="#0072B2" stroke-width="1" opacity="0.4"/>
+
+        <!-- Separator -->
+        <line x1="40" y1="125" x2="290" y2="125" stroke="#d1d5db" stroke-width="1"/>
+
+        <!-- Mini heatmap for A's edges only -->
+        <text x="38" y="140" font-size="6" fill="#0072B2" text-anchor="end">A-B</text>
+        <text x="38" y="153" font-size="6" fill="#0072B2" text-anchor="end">A-C</text>
+        <text x="38" y="166" font-size="6" fill="#0072B2" text-anchor="end">A-D</text>
+
+        <rect x="52" y="133" width="38" height="10" fill="#0072B2" opacity="0.7" rx="1"/>
+        <rect x="92" y="133" width="38" height="10" fill="#0072B2" opacity="0.9" rx="1"/>
+        <rect x="132" y="133" width="38" height="10" fill="#0072B2" opacity="0.2" rx="1"/>
+        <rect x="172" y="133" width="38" height="10" fill="#0072B2" opacity="0.8" rx="1"/>
+        <rect x="212" y="133" width="38" height="10" fill="#0072B2" opacity="0.5" rx="1"/>
+
+        <rect x="52" y="146" width="38" height="10" fill="#0072B2" opacity="0.1" rx="1"/>
+        <rect x="92" y="146" width="38" height="10" fill="#0072B2" opacity="0.0" rx="1"/>
+        <rect x="132" y="146" width="38" height="10" fill="#0072B2" opacity="0.8" rx="1"/>
+        <rect x="172" y="146" width="38" height="10" fill="#0072B2" opacity="0.3" rx="1"/>
+        <rect x="212" y="146" width="38" height="10" fill="#0072B2" opacity="0.1" rx="1"/>
+
+        <rect x="52" y="159" width="38" height="10" fill="#0072B2" opacity="0.3" rx="1"/>
+        <rect x="92" y="159" width="38" height="10" fill="#0072B2" opacity="0.4" rx="1"/>
+        <rect x="132" y="159" width="38" height="10" fill="#0072B2" opacity="0.5" rx="1"/>
+        <rect x="172" y="159" width="38" height="10" fill="#0072B2" opacity="0.0" rx="1"/>
+        <rect x="212" y="159" width="38" height="10" fill="#0072B2" opacity="0.6" rx="1"/>
+
+        <text x="71" y="180" font-size="7" fill="#9ca3af" text-anchor="middle">t1</text>
+        <text x="111" y="180" font-size="7" fill="#9ca3af" text-anchor="middle">t2</text>
+        <text x="151" y="180" font-size="7" fill="#9ca3af" text-anchor="middle">t3</text>
+        <text x="191" y="180" font-size="7" fill="#9ca3af" text-anchor="middle">t4</text>
+        <text x="231" y="180" font-size="7" fill="#9ca3af" text-anchor="middle">t5</text>
+
+        <rect x="140" y="190" width="90" height="14" rx="3" fill="#0072B2" opacity="0.1"/>
+        <text x="185" y="200" font-size="7" fill="#0072B2" text-anchor="middle" font-weight="600">highlight = "A"</text>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>D. Combine All Three</h3>
+      <p>Degree dots on trajectories + highlight parameter to focus one node + heatmap strip of that node's edges below. Layered detail: overview at a glance, detail on demand.</p>
+    </div>
+  </div>
+
+</div>

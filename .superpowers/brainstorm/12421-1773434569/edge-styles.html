@@ -1,0 +1,191 @@
+<h2>How Should Edges Appear at Each Time Point?</h2>
+<p class="subtitle">Showing 4 nodes over 5 time bins. Edges exist between some pairs at some times.</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="connectors" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#ffffff; padding:20px; min-height:220px; display:flex; align-items:center; justify-content:center;">
+      <svg width="300" height="200" viewBox="0 0 300 200">
+        <text x="150" y="14" font-size="10" fill="#6b7280" text-anchor="middle">Vertical Connectors</text>
+        <!-- Grid -->
+        <line x1="40" y1="180" x2="270" y2="180" stroke="#e5e7eb" stroke-width="0.5"/>
+        <line x1="40" y1="25" x2="40" y2="180" stroke="#e5e7eb" stroke-width="0.5"/>
+
+        <!-- 4 lines -->
+        <path d="M60,45 L110,55 L160,40 L210,50 L260,42" fill="none" stroke="#0072B2" stroke-width="2"/>
+        <path d="M60,85 L110,95 L160,80 L210,100 L260,90" fill="none" stroke="#D55E00" stroke-width="2"/>
+        <path d="M60,125 L110,110 L160,130 L210,120 L260,135" fill="none" stroke="#009E73" stroke-width="2"/>
+        <path d="M60,160 L110,155 L160,165 L210,150 L260,158" fill="none" stroke="#E69F00" stroke-width="2"/>
+
+        <!-- Vertical edge connectors at t2: A-B, B-C -->
+        <line x1="110" y1="55" x2="110" y2="95" stroke="#9ca3af" stroke-width="1" stroke-dasharray="3,2"/>
+        <line x1="110" y1="95" x2="110" y2="110" stroke="#9ca3af" stroke-width="1" stroke-dasharray="3,2"/>
+        <!-- At t3: A-C -->
+        <line x1="160" y1="40" x2="160" y2="130" stroke="#9ca3af" stroke-width="1" stroke-dasharray="3,2"/>
+        <!-- At t4: B-D, C-D -->
+        <line x1="210" y1="100" x2="210" y2="150" stroke="#9ca3af" stroke-width="1" stroke-dasharray="3,2"/>
+        <line x1="210" y1="120" x2="210" y2="150" stroke="#9ca3af" stroke-width="1" stroke-dasharray="3,2"/>
+        <!-- At t5: A-B -->
+        <line x1="260" y1="42" x2="260" y2="90" stroke="#9ca3af" stroke-width="1" stroke-dasharray="3,2"/>
+
+        <!-- Labels -->
+        <text x="268" y="40" font-size="8" fill="#0072B2" font-weight="600">A</text>
+        <text x="268" y="88" font-size="8" fill="#D55E00" font-weight="600">B</text>
+        <text x="268" y="138" font-size="8" fill="#009E73" font-weight="600">C</text>
+        <text x="268" y="162" font-size="8" fill="#E69F00" font-weight="600">D</text>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>A. Vertical Connectors</h3>
+      <p>Dashed vertical lines between connected nodes at each time bin. Simple, but gets noisy with many edges. Current implementation uses this.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="dots-arcs" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#ffffff; padding:20px; min-height:220px; display:flex; align-items:center; justify-content:center;">
+      <svg width="300" height="200" viewBox="0 0 300 200">
+        <text x="150" y="14" font-size="10" fill="#6b7280" text-anchor="middle">Dots + Curved Arcs</text>
+        <line x1="40" y1="180" x2="270" y2="180" stroke="#e5e7eb" stroke-width="0.5"/>
+        <line x1="40" y1="25" x2="40" y2="180" stroke="#e5e7eb" stroke-width="0.5"/>
+
+        <!-- 4 lines -->
+        <path d="M60,45 L110,55 L160,40 L210,50 L260,42" fill="none" stroke="#0072B2" stroke-width="2"/>
+        <path d="M60,85 L110,95 L160,80 L210,100 L260,90" fill="none" stroke="#D55E00" stroke-width="2"/>
+        <path d="M60,125 L110,110 L160,130 L210,120 L260,135" fill="none" stroke="#009E73" stroke-width="2"/>
+        <path d="M60,160 L110,155 L160,165 L210,150 L260,158" fill="none" stroke="#E69F00" stroke-width="2"/>
+
+        <!-- Dots at each time point where edges exist -->
+        <!-- t2: A-B, B-C -->
+        <circle cx="110" cy="55" r="3.5" fill="#0072B2"/>
+        <circle cx="110" cy="95" r="3.5" fill="#D55E00"/>
+        <circle cx="110" cy="110" r="3.5" fill="#009E73"/>
+        <!-- Arc A-B at t2 -->
+        <path d="M110,58 C100,75 100,75 110,92" fill="none" stroke="#9ca3af" stroke-width="1" opacity="0.6"/>
+        <!-- Arc B-C at t2 -->
+        <path d="M110,98 C102,104 102,104 110,107" fill="none" stroke="#9ca3af" stroke-width="1" opacity="0.6"/>
+
+        <!-- t3: A-C -->
+        <circle cx="160" cy="40" r="3.5" fill="#0072B2"/>
+        <circle cx="160" cy="130" r="3.5" fill="#009E73"/>
+        <path d="M160,43 C145,85 145,85 160,127" fill="none" stroke="#9ca3af" stroke-width="1" opacity="0.6"/>
+
+        <!-- t4: B-D, C-D -->
+        <circle cx="210" cy="100" r="3.5" fill="#D55E00"/>
+        <circle cx="210" cy="120" r="3.5" fill="#009E73"/>
+        <circle cx="210" cy="150" r="3.5" fill="#E69F00"/>
+        <path d="M210,103 C198,125 198,125 210,147" fill="none" stroke="#9ca3af" stroke-width="1" opacity="0.6"/>
+        <path d="M210,123 C200,135 200,135 210,147" fill="none" stroke="#9ca3af" stroke-width="1" opacity="0.6"/>
+
+        <!-- t5: A-B -->
+        <circle cx="260" cy="42" r="3.5" fill="#0072B2"/>
+        <circle cx="260" cy="90" r="3.5" fill="#D55E00"/>
+        <path d="M260,45 C248,66 248,66 260,87" fill="none" stroke="#9ca3af" stroke-width="1" opacity="0.6"/>
+
+        <!-- Labels -->
+        <text x="268" y="40" font-size="8" fill="#0072B2" font-weight="600">A</text>
+        <text x="268" y="88" font-size="8" fill="#D55E00" font-weight="600">B</text>
+        <text x="268" y="138" font-size="8" fill="#009E73" font-weight="600">C</text>
+        <text x="268" y="162" font-size="8" fill="#E69F00" font-weight="600">D</text>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>B. Dots + Curved Arcs</h3>
+      <p>Nodes become visible dots at time points where they have edges. Curved arcs bow outward to connect pairs. More expressive than straight verticals.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="shaded-bands" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#ffffff; padding:20px; min-height:220px; display:flex; align-items:center; justify-content:center;">
+      <svg width="300" height="200" viewBox="0 0 300 200">
+        <text x="150" y="14" font-size="10" fill="#6b7280" text-anchor="middle">Shaded Bands Between Connected Pairs</text>
+        <line x1="40" y1="180" x2="270" y2="180" stroke="#e5e7eb" stroke-width="0.5"/>
+        <line x1="40" y1="25" x2="40" y2="180" stroke="#e5e7eb" stroke-width="0.5"/>
+
+        <!-- Shaded band A-B at t2 (between time columns) -->
+        <path d="M85,50 L135,47 L135,87 L85,90 Z" fill="#64748b" fill-opacity="0.06"/>
+        <!-- Shaded band B-C at t2 -->
+        <path d="M85,90 L135,87 L135,120 L85,118 Z" fill="#64748b" fill-opacity="0.06"/>
+        <!-- Shaded band A-C at t3 -->
+        <path d="M135,47 L185,45 L185,135 L135,120 Z" fill="#64748b" fill-opacity="0.06"/>
+        <!-- Shaded band B-D at t4 -->
+        <path d="M185,95 L235,88 L235,156 L185,155 Z" fill="#64748b" fill-opacity="0.06"/>
+        <!-- Shaded band C-D at t4 -->
+        <path d="M185,125 L235,130 L235,156 L185,155 Z" fill="#64748b" fill-opacity="0.06"/>
+        <!-- Shaded band A-B at t5 -->
+        <path d="M235,44 L260,42 L260,90 L235,88 Z" fill="#64748b" fill-opacity="0.06"/>
+
+        <!-- 4 lines on top -->
+        <path d="M60,45 L110,55 L160,40 L210,50 L260,42" fill="none" stroke="#0072B2" stroke-width="2"/>
+        <path d="M60,85 L110,95 L160,80 L210,100 L260,90" fill="none" stroke="#D55E00" stroke-width="2"/>
+        <path d="M60,125 L110,110 L160,130 L210,120 L260,135" fill="none" stroke="#009E73" stroke-width="2"/>
+        <path d="M60,160 L110,155 L160,165 L210,150 L260,158" fill="none" stroke="#E69F00" stroke-width="2"/>
+
+        <!-- Labels -->
+        <text x="268" y="40" font-size="8" fill="#0072B2" font-weight="600">A</text>
+        <text x="268" y="88" font-size="8" fill="#D55E00" font-weight="600">B</text>
+        <text x="268" y="138" font-size="8" fill="#009E73" font-weight="600">C</text>
+        <text x="268" y="162" font-size="8" fill="#E69F00" font-weight="600">D</text>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>C. Shaded Bands</h3>
+      <p>Subtle filled regions between connected node trajectories during time intervals when the edge exists. Shows connection duration, not just single time points.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="mini-networks" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#ffffff; padding:20px; min-height:220px; display:flex; align-items:center; justify-content:center;">
+      <svg width="300" height="200" viewBox="0 0 300 200">
+        <text x="150" y="14" font-size="10" fill="#6b7280" text-anchor="middle">Mini Network Snapshots Below</text>
+        <line x1="40" y1="120" x2="270" y2="120" stroke="#d1d5db" stroke-width="0.5"/>
+        <line x1="40" y1="25" x2="40" y2="120" stroke="#e5e7eb" stroke-width="0.5"/>
+
+        <!-- 4 compressed lines in top half -->
+        <path d="M60,40 L110,48 L160,38 L210,44 L260,40" fill="none" stroke="#0072B2" stroke-width="1.5"/>
+        <path d="M60,60 L110,66 L160,58 L210,68 L260,62" fill="none" stroke="#D55E00" stroke-width="1.5"/>
+        <path d="M60,82 L110,76 L160,84 L210,80 L260,86" fill="none" stroke="#009E73" stroke-width="1.5"/>
+        <path d="M60,100 L110,98 L160,104 L210,96 L260,100" fill="none" stroke="#E69F00" stroke-width="1.5"/>
+
+        <!-- Labels -->
+        <text x="268" y="42" font-size="7" fill="#0072B2" font-weight="600">A</text>
+        <text x="268" y="64" font-size="7" fill="#D55E00" font-weight="600">B</text>
+        <text x="268" y="88" font-size="7" fill="#009E73" font-weight="600">C</text>
+        <text x="268" y="102" font-size="7" fill="#E69F00" font-weight="600">D</text>
+
+        <!-- Separator -->
+        <line x1="50" y1="125" x2="270" y2="125" stroke="#e5e7eb" stroke-width="1"/>
+
+        <!-- Mini network at t2 -->
+        <circle cx="85" cy="142" r="4" fill="#0072B2"/><text x="85" y="138" font-size="6" fill="#0072B2" text-anchor="middle">A</text>
+        <circle cx="95" cy="158" r="4" fill="#D55E00"/><text x="102" y="160" font-size="6" fill="#D55E00">B</text>
+        <circle cx="75" cy="162" r="4" fill="#009E73"/><text x="68" y="160" font-size="6" fill="#009E73">C</text>
+        <circle cx="85" cy="175" r="4" fill="#E69F00"/><text x="85" y="186" font-size="6" fill="#E69F00" text-anchor="middle">D</text>
+        <line x1="85" y1="146" x2="95" y2="154" stroke="#9ca3af" stroke-width="0.8"/>
+        <line x1="95" y1="158" x2="75" y2="162" stroke="#9ca3af" stroke-width="0.8"/>
+        <text x="85" y="196" font-size="7" fill="#9ca3af" text-anchor="middle">t2</text>
+
+        <!-- Mini network at t3 -->
+        <circle cx="155" cy="142" r="4" fill="#0072B2"/>
+        <circle cx="165" cy="158" r="4" fill="#D55E00"/>
+        <circle cx="145" cy="162" r="4" fill="#009E73"/>
+        <circle cx="155" cy="175" r="4" fill="#E69F00"/>
+        <line x1="155" y1="146" x2="145" y2="158" stroke="#9ca3af" stroke-width="0.8"/>
+        <text x="155" y="196" font-size="7" fill="#9ca3af" text-anchor="middle">t3</text>
+
+        <!-- Mini network at t4 -->
+        <circle cx="225" cy="142" r="4" fill="#0072B2"/>
+        <circle cx="235" cy="158" r="4" fill="#D55E00"/>
+        <circle cx="215" cy="162" r="4" fill="#009E73"/>
+        <circle cx="225" cy="175" r="4" fill="#E69F00"/>
+        <line x1="235" y1="158" x2="225" y2="171" stroke="#9ca3af" stroke-width="0.8"/>
+        <line x1="215" y1="166" x2="225" y2="171" stroke="#9ca3af" stroke-width="0.8"/>
+        <text x="225" y="196" font-size="7" fill="#9ca3af" text-anchor="middle">t4</text>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>D. Mini Network Snapshots</h3>
+      <p>Small network graph aligned below each time bin. Shows the actual topology. Clear but takes vertical space and compresses the main plot.</p>
+    </div>
+  </div>
+
+</div>
