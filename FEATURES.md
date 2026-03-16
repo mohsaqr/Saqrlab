@@ -30,7 +30,12 @@
 - **build_hypa()** — HYPA path anomaly detection (LaRock et al. 2020); multi-hypergeometric null model on k-th order De Bruijn graphs; iterative proportional fitting for propensity matrix; per-edge p-values for over/under-represented paths
 
 ## Data Simulation
-- **simulate_data()** — 7 dataset types: ttest, anova, correlation, clusters, factor_analysis, prediction, mlvar; seed-driven structural variation
+- **simulate_data()** — 7 dataset types: ttest, anova, correlation, clusters, factor_analysis, prediction, mlvar; 11 complexity cases (na, outliers, ties, duplicates, constant_col, all_na_col, tiny_n, heavy_tailed, heteroscedastic, extreme_imbalance, multicollinear); batch generation
+- **simulate_lpa()** — LPA data with explicit profile means/SDs matrix; list(data, params) return
+- **simulate_lca()** — LCA data with explicit item response probability matrix; list(data, params) return
+- **simulate_regression()** — regression data with known named coefficients; list(data, params) return
+- **simulate_fa()** — factor analysis data from explicit loadings/phi/psi; sigma_implied in params; list(data, params) return
+- **simulate_seq_clusters()** — Markov chain sequences with K known-cluster transition matrices; explicit or auto mode; default n_states=10; list(data, params) return
 
 ## Visualization
 - All S3 classes have print/summary/plot methods
