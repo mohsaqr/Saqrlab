@@ -608,6 +608,132 @@ r3$params$phi   # factor correlation matrix
 
 ---
 
+### `simulate_seq_clusters()` — Sequence Cluster Analysis
+
+Generates wide-format Markov chain sequences where each row belongs to one of K clusters, each driven by its own transition matrix. Designed to test sequence clustering methods for correct recovery of cluster assignments and transition dynamics.
+
+```r
+simulate_seq_clusters(trans_list = NULL, props = NULL, n = 300, seq_length = 20,
+                      init_probs = NULL, n_clusters = 3L, n_states = 10L,
+                      states = NULL, seed = NULL)
+```
+
+| Argument | Type | Description |
+|---|---|---|
+| `trans_list` | list of matrices or `NULL` | K square row-stochastic transition matrices with matching `rownames`/`colnames`. `NULL` = auto-generate. |
+| `props` | numeric vector length K | Mixing proportions (normalised internally). Defaults to equal mixing. |
+| `n` | integer | Total number of sequences. Default 300. |
+| `seq_length` | integer | Time points per sequence (columns `T1`…`T{seq_length}`). Default 20. |
+| `init_probs` | vector, list, or `NULL` | Initial state distribution. Shared vector, per-cluster list, or `NULL` (uniform). |
+| `n_clusters` | integer | Number of clusters when `trans_list = NULL`. Default 3. |
+| `n_states` | integer | Number of states when `trans_list = NULL`. Default 10. |
+| `states` | character vector or `NULL` | State names when `trans_list = NULL`. Defaults to `"S1"`, `"S2"`, … |
+| `seed` | integer or NULL | Reproducibility. |
+
+**Returns:** `list(data, params)`.
+- `$data`: `data.frame` with columns `T1`…`T{seq_length}` (character state labels) + `true_cluster` (integer 1…K).
+- `$params`: `list(trans_list, props, init_probs)` — the K matrices, normalised proportions, and per-cluster initial distributions.
+
+#### Explicit mode — supply your own transition matrices
+
+```r
+# Two clusters: cluster 1 stays in A, cluster 2 stays in B
+m1 <- matrix(c(0.9, 0.1, 0.2, 0.8), nrow = 2, byrow = TRUE,
+             dimnames = list(c("A","B"), c("A","B")))
+m2 <- matrix(c(0.2, 0.8, 0.1, 0.9), nrow = 2, byrow = TRUE,
+             dimnames = list(c("A","B"), c("A","B")))
+
+r <- simulate_seq_clusters(trans_list = list(m1, m2), n = 200, seed = 1)
+
+# Sequences and ground truth
+head(r$data[, c("T1","T2","T3","true_cluster")])
+table(r$data$true_cluster)   # ~100 per cluster (equal mixing by default)
+
+# Ground truth parameters
+r$params$trans_list[[1]]     # m1 (cluster 1 matrix)
+r$params$props               # c(0.5, 0.5)
+r$params$init_probs[[1]]     # uniform: c(A=0.5, B=0.5)
+```
+
+#### Auto mode — random matrices, control cluster count and state space size
+
+```r
+# 3 clusters, 5 states (default n_states = 10)
+r <- simulate_seq_clusters(n = 300, n_clusters = 3, n_states = 5, seed = 42)
+
+# State names default to S1..S5
+unique(unlist(r$data[, grep("^T", names(r$data))]))  # "S1" "S2" "S3" "S4" "S5"
+
+# Verify row-stochastic
+vapply(r$params$trans_list, function(m) max(abs(rowSums(m) - 1)), numeric(1))  # all near 0
+```
+
+#### Unequal mixing proportions
+
+```r
+r <- simulate_seq_clusters(trans_list = list(m1, m2, m3),
+                           props = c(0.5, 0.3, 0.2),
+                           n = 3000, seed = 1)
+r$params$props                          # c(0.5, 0.3, 0.2) — stored normalised
+table(r$data$true_cluster) / 3000       # observed counts ≈ props at large n
+```
+
+#### Custom initial state distribution
+
+```r
+# Shared across all clusters
+r <- simulate_seq_clusters(trans_list = list(m1, m2),
+                           init_probs = c(A = 0.8, B = 0.2),
+                           n = 200, seed = 1)
+
+# Per-cluster (list of vectors)
+r <- simulate_seq_clusters(
+  trans_list = list(m1, m2),
+  init_probs = list(c(A = 0.9, B = 0.1), c(A = 0.1, B = 0.9)),
+  n = 200, seed = 1
+)
+r$params$init_probs[[1]]   # c(A=0.9, B=0.1)
+r$params$init_probs[[2]]   # c(A=0.1, B=0.9)
+```
+
+#### Comparing recovered clusters to ground truth
+
+```r
+r <- simulate_seq_clusters(n = 300, n_clusters = 3, n_states = 10, seed = 42)
+
+seq_cols <- grep("^T", names(r$data), value = TRUE)
+# ... run your clustering method on r$data[, seq_cols] → my_clusters ...
+
+# Agreement table
+table(recovered = my_clusters, true = r$data$true_cluster)
+
+# Accuracy (after resolving label permutation)
+mean(my_clusters == r$data$true_cluster)
+```
+
+#### Validation errors
+
+```r
+# Non-square matrix
+bad <- list(matrix(1:6, nrow = 2))
+simulate_seq_clusters(trans_list = bad, n = 10)      # Error: "square"
+
+# Rows don't sum to 1
+bad_mat <- matrix(c(0.5, 0.5, 0.5, 0.1, 0.9, 0.1, 0.3, 0.3, 0.3),
+                  nrow = 3, byrow = TRUE,
+                  dimnames = list(c("A","B","C"), c("A","B","C")))
+simulate_seq_clusters(trans_list = list(bad_mat), n = 10)  # Error: "sum to 1"
+
+# Mixed dimensions
+simulate_seq_clusters(trans_list = list(m2x2, m3x3), n = 10)  # Error: "same"
+
+# No rownames
+bad <- matrix(c(0.7, 0.3, 0.4, 0.6), nrow = 2)
+simulate_seq_clusters(trans_list = list(bad), n = 10)      # Error: "rownames"
+```
+
+---
+
 **What to check:**
 
 | Goal | Assert |
@@ -616,4 +742,7 @@ r3$params$phi   # factor correlation matrix
 | LCA item probs recovered | `abs(tapply(r$data$item1, r$data$true_class, mean) - r$params$item_probs[1,]) < tol` |
 | Regression coefs recovered | `abs(coef(lm(y~., data=r$data)) - r$params$coefs[names(coef(...))]) < tol` |
 | FA covariance recovered | `max(abs(cov(r$data) - r$params$sigma_implied)) < 0.1` (large n) |
-| Ground truth accessible | `r$params$coefs` / `r$params$means` / `r$params$item_probs` / `r$params$sigma_implied` |
+| Seq cluster assignment | `table(recovered = my_clusters, true = r$data$true_cluster)` |
+| Seq cluster proportions | `abs(table(r$data$true_cluster)/n - r$params$props) < 0.05` (large n) |
+| Seq transition matrices | `r$params$trans_list[[k]]` — the exact matrix used for cluster k |
+| Ground truth accessible | `r$params$coefs` / `r$params$means` / `r$params$item_probs` / `r$params$sigma_implied` / `r$params$trans_list` |
