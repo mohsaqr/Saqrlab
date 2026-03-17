@@ -2,28 +2,28 @@
 
 ## Completed This Session
 
-### simulate_seq_clusters() (from previous session context)
-- Implemented `simulate_seq_clusters()` in `R/simulate_latent.R` (TDD, 31 assertions green)
+### simulate_seq_clusters()
+- Implemented in `R/simulate_latent.R` — TDD, 31 assertions green
 - Added full manual to `docs/simulate_data-cookbook.md`
+- Committed: `ce19f35`, `ca8b69e`
 
 ### Post-split structural review and fixes
 - Ran comprehensive structural audit of Saqrlab after Nestimate split
-- **Deleted 18 orphaned test files** for Nestimate functions (active copies in Nestimate; sidelined copies archived there too)
-- **Fixed `simulate_onehot_data()`** — `action_to_onehot()` was moved to Nestimate, breaking the function. Added private `.action_to_onehot()` helper in `simulate_onehot_data.R`
-- **Removed `glasso` and `data.table`** from DESCRIPTION Imports (unused since split)
-- **Updated DESCRIPTION description** to reflect simulation-only scope
-- **Added `.superpowers/` and `Rplots.pdf`** to `.gitignore`
+- Deleted 18 orphaned test files for Nestimate functions
+- Fixed `simulate_onehot_data()` — added private `.action_to_onehot()` helper
+- Removed `glasso` and `data.table` from DESCRIPTION Imports
+- Updated DESCRIPTION description to simulation-only scope
+- Added `.superpowers/` and `Rplots.pdf` to `.gitignore`
+- Committed: `df1bad1`, `518b973`, `9316a08`
 
 ## Current State
 
-### What works
+### Tests
 - 275 simulation tests passing: 169 (simulate_data) + 75 (simulate_latent) + 31 (simulate_seq_clusters)
-- `simulate_onehot_data()` works correctly
-- DESCRIPTION is accurate (no false dependencies)
-- `.gitignore` covers tool artifacts
-- All changes committed and pushed (latest: `518b973`)
+- 0 failures in simulation tests
+- `devtools::test()` still errors on NAMESPACE exports pointing to Nestimate — run `testthat::test_file()` on specific files instead
 
-### Test files in Saqrlab (11 active)
+### Active test files (11)
 ```
 test-global_names.R          test-learning_states.R
 test-simulate_data.R         test-simulate_edge_list.R
@@ -33,25 +33,34 @@ test-simulate_network.R      test-simulate_seq_clusters.R
 test-simulate_sequences.R
 ```
 
-### Still broken / pending
-- `devtools::check()` will warn on NAMESPACE exports pointing to Nestimate functions (NAMESPACE not yet cleaned up — deferred until Nestimate is wired as dependency)
-- Nestimate not yet a git repository
-- `temporal_network.R`, `velocity_tna.R`, `bootstrap_mcml` sidelined in Nestimate
+### Latest commit: `9316a08`
 
-## Key Decisions
-- `action_to_onehot()` kept as private `.action_to_onehot()` in simulate_onehot_data.R rather than adding Nestimate as a dependency — keeps Saqrlab standalone
-- 18 orphaned test files deleted (not moved) — Nestimate already has its own copies, more up-to-date
+## Interrupted Task — netobject → cograph integration (Nestimate)
+
+User asked: "can we convert netobject to cograph or create a function that converts or better make cograph support netobject"
+
+Brainstorming was started but interrupted before context exploration completed.
+
+**What needs to happen next:**
+1. Explore `netobject` structure in Nestimate (`R/build_network.R` or `R/estimate_network.R`)
+2. Explore how `cograph` is currently called in Nestimate (search `cograph::` in R/ files)
+3. Understand what cograph expects as input
+4. Brainstorm: (a) conversion function `as_cograph()`, (b) cograph S3 method for netobject, (c) cograph integration in plot.netobject
+5. Design → spec → implementation plan
+
+**This work belongs in Nestimate, not Saqrlab.**
 
 ## Open Issues
 1. Nestimate needs `git init` + push to GitHub
 2. Saqrlab DESCRIPTION needs `Imports: Nestimate` once Nestimate has a remote
-3. NAMESPACE needs regeneration after Nestimate is wired up
-4. Consider un-sidelining `temporal_network.R` and `velocity_tna.R` in Nestimate
+3. NAMESPACE cleanup after Nestimate is wired
+4. `temporal_network.R`, `velocity_tna.R`, `bootstrap_mcml` sidelined in Nestimate
 
 ## Next Steps (prioritised)
-1. `git init` in `/Users/mohammedsaqr/Documents/Github/Nestimate/`, push to GitHub
-2. Add Nestimate to Saqrlab DESCRIPTION
-3. Update NAMESPACE → `devtools::check()` clean
+1. Resume netobject → cograph brainstorming in Nestimate
+2. `git init` Nestimate, push to GitHub
+3. Wire Nestimate as Saqrlab dependency
+4. `devtools::check()` clean on both packages
 
 ## Context
 - Saqrlab: `/Users/mohammedsaqr/Documents/Github/Saqrlab/`
