@@ -35,21 +35,6 @@ test-simulate_sequences.R
 
 ### Latest commit: `9316a08`
 
-## Interrupted Task — netobject → cograph integration (Nestimate)
-
-User asked: "can we convert netobject to cograph or create a function that converts or better make cograph support netobject"
-
-Brainstorming was started but interrupted before context exploration completed.
-
-**What needs to happen next:**
-1. Explore `netobject` structure in Nestimate (`R/build_network.R` or `R/estimate_network.R`)
-2. Explore how `cograph` is currently called in Nestimate (search `cograph::` in R/ files)
-3. Understand what cograph expects as input
-4. Brainstorm: (a) conversion function `as_cograph()`, (b) cograph S3 method for netobject, (c) cograph integration in plot.netobject
-5. Design → spec → implementation plan
-
-**This work belongs in Nestimate, not Saqrlab.**
-
 ## Open Issues
 1. Nestimate needs `git init` + push to GitHub
 2. Saqrlab DESCRIPTION needs `Imports: Nestimate` once Nestimate has a remote
@@ -57,10 +42,9 @@ Brainstorming was started but interrupted before context exploration completed.
 4. `temporal_network.R`, `velocity_tna.R`, `bootstrap_mcml` sidelined in Nestimate
 
 ## Next Steps (prioritised)
-1. Resume netobject → cograph brainstorming in Nestimate
-2. `git init` Nestimate, push to GitHub
-3. Wire Nestimate as Saqrlab dependency
-4. `devtools::check()` clean on both packages
+1. `git init` Nestimate, push to GitHub
+2. Wire Nestimate as Saqrlab dependency
+3. `devtools::check()` clean on both packages
 
 ## Context
 - Saqrlab: `/Users/mohammedsaqr/Documents/Github/Saqrlab/`
