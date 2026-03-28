@@ -4,66 +4,83 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Package Overview
 
-Saqrlab is an R package (v0.3.0) for Temporal Network Analysis (TNA). It provides network estimation (6 methods), bootstrap/permutation testing, advanced algorithms (GIMME, MCML, HON/HON+, HONEM, HYPA, MOGen), temporal network analysis, and simulation tools.
+Saqrlab is an R package (v0.3.0) for simulating Temporal Network Analysis (TNA) data. It generates synthetic datasets with known ground-truth parameters for testing and validating statistical methods. **Network estimation code lives in the sibling package [Nestimate](../Nestimate/)** — Saqrlab is simulation-only.
 
 ## Build & Test Commands
 
-```r
-# Run all tests
-devtools::test()
+```bash
+# Run all tests (~275 assertions)
+Rscript -e 'devtools::test()'
 
 # Run a single test file
-testthat::test_file("tests/testthat/test-build_network.R")
+Rscript -e 'testthat::test_file("tests/testthat/test-simulate_data.R")'
 
 # Rebuild documentation (roxygen2 → man/ + NAMESPACE)
-devtools::document()
+Rscript -e 'devtools::document()'
+
+# Quick package check (skip slow parts)
+Rscript -e 'devtools::check(".", args = c("--no-tests", "--no-examples", "--no-vignettes", "--no-manual"))'
 
 # Full package check
-devtools::check()
+Rscript -e 'devtools::check()'
 
 # Install locally
-devtools::install()
+Rscript -e 'devtools::install()'
 ```
 
-Tests use testthat edition 3. No external test data files — all tests generate mock data internally.
+Tests use testthat edition 3. All tests generate mock data internally — no external test data files.
 
 ## Architecture
 
-### Estimation Pipeline
+### Simulation Modules (core of the package)
 
-`build_network()` is the **single entry point** for all network estimation. It dispatches to one of 6 estimators (relative, frequency, co_occurrence, cor, pcor, glasso, ising) via an **estimator registry** (`.estimator_registry` environment in `R/estimator_registry.R`). Returns `netobject` S3 class. Supports multilevel decomposition (`level = "between"/"within"/"both"` → `netobject_ml`).
+**TNA-specific simulation** — generates fitted `tna` model objects directly:
+- `simulate_tna_network.R` — single fitted TNA model with learning states
+- `simulate_tna_networks.R` — multiple TNA models, group networks, HTNA/MLNA matrices (`simulate_tna_networks()`, `simulate_group_tna_networks()`, `simulate_htna()`, `simulate_mlna()`, `simulate_mtna()`)
+- `simulate_sequences.R` — Markov chain sequences from transition matrices (`simulate_sequences()`)
+- `simulate_sequences_advanced.R` — sequences with stability/instability patterns
+- `simulate_matrix.R` — raw transition matrices (`simulate_matrix()`, `simulate_tna_matrix()`)
 
-### Bootstrap & Inference
+**Generic statistical simulation** — returns `list(data, params)` for ground-truth access:
+- `simulate_data.R` — 7 dataset types: ttest, anova, correlation, clusters, factor_analysis, prediction, mlvar. Supports `complexity` parameter for edge-case injection (NA, outliers, ties, etc.) and batch generation.
+- `simulate_latent.R` — `simulate_lpa()`, `simulate_lca()`, `simulate_regression()`, `simulate_fa()`, `simulate_seq_clusters()`. All return `list(data, params)`.
 
-- `bootstrap_network()` — universal bootstrap for all 6 methods. Has a **fast precomputed path** for transitions (pre-computes per-sequence count matrices, single `tabulate()` per iteration).
-- `permutation_test()` — edge-level network comparison (paired/unpaired, 8 p-value corrections). Shares precomputed infrastructure with bootstrap.
-- `boot_glasso()` — specialized bootstrap for EBICglasso (edge/centrality CIs, CS-coefficient, difference tests).
+**Network/graph simulation**:
+- `simulate_edge_list.R`, `simulate_igraph.R`, `simulate_network.R` — social network structures
+- `simulate_long_data.R` — hierarchical long-format group data
+- `simulate_onehot_data.R` — one-hot encoded sequences
 
-### Advanced Methods
+### Comparison & Validation Pipeline
 
-- **GIMME** (`R/gimme.R`): lavaan-based uSEM with group + individual path search via modification indices. Uses `testWeights` eigenvalue stability check. Exact equivalence with the gimme R package.
-- **MCML** (`R/mcml.R`): Multi-cluster multi-layer networks. Uses native `build_network()` pipeline, NOT `cograph::cluster_summary()`. Between matrix includes self-loops (DO NOT collapse consecutive same-cluster states — explicit design decision).
-- **HON family**: `R/hon.R` (BuildHON/BuildHON+), `R/mogen.R` (MOGen), `R/honem.R` (HONEM embedding), `R/hypa.R` (HYPA anomaly detection). All use unified edge format: columns `path`, `from`, `to`, `count`, `probability`. Node names use arrow notation (`"A -> B -> C"`).
+Orchestrates TNA model comparisons using the `tna` package:
+- `compare_network_estimation.R` / `compare_estimation.R` — compare TNA model types (tna/ftna/ctna/atna) via sampling stability
+- `compare_reliability.R` — reliability analysis across conditions
+- `network_comparison.R` — compare two fitted networks (correlation, RMSE, edge recovery)
+- `fit_network_model.R` — fit TNA/fTNA/cTNA/aTNA models to sequences
+- `run_bootstrap_simulation.R`, `run_network_simulation.R`, `run_grid_simulation.R` — simulation orchestration
+- `run_sampling_analysis.R` — sampling distribution and stability analysis
 
-### Temporal Networks
+### Data & Reference
 
-`R/temporal_network.R` — dynamic network analysis with temporal BFS (multi-pass convergence for non-DAG edges), 21 snapshot metrics, 12 plot types. tsna-equivalent reachability/paths.
-
-### Data Flow
-
-Simulation (`simulate_*.R`) → format conversion (`R/frequencies.R`, `R/data_conversion.R`) → estimation (`build_network()`) → inference (`bootstrap_network()`, `permutation_test()`) → analysis/plotting.
+- `learning_states.R` — 180+ learning action verbs across 8 categories (metacognitive, cognitive, behavioral, social, motivational, affective, group_regulation, lms). Accessed via `LEARNING_STATES` or `get_learning_states()`.
+- `global_names.R` — 300 diverse names for actor simulations. Accessed via `GLOBAL_NAMES` or `get_global_names()`.
+- `generate_probabilities.R` — random row-stochastic transition matrices and initial probability vectors.
 
 ### S3 Classes
 
-`netobject`, `netobject_ml`, `saqr_bootstrap`, `saqr_permutation`, `mcml_network`, `mcml_bootstrap`, `temporal_network`, `boot_glasso`, `saqr_gimme`, `saqr_hon`, `saqr_honem`, `saqr_hypa`, `saqr_mogen` — each with print/summary/plot methods.
+`tna_reliability_comparison`, `network_estimation`, `sim_batch_type`, `sim_batch_full` — each with print/plot methods.
+
+### Data Flow
+
+Simulation (`simulate_*.R`) → TNA model fitting (`fit_network_model()` via `tna` package) → comparison (`compare_*`, `run_*`) → visualization (`plot_tna_comparison()`, `plot_network_estimation()`).
 
 ## Key Design Decisions
 
-- **MCML between-cluster**: Does NOT collapse consecutive same-cluster states. Between matrix includes self-loops, matching TNA behavior exactly.
-- **MCML internals**: `$between` and `$within` are plain matrices, not tna objects. Uses `build_network()` pipeline; `cograph::cluster_summary` only for `plot_mcml()`.
-- **HON output**: Unified edge columns (`path`, `from`, `to`) with readable arrow notation for node names.
-- **Bootstrap optimization**: Pre-computed per-sequence counts for 2.8x speedup over tna::bootstrap.
-- **Estimator extensibility**: New methods added via `register_estimator()` without modifying core code.
+- **list(data, params) pattern**: All `simulate_latent.R` functions return `list(data, params)` so ground-truth parameters are JSON-serializable and testable.
+- **simulate_data() seed-driven structure**: The seed determines both the random data AND structural parameters (n, effect sizes, n_groups), so each seed produces a structurally unique dataset.
+- **simulate_data() complexity injection**: Edge cases (NA, outliers, constant columns, etc.) are injected post-generation. In batch mode with `complexity = "auto"`, 0–3 cases are randomly selected per dataset (seed-driven, reproducible).
+- **Package split**: Network estimation (build_network, bootstrap_network, permutation_test, GIMME, MCML, HON, temporal_network, etc.) moved to [Nestimate](../Nestimate/). Saqrlab depends on `tna` for model fitting but does no estimation itself.
+- **Learning states**: 8 categories with realistic verb names. Used by `simulate_sequences()` and `simulate_tna_network()` to generate human-readable state labels.
 
 ## Project Workflow Files
 
@@ -74,4 +91,4 @@ Simulation (`simulate_*.R`) → format conversion (`R/frequencies.R`, `R/data_co
 
 ## Dependencies
 
-Core imports: tna, seqHMM, dplyr, tidyr, igraph, ggplot2, glasso, data.table, parallel, future, future.apply, progressr, lhs. Suggested: testthat, lavaan, cograph, glmnet, network, sna.
+Core imports: tna, seqHMM, dplyr, tidyr, igraph, ggplot2, parallel, future, future.apply, progressr, lhs. Suggested: testthat, knitr, rmarkdown, network, sna, ggridges, cograph, glmnet, lavaan.

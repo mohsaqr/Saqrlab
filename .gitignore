@@ -9,5 +9,6 @@ tests/testthat/Rplots.pdf
 docs/*
 !docs/mlvar-technical-report.Rmd
 !docs/mlvar-technical-report.html
+!docs/simulate_data-manual.md
 tmp/
 ..Rcheck/

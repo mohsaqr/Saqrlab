@@ -29,13 +29,24 @@
 - **build_honem()** — HONEM Higher-Order Network Embedding (Saebi et al. 2020); parameter-free embeddings via exponentially-decaying matrix powers + truncated SVD; accepts HON output or any square matrix
 - **build_hypa()** — HYPA path anomaly detection (LaRock et al. 2020); multi-hypergeometric null model on k-th order De Bruijn graphs; iterative proportional fitting for propensity matrix; per-edge p-values for over/under-represented paths
 
-## Data Simulation
-- **simulate_data()** — 7 dataset types: ttest, anova, correlation, clusters, factor_analysis, prediction, mlvar; 11 complexity cases (na, outliers, ties, duplicates, constant_col, all_na_col, tiny_n, heavy_tailed, heteroscedastic, extreme_imbalance, multicollinear); batch generation
-- **simulate_lpa()** — LPA data with explicit profile means/SDs matrix; list(data, params) return
-- **simulate_lca()** — LCA data with explicit item response probability matrix; list(data, params) return
-- **simulate_regression()** — regression data with known named coefficients; list(data, params) return
-- **simulate_fa()** — factor analysis data from explicit loadings/phi/psi; sigma_implied in params; list(data, params) return
-- **simulate_seq_clusters()** — Markov chain sequences with K known-cluster transition matrices; explicit or auto mode; default n_states=10; list(data, params) return
+## Unified Simulation Interface
+- **saqr_sim S3 class** — all numerical simulation functions return `saqr_sim` with `$data`, `$params`, `$type`, `$seed`. Backward-compatible: `$data`/`$params` access unchanged. Supports `[`, `as.data.frame()`, `head()`, `dim()`, `print()`, `summary()`.
+
+## Data Simulation — Explicit Parameters (saqr_sim return)
+- **simulate_ttest()** — two-group data with specified means/SDs; params include Cohen's d
+- **simulate_anova()** — multi-group data with specified means/SDs; params include population eta-squared; supports unequal group sizes
+- **simulate_correlation()** — multivariate normal from explicit correlation/covariance matrix; custom means and variable names
+- **simulate_clusters()** — mixture of Gaussians with specified centers/SDs; per-cluster sizes or proportions; params include true cluster labels
+- **simulate_prediction()** — regression with continuous + categorical predictors; explicit coefficients and category effects; params include population R²
+- **simulate_longitudinal()** — VAR(1) multilevel panel data for mlVAR/ESM; explicit temporal (B), contemporaneous, between-person matrices; ESM day/beep structure; complexity injection
+- **simulate_lpa()** — LPA data with explicit profile means/SDs
+- **simulate_lca()** — LCA data with explicit item response probabilities
+- **simulate_regression()** — regression data with known named coefficients
+- **simulate_fa()** — factor analysis data from explicit loadings/phi/psi; sigma_implied in params
+- **simulate_seq_clusters()** — Markov chain sequences with K known-cluster transition matrices
+
+## Data Simulation — Random Parameters
+- **simulate_data()** — 7 dataset types: ttest, anova, correlation, clusters, factor_analysis, prediction, mlvar; 11 complexity cases; batch generation. Seed-driven random structure — returns bare data.frame
 
 ## Visualization
 - All S3 classes have print/summary/plot methods

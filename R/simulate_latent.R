@@ -59,9 +59,12 @@ simulate_lpa <- function(means, sds, props, n, seed = NULL) {
   colnames(df)    <- paste0("y", seq_len(p))
   df$true_profile <- class_assign
 
-  list(
+  saqr_sim(
     data   = df,
-    params = list(means = means, sds = sds_mat, props = props)
+    params = list(means = means, sds = sds_mat, props = props),
+    type   = "lpa",
+    seed   = seed,
+    call   = match.call()
   )
 }
 
@@ -125,9 +128,12 @@ simulate_lca <- function(item_probs, class_probs, n, seed = NULL) {
   colnames(df)  <- paste0("item", seq_len(m))
   df$true_class <- class_assign
 
-  list(
+  saqr_sim(
     data   = df,
-    params = list(item_probs = item_probs, class_probs = class_probs)
+    params = list(item_probs = item_probs, class_probs = class_probs),
+    type   = "lca",
+    seed   = seed,
+    call   = match.call()
   )
 }
 
@@ -202,9 +208,12 @@ simulate_regression <- function(coefs, predictor_sds, error_sd, n, seed = NULL) 
   df$y         <- y
   df           <- df[, c("y", pred_names), drop = FALSE]
 
-  list(
+  saqr_sim(
     data   = df,
-    params = list(coefs = coefs, predictor_sds = predictor_sds, error_sd = error_sd)
+    params = list(coefs = coefs, predictor_sds = predictor_sds, error_sd = error_sd),
+    type   = "regression",
+    seed   = seed,
+    call   = match.call()
   )
 }
 
@@ -315,14 +324,17 @@ simulate_fa <- function(loadings, phi = NULL, psi = NULL, n, seed = NULL) {
   df           <- as.data.frame(X)
   colnames(df) <- paste0("y", seq_len(p))
 
-  list(
+  saqr_sim(
     data   = df,
     params = list(
       loadings      = loadings,
       phi           = phi,
       psi           = psi,
       sigma_implied = Sigma
-    )
+    ),
+    type = "fa",
+    seed = seed,
+    call = match.call()
   )
 }
 
@@ -479,12 +491,15 @@ simulate_seq_clusters <- function(
   df <- as.data.frame(seq_mat, stringsAsFactors = FALSE)
   df$true_cluster <- cluster_ids
 
-  list(
+  saqr_sim(
     data   = df,
     params = list(
       trans_list = trans_list,
       props      = props,
       init_probs = init_list
-    )
+    ),
+    type = "seq_clusters",
+    seed = seed,
+    call = match.call()
   )
 }

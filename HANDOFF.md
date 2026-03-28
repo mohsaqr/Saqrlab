@@ -1,52 +1,74 @@
-# Session Handoff — 2026-03-17
+# Session Handoff — 2026-03-28
 
 ## Completed This Session
 
-### simulate_seq_clusters()
-- Implemented in `R/simulate_latent.R` — TDD, 31 assertions green
-- Added full manual to `docs/simulate_data-cookbook.md`
-- Committed: `ce19f35`, `ca8b69e`
+### 1. saqr_sim S3 class (`R/saqr_sim.R`)
+- Unified wrapper: every explicit-parameter simulation function returns `saqr_sim`
+- S3 methods: print, summary, as.data.frame, [, dim, head, tail, str, names
+- Backward-compatible: `$data` and `$params` still work, all existing tests pass unchanged
+- 45 tests in `tests/testthat/test-saqr_sim.R`
 
-### Post-split structural review and fixes
-- Ran comprehensive structural audit of Saqrlab after Nestimate split
-- Deleted 18 orphaned test files for Nestimate functions
-- Fixed `simulate_onehot_data()` — added private `.action_to_onehot()` helper
-- Removed `glasso` and `data.table` from DESCRIPTION Imports
-- Updated DESCRIPTION description to simulation-only scope
-- Added `.superpowers/` and `Rplots.pdf` to `.gitignore`
-- Committed: `df1bad1`, `518b973`, `9316a08`
+### 2. Explicit-parameter statistical functions (`R/simulate_statistical.R`)
+- `simulate_ttest(n_a, n_b, mean_a, mean_b, sd_a, sd_b)` — params include `cohens_d`
+- `simulate_anova(n, means, sds)` — params include `eta_squared`; supports unequal groups
+- `simulate_correlation(n, sigma, means)` — params include `is_correlation`
+- `simulate_clusters(n, centers, sds, props)` — per-cluster sizes or proportions
+- `simulate_prediction(n, coefs, cat_levels, cat_effects)` — params include `r_squared`
+- 81 tests in `tests/testthat/test-simulate_statistical.R`
+
+### 3. simulate_longitudinal() (`R/simulate_longitudinal.R`)
+- VAR(1) panel data for mlVAR/ESM: explicit temporal (B), contemporaneous, between matrices
+- ESM day/beep structure via `beeps_per_day` (day breaks reset carry-over)
+- Complexity injection: na, outliers, heavy_tailed, heteroscedastic, tiny_n
+- Auto-generated B guaranteed stationary via eigenvalue rescaling
+- 42 tests in `tests/testthat/test-simulate_longitudinal.R`
+
+### 4. Wrapped latent functions in saqr_sim (`R/simulate_latent.R`)
+- simulate_lpa, simulate_lca, simulate_regression, simulate_fa, simulate_seq_clusters
+- All return saqr_sim; 75 existing tests pass unchanged
+
+### 5. Comprehensive manual (`docs/simulate_data-manual.md`)
+- 944-line reference covering all 12 simulation functions
+- Full signatures, return structure tables, working examples
+- Parameter Recovery Cookbook with complete worked examples for every function type
+
+### 6. Updated CLAUDE.md
+- Rewrote to reflect post-split state (simulation-only package)
+- Removed all references to network estimation code that moved to Nestimate
 
 ## Current State
 
 ### Tests
-- 275 simulation tests passing: 169 (simulate_data) + 75 (simulate_latent) + 31 (simulate_seq_clusters)
-- 0 failures in simulation tests
-- `devtools::test()` still errors on NAMESPACE exports pointing to Nestimate — run `testthat::test_file()` on specific files instead
+- **559 total assertions passing, 0 failures**
+- New this session: 45 (saqr_sim) + 81 (statistical) + 42 (longitudinal) = 168 new tests
+- All pre-existing tests unaffected
 
-### Active test files (11)
-```
-test-global_names.R          test-learning_states.R
-test-simulate_data.R         test-simulate_edge_list.R
-test-simulate_htna.R         test-simulate_igraph.R
-test-simulate_latent.R       test-simulate_matrix.R
-test-simulate_network.R      test-simulate_seq_clusters.R
-test-simulate_sequences.R
-```
+### Uncommitted Changes
+All work from this session is **uncommitted**. `git status` shows:
+- **Modified**: CHANGES.md, CLAUDE.md, FEATURES.md, HANDOFF.md, LEARNINGS.md, NAMESPACE, R/simulate_latent.R, man/Saqrlab-package.Rd, man/simulate_onehot_data.Rd
+- **New (untracked)**: R/saqr_sim.R, R/simulate_longitudinal.R, R/simulate_statistical.R, man/saqr_sim.Rd, man/simulate_anova.Rd, man/simulate_clusters.Rd, man/simulate_correlation.Rd, man/simulate_longitudinal.Rd, man/simulate_prediction.Rd, man/simulate_ttest.Rd, tests/testthat/test-saqr_sim.R, tests/testthat/test-simulate_longitudinal.R, tests/testthat/test-simulate_statistical.R
 
-### Latest commit: `9316a08`
+### Architecture: two simulation tiers
+1. **Explicit-parameter** (`simulate_ttest`, `simulate_anova`, etc.) → `saqr_sim` with `$params` containing ground truth. For parameter recovery testing.
+2. **Random-parameter** (`simulate_data()`) → bare `data.frame` with attributes. Random structure from seed. For stress/robustness testing. NOT wrapped in saqr_sim (incompatible interface — tests use `d$group`, `names(d)` directly).
 
 ## Open Issues
-1. Nestimate needs `git init` + push to GitHub
+1. Nestimate still needs `git init` + push to GitHub
 2. Saqrlab DESCRIPTION needs `Imports: Nestimate` once Nestimate has a remote
-3. NAMESPACE cleanup after Nestimate is wired
-4. `temporal_network.R`, `velocity_tna.R`, `bootstrap_mcml` sidelined in Nestimate
+3. `simulate_data()` stays as bare data.frame — wrapping breaks 169 existing tests that treat result as data.frame
+4. Sequence functions (`simulate_sequences`, `simulate_tna_network`, etc.) not yet wrapped in saqr_sim
+5. No complexity injection yet on latent functions (simulate_lpa, etc.) or statistical functions
+6. docs/simulate_data-manual.md is local only — not yet pushed to GitHub
 
 ## Next Steps (prioritised)
-1. `git init` Nestimate, push to GitHub
-2. Wire Nestimate as Saqrlab dependency
-3. `devtools::check()` clean on both packages
+1. Commit and push all session work to GitHub
+2. Push `docs/simulate_data-manual.md` to GitHub for public access
+3. Add complexity injection to explicit-parameter functions (simulate_ttest, simulate_lpa, etc.)
+4. Add more longitudinal DGPs: growth curve, RI-CLPM, DSEM
+5. Wire Nestimate as Saqrlab dependency
+6. Consider wrapping sequence functions in saqr_sim
 
 ## Context
 - Saqrlab: `/Users/mohammedsaqr/Documents/Github/Saqrlab/`
 - Nestimate: `/Users/mohammedsaqr/Documents/Github/Nestimate/` (not on git)
-- Cookbook: `docs/simulate_data-cookbook.md`
+- Manual: `docs/simulate_data-manual.md`

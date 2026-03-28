@@ -1,5 +1,16 @@
 # Saqrlab Project Learnings
 
+### 2026-03-28
+- [saqr_sim backward compat]: Adding an S3 class to `list(data, params)` via `class(obj) <- c("saqr_sim", "list")` is fully backward compatible — `$data`, `$params`, `names()` all keep working. The `[.saqr_sim` method delegates to `$data` so subscripting works too.
+- [saqr_sim vs data.frame returns]: Cannot wrap `simulate_data()` in saqr_sim — 169 existing tests treat the result as a bare data.frame (`d$group`, `names(d)`, `is.data.frame(d)`). The `$` on a list goes to list elements, not data columns. Would need `$.saqr_sim` fall-through to `$data` columns, which creates name collision risk with fields like "type". Two tiers is the right design: saqr_sim for explicit-parameter functions, bare data.frame for random-parameter `simulate_data()`.
+- [nrow/ncol not S3 generics]: In base R, `nrow()` and `ncol()` call `NROW()`/`NCOL()` which use `dim()`. Defining `dim.saqr_sim()` is sufficient — explicit `nrow.saqr_sim` and `ncol.saqr_sim` get exported as regular functions (not methods) and pollute NAMESPACE. Just define `dim`.
+- [population eta-squared]: True population eta-squared = ss_between / (ss_between + ss_within) where ss_between = sum(n_k * (mu_k - grand_mean)^2) and ss_within = sum((n_k - 1) * sigma_k^2). This is the parameter, not the sample estimate.
+- [population R-squared]: True R² = var(signal) / (var(signal) + error_sd^2). Computed from the actual linear combination variance on the generated data, not from the population formula. Accounts for both continuous and categorical predictor contributions.
+- [pooled SD for Cohen's d]: Use `sqrt(((n_a-1)*sd_a^2 + (n_b-1)*sd_b^2) / (n_a+n_b-2))` for the pooled SD in Cohen's d. This is the standard pooled estimator, not the simple average of variances.
+- [VAR stationarity]: A VAR(1) process y(t) = mu + B(y(t-1) - mu) + e is stationary iff all eigenvalues of B have modulus < 1. Rescaling `B <- B * (0.95 / max(Mod(eigen(B)$values)))` guarantees this while preserving relative coefficient structure.
+- [ESM day breaks]: In ESM/EMA VAR models, the first beep of each day should NOT carry over from the previous day's last beep. Most mlVAR software treats day boundaries as missing data points. Our generator resets to `mu + innovation` at day breaks.
+- [.ensure_pd vs .nearest_pd]: Two PD-fixing helpers now exist: `.ensure_pd()` in simulate_longitudinal.R (eigenvalue clamp only) and `.nearest_pd()` in simulate_data.R (eigenvalue clamp + correlation normalisation). The latter normalises to a correlation matrix; the former preserves scale for covariance matrices.
+
 ### 2026-03-17
 - [package split cleanup]: When splitting packages, check for (1) functions called by remaining code that were moved, (2) test files for moved functions, (3) unused DESCRIPTION Imports. All three bit us after the Saqrlab/Nestimate split.
 - [internal helper pattern]: When a dependency function is in another package not yet wired up, copy it as a private `.fn()` helper into the calling file. Keeps the package standalone; document the source clearly.

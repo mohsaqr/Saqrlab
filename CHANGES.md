@@ -1,5 +1,15 @@
 # Saqrlab Changes
 
+### 2026-03-28 — Unified saqr_sim class + explicit-parameter simulation functions
+- R/saqr_sim.R: New S3 class `saqr_sim` wrapping all simulation returns. Provides print, summary, as.data.frame, [, dim, head, tail, str, names methods. Backward-compatible: $data and $params still work.
+- R/simulate_statistical.R: New explicit-parameter functions: `simulate_ttest()`, `simulate_anova()`, `simulate_correlation()`, `simulate_clusters()`, `simulate_prediction()`. All return saqr_sim with $params containing ground-truth values (Cohen's d, eta-squared, population R², true cluster centers, etc.).
+- R/simulate_longitudinal.R: New `simulate_longitudinal()` — VAR(1) panel data generator for mlVAR/ESM testing. Explicit temporal (B), contemporaneous, between-person matrices. ESM day/beep structure via `beeps_per_day`. Complexity injection. Returns saqr_sim.
+- R/simulate_latent.R: Wrapped simulate_lpa, simulate_lca, simulate_regression, simulate_fa, simulate_seq_clusters returns in saqr_sim. Fully backward compatible.
+- tests/testthat/test-saqr_sim.R: 45 assertions.
+- tests/testthat/test-simulate_statistical.R: 81 assertions (all 5 functions: structure, params, parameter recovery, reproducibility, edge cases).
+- tests/testthat/test-simulate_longitudinal.R: 42 assertions.
+- Tests: 559 passing, 0 failures (was 391).
+
 ### 2026-03-17 — Post-split structural fixes
 - tests/testthat/: Deleted 18 orphaned test files for Nestimate functions (active copies already in Nestimate/tests/testthat/ with updated class names; sidelined copies in Nestimate/sidelined/)
 - R/simulate_onehot_data.R: Fixed broken `action_to_onehot()` call — function was moved to Nestimate during split. Added private `.action_to_onehot()` internal helper (vectorised with vapply, no for loop). Keeps Saqrlab standalone without Nestimate dependency.

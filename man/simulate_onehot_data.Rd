@@ -114,7 +114,7 @@ a categorical Action column.
 }
 \details{
 This function internally calls \code{\link{simulate_long_data}} to generate
-the base data, then applies \code{\link{action_to_onehot}} to convert the
+the base data, then applies an internal one-hot helper to convert the
 Action column to one-hot encoded columns.
 
 Each row will have exactly one state column with value 1, and all others
@@ -150,6 +150,6 @@ data <- simulate_onehot_data(
 }
 \seealso{
 \code{\link{simulate_long_data}} for categorical Action format,
-\code{\link{action_to_onehot}} for converting existing long data,
+\code{Nestimate::action_to_onehot()} for converting existing long data,
 \code{\link{simulate_sequences}} for generating wide-format sequences.
 }

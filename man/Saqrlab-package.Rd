@@ -6,7 +6,7 @@
 \alias{Saqrlab-package}
 \title{Saqrlab: Simulation and Analysis for Temporal Network Analysis}
 \description{
-Tools for simulating Markov chain sequences, bootstrapping temporal network models, and evaluating edge recovery performance. Supports multiple TNA model variants (tna, ftna, ctna, atna) with parallel processing capabilities.
+Simulation tools for temporal network analysis (TNA) research. Generates synthetic datasets with known ground-truth parameters for testing and validating statistical methods: Markov chain sequences, latent profiles, latent classes, regression, factor analysis, and sequence cluster structures. All simulation functions return list(data, params) for JSON-serializable access to ground-truth parameters.
 }
 \author{
 \strong{Maintainer}: Mohammed Saqr \email{saqr@saqr.me}
