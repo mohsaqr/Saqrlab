@@ -187,6 +187,14 @@ simulate_data <- function(type, seed = NULL, complexity = "clean",
     clusters        = .simulate_clusters,
     factor_analysis = .simulate_factor_analysis,
     prediction      = .simulate_prediction,
+    probit          = .simulate_probit,
+    meta            = .simulate_meta,
+    count           = .simulate_count,
+    reliability     = .simulate_reliability,
+    gam             = .simulate_gam,
+    nma             = .simulate_nma,
+    power           = .simulate_power,
+    cthmm           = .simulate_cthmm,
     mlvar           = .simulate_mlvar
   )
   result <- generator(opts)
@@ -215,7 +223,7 @@ simulate_data <- function(type, seed = NULL, complexity = "clean",
 # ===========================================================================
 
 .inject_complexity_post <- function(df, cases) {
-  if (length(cases) == 0L) return(df)
+  if (length(cases) == 0L || !is.data.frame(df)) return(df)
 
   num_cols <- names(df)[vapply(df, is.numeric, logical(1L))]
   n <- nrow(df)
@@ -729,6 +737,439 @@ simulate_data <- function(type, seed = NULL, complexity = "clean",
 }
 
 
+
+.simulate_probit <- function(opts = list()) {
+  complexity <- opts$complexity %||% character(0L)
+
+  n <- if ("tiny_n" %in% complexity) {
+    sample(20L:30L, 1L)
+  } else {
+    opts$n %||% sample(60L:400L, 1L)
+  }
+  n <- opts$n %||% n
+
+  # Generate predictors
+  if ("multicollinear" %in% complexity) {
+    x1 <- stats::rnorm(n)
+    x2 <- x1 * 0.85 + stats::rnorm(n, sd = 0.5)
+  } else {
+    x1 <- stats::rnorm(n)
+    x2 <- stats::rnorm(n)
+  }
+
+  # Coefficients vary by current RNG state
+  beta0 <- stats::runif(1L, -1, 1)
+  beta1 <- stats::runif(1L, 0.3, 1.5) * sample(c(-1, 1), 1L)
+  beta2 <- stats::runif(1L, 0.2, 1.0) * sample(c(-1, 1), 1L)
+
+  # Optional third predictor
+  has_x3 <- sample(c(TRUE, FALSE), 1L)
+  if (has_x3) {
+    x3    <- stats::rnorm(n)
+    beta3 <- stats::runif(1L, 0.1, 0.8) * sample(c(-1, 1), 1L)
+  }
+
+  # Extreme imbalance: shift intercept to make p ~ 0.05 or 0.95
+ if ("extreme_imbalance" %in% complexity) {
+    beta0 <- sample(c(-2.5, 2.5), 1L)
+  }
+
+  latent <- beta0 + beta1 * x1 + beta2 * x2
+  if (has_x3) latent <- latent + beta3 * x3
+
+  # Heavy-tailed: add t-distributed noise to latent
+  if ("heavy_tailed" %in% complexity) {
+    df_t   <- sample(2L:5L, 1L)
+    latent <- latent + stats::rt(n, df = df_t) * 0.3
+  }
+
+  prob <- stats::pnorm(latent)
+  y    <- stats::rbinom(n, size = 1L, prob = prob)
+
+  df <- data.frame(y = y, x1 = x1, x2 = x2)
+  if (has_x3) df$x3 <- x3
+  attr(df, "type") <- "probit"
+  attr(df, "info") <- .SIM_INFO_MAP["probit"]
+  df
+}
+
+
+.simulate_meta <- function(opts = list()) {
+  complexity <- opts$complexity %||% character(0L)
+
+  k <- if ("tiny_n" %in% complexity) {
+    sample(3L:4L, 1L)
+  } else {
+    opts$k %||% sample(5L:20L, 1L)
+  }
+  k <- opts$k %||% k
+
+  mu  <- stats::runif(1L, 0.2, 0.8)
+  tau <- if ("heteroscedastic" %in% complexity) {
+    stats::runif(1L, 0.4, 0.8)
+  } else {
+    stats::runif(1L, 0, 0.5)
+  }
+
+  # Study-level sample sizes
+  ni <- sample(20L:200L, k, replace = TRUE)
+  vi <- 1 / ni + stats::runif(k, 0.01, 0.05)
+
+  # True effect per study
+  theta_i <- stats::rnorm(k, mean = mu, sd = tau)
+  yi      <- stats::rnorm(k, mean = theta_i, sd = sqrt(vi))
+
+  # Outlier: one extreme study
+  if ("outliers" %in% complexity && k >= 3L) {
+    idx     <- sample.int(k, 1L)
+    yi[idx] <- mu + sample(c(-1, 1), 1L) * stats::runif(1L, 3, 6) * sqrt(vi[idx] + tau^2)
+  }
+
+  df <- data.frame(
+    yi    = yi,
+    vi    = vi,
+    study = paste0("Study_", seq_len(k))
+  )
+  attr(df, "type") <- "meta"
+  attr(df, "info") <- .SIM_INFO_MAP["meta"]
+  df
+}
+
+
+.simulate_count <- function(opts = list()) {
+  complexity <- opts$complexity %||% character(0L)
+
+  n <- if ("tiny_n" %in% complexity) {
+    sample(15L:30L, 1L)
+  } else {
+    opts$n %||% sample(50L:400L, 1L)
+  }
+  n <- opts$n %||% n
+
+  x1 <- stats::rnorm(n)
+  x2 <- stats::rnorm(n)
+
+  beta0 <- stats::runif(1L, 0.5, 2.0)
+  beta1 <- stats::runif(1L, 0.1, 0.6) * sample(c(-1, 1), 1L)
+  beta2 <- stats::runif(1L, 0.05, 0.3) * sample(c(-1, 1), 1L)
+
+  lambda <- exp(beta0 + beta1 * x1 + beta2 * x2)
+  y      <- stats::rpois(n, lambda = lambda)
+
+  # Zero-inflation via ties complexity
+  if ("ties" %in% complexity) {
+    zi_prob <- stats::runif(1L, 0.3, 0.6)
+    zi_mask <- stats::rbinom(n, size = 1L, prob = zi_prob)
+    y <- y * (1L - zi_mask)
+  }
+
+  # Outliers: extreme counts
+  if ("outliers" %in% complexity) {
+    n_out <- sample(1L:3L, 1L)
+    idx   <- sample.int(n, n_out)
+    y[idx] <- y[idx] + sample(50L:200L, n_out, replace = TRUE)
+  }
+
+  df <- data.frame(y = as.integer(y), x1 = x1, x2 = x2)
+  attr(df, "type") <- "count"
+  attr(df, "info") <- .SIM_INFO_MAP["count"]
+  df
+}
+
+
+.simulate_reliability <- function(opts = list()) {
+  complexity <- opts$complexity %||% character(0L)
+
+  p <- opts$n_items %||% sample(4L:8L, 1L)
+  n <- if ("tiny_n" %in% complexity) {
+    sample(10L:25L, 1L)
+  } else {
+    opts$n %||% sample(50L:400L, 1L)
+  }
+  n <- opts$n %||% n
+
+  # True person ability
+  theta <- stats::rnorm(n)
+
+  # Item loadings (discrimination)
+  lambdas <- stats::runif(p, 0.4, 0.9)
+
+  # Generate item responses: X_ij = lambda_j * theta_i + eps_ij
+  items <- vapply(seq_len(p), function(j) {
+    lambdas[j] * theta + stats::rnorm(n, sd = sqrt(1 - lambdas[j]^2))
+  }, numeric(n))
+
+  # Ties: round to Likert 1-5
+  if ("ties" %in% complexity) {
+    items <- round(items * 1.2 + 3)
+    items <- pmin(pmax(items, 1), 5)
+  }
+
+  # Outliers: random response pattern for a few subjects
+  if ("outliers" %in% complexity) {
+    n_bad <- max(1L, round(n * 0.05))
+    idx   <- sample.int(n, n_bad)
+    if ("ties" %in% complexity) {
+      items[idx, ] <- matrix(sample(1L:5L, n_bad * p, replace = TRUE),
+                             nrow = n_bad, ncol = p)
+    } else {
+      items[idx, ] <- matrix(stats::rnorm(n_bad * p, sd = 3),
+                             nrow = n_bad, ncol = p)
+    }
+  }
+
+  df <- as.data.frame(items)
+  colnames(df) <- paste0("item", seq_len(p))
+  attr(df, "type")    <- "reliability"
+  attr(df, "info")    <- .SIM_INFO_MAP["reliability"]
+  attr(df, "lambdas") <- lambdas
+  df
+}
+
+
+.simulate_gam <- function(opts = list()) {
+  complexity <- opts$complexity %||% character(0L)
+
+  n <- if ("tiny_n" %in% complexity) {
+    sample(20L:40L, 1L)
+  } else {
+    opts$n %||% sample(100L:500L, 1L)
+  }
+  n <- opts$n %||% n
+
+  x1 <- stats::runif(n, 0, 1)
+  x2 <- stats::runif(n, 0, 1)
+
+  # Smooth functions (vary by seed)
+  f_type <- sample(1L:3L, 1L)
+  f1 <- switch(f_type,
+    sin(2 * pi * x1),
+    cos(3 * pi * x1) + x1^2,
+    2 * x1 * sin(4 * pi * x1)
+  )
+  f2 <- x2^2 - 0.5
+
+  signal <- f1 + f2
+  signal_sd <- stats::sd(signal)
+  noise_sd  <- signal_sd * stats::runif(1L, 0.3, 0.8)
+
+  # Heteroscedastic noise
+  if ("heteroscedastic" %in% complexity) {
+    noise <- stats::rnorm(n) * noise_sd * (0.5 + 2 * x1)
+  } else if ("heavy_tailed" %in% complexity) {
+    df_t  <- sample(2L:5L, 1L)
+    noise <- stats::rt(n, df = df_t) * noise_sd
+  } else {
+    noise <- stats::rnorm(n, sd = noise_sd)
+  }
+
+  y <- signal + noise
+
+  # Outliers
+  if ("outliers" %in% complexity) {
+    n_out <- sample(2L:5L, 1L)
+    idx   <- sample.int(n, n_out)
+    y[idx] <- y[idx] + sample(c(-1, 1), n_out, replace = TRUE) *
+                        stats::runif(n_out, 4, 8) * noise_sd
+  }
+
+  df <- data.frame(y = y, x1 = x1, x2 = x2)
+  attr(df, "type") <- "gam"
+  attr(df, "info") <- .SIM_INFO_MAP["gam"]
+  df
+}
+
+
+.simulate_nma <- function(opts = list()) {
+  complexity <- opts$complexity %||% character(0L)
+
+  n_treat <- if ("tiny_n" %in% complexity) {
+    3L
+  } else {
+    opts$n_treat %||% sample(3L:5L, 1L)
+  }
+  n_treat <- opts$n_treat %||% n_treat
+
+  k <- if ("tiny_n" %in% complexity) {
+    5L
+  } else {
+    opts$k %||% sample(8L:20L, 1L)
+  }
+  k <- opts$k %||% k
+
+  treatments <- LETTERS[seq_len(n_treat)]
+
+  # All possible pairwise comparisons
+  pairs <- expand.grid(treat1 = treatments, treat2 = treatments,
+                        stringsAsFactors = FALSE)
+  pairs <- pairs[pairs$treat1 < pairs$treat2, ]
+
+  # True treatment effects relative to reference (A)
+  true_d <- c(0, stats::runif(n_treat - 1L, 0.1, 1.0) *
+                  sample(c(-1, 1), n_treat - 1L, replace = TRUE))
+  names(true_d) <- treatments
+
+  # Assign studies to comparisons, ensuring connected network
+  # First: one study per pair to guarantee connectivity
+  n_base <- nrow(pairs)
+  if (k < n_base) {
+    # Subsample pairs but ensure connectivity via spanning tree
+    adj <- pairs[sample.int(n_base, min(k, n_base)), ]
+  } else {
+    adj <- pairs
+  }
+  # Fill remaining studies
+  n_extra <- k - nrow(adj)
+  if (n_extra > 0L) {
+    extra <- pairs[sample.int(nrow(pairs), n_extra, replace = TRUE), ]
+    adj   <- rbind(adj, extra)
+  }
+
+  study_ids <- paste0("S", seq_len(nrow(adj)))
+
+  # Generate effects
+  tau   <- stats::runif(1L, 0, 0.3)
+  ni    <- sample(30L:200L, nrow(adj), replace = TRUE)
+  vi    <- 1 / ni + stats::runif(nrow(adj), 0.01, 0.04)
+  d_ij  <- true_d[adj$treat2] - true_d[adj$treat1]
+  yi    <- stats::rnorm(nrow(adj), mean = d_ij, sd = sqrt(vi + tau^2))
+
+  # Outlier: one inconsistent study
+  if ("outliers" %in% complexity && nrow(adj) >= 3L) {
+    idx     <- sample.int(nrow(adj), 1L)
+    yi[idx] <- yi[idx] + sample(c(-1, 1), 1L) * stats::runif(1L, 2, 5)
+  }
+
+  df <- data.frame(
+    study  = study_ids,
+    treat1 = adj$treat1,
+    treat2 = adj$treat2,
+    yi     = yi,
+    vi     = vi,
+    stringsAsFactors = FALSE
+  )
+  attr(df, "type")       <- "nma"
+  attr(df, "info")       <- .SIM_INFO_MAP["nma"]
+  attr(df, "treatments") <- treatments
+  attr(df, "true_d")     <- true_d
+  df
+}
+
+
+.simulate_power <- function(opts = list()) {
+  complexity <- opts$complexity %||% character(0L)
+
+  # Type of test
+  test_type <- sample(c("two.sample", "paired", "one.sample"), 1L)
+
+  # Effect size
+  d <- if ("tiny_n" %in% complexity) {
+    stats::runif(1L, 0.1, 0.3)
+  } else {
+    stats::runif(1L, 0.2, 1.2)
+  }
+
+  # Sample size
+  n <- if ("tiny_n" %in% complexity) {
+    sample(5L:15L, 1L)
+  } else {
+    sample(10L:200L, 1L)
+  }
+
+  alpha <- opts$alpha %||% 0.05
+
+  # Compute true power analytically (two-sided)
+  if (test_type == "one.sample") {
+    ncp        <- d * sqrt(n)
+    df_val     <- n - 1L
+  } else if (test_type == "paired") {
+    ncp        <- d * sqrt(n)
+    df_val     <- n - 1L
+  } else {
+    # two.sample: n per group
+    ncp        <- d * sqrt(n / 2)
+    df_val     <- 2L * n - 2L
+  }
+  crit      <- stats::qt(1 - alpha / 2, df = df_val)
+  power_true <- 1 - stats::pt(crit, df = df_val, ncp = ncp) +
+                    stats::pt(-crit, df = df_val, ncp = ncp)
+
+  result <- list(
+    n          = n,
+    d          = d,
+    alpha      = alpha,
+    type       = test_type,
+    power_true = power_true
+  )
+  attr(result, "type") <- "power"
+  attr(result, "info") <- .SIM_INFO_MAP["power"]
+  result
+}
+
+
+.simulate_cthmm <- function(opts = list()) {
+  complexity <- opts$complexity %||% character(0L)
+
+  n_states <- opts$n_states %||% sample(2L:3L, 1L)
+  T_obs <- if ("tiny_n" %in% complexity) {
+    sample(30L:50L, 1L)
+  } else {
+    opts$T_obs %||% sample(100L:300L, 1L)
+  }
+  T_obs <- opts$T_obs %||% T_obs
+
+  # Rate matrix Q (off-diagonal positive, rows sum to 0)
+  Q <- matrix(stats::runif(n_states^2, 0.01, 0.3), nrow = n_states, ncol = n_states)
+  diag(Q) <- 0
+  diag(Q) <- -rowSums(Q)
+
+  # Emission parameters per state: mean and sd
+  state_means <- sort(stats::rnorm(n_states, sd = 3))
+  state_sds   <- stats::runif(n_states, 0.5, 2.0)
+
+  # Generate irregular time intervals
+  dt <- stats::rexp(T_obs - 1L, rate = stats::runif(1L, 0.5, 2.0))
+  times <- c(0, cumsum(dt))
+
+  # Simulate Markov chain in continuous time
+  states    <- integer(T_obs)
+  states[1] <- sample.int(n_states, 1L)
+
+  for (t in seq(2L, T_obs)) {
+    delta <- dt[t - 1L]
+    # Transition probability: P = expm(Q * delta) via eigendecomposition
+    eig  <- eigen(Q * delta)
+    expD <- diag(exp(Re(eig$values)))
+    P    <- Re(eig$vectors %*% expD %*% solve(eig$vectors))
+    P    <- pmax(P, 0)
+    P    <- P / rowSums(P)
+    states[t] <- sample.int(n_states, 1L, prob = P[states[t - 1L], ])
+  }
+
+  # Generate observations
+  y <- stats::rnorm(T_obs, mean = state_means[states], sd = state_sds[states])
+
+  # Outliers in emissions
+  if ("outliers" %in% complexity) {
+    n_out <- sample(2L:5L, 1L)
+    idx   <- sample.int(T_obs, n_out)
+    y[idx] <- y[idx] + sample(c(-1, 1), n_out, replace = TRUE) *
+                        stats::runif(n_out, 5, 10)
+  }
+
+  df <- data.frame(
+    time       = times,
+    y          = y,
+    true_state = states
+  )
+  attr(df, "type")         <- "cthmm"
+  attr(df, "info")         <- .SIM_INFO_MAP["cthmm"]
+  attr(df, "Q")            <- Q
+  attr(df, "state_means")  <- state_means
+  attr(df, "state_sds")    <- state_sds
+  df
+}
+
 # ===========================================================================
 # S3 print methods for batch objects
 # ===========================================================================
@@ -761,7 +1202,9 @@ print.sim_batch_full <- function(x, ...) {
 
 .SIM_VALID_TYPES <- c(
   "ttest", "anova", "correlation", "clusters",
-  "factor_analysis", "prediction", "mlvar"
+  "factor_analysis", "prediction", "mlvar",
+  "probit", "meta", "count", "reliability",
+  "gam", "nma", "power", "cthmm"
 )
 
 .SIM_INFO_MAP <- c(
@@ -771,7 +1214,15 @@ print.sim_batch_full <- function(x, ...) {
   clusters        = "kmeans(d[, -ncol(d)], centers = max(d$true_cluster))",
   factor_analysis = "factanal(d, factors = attr(d, 'n_factors'))",
   prediction      = "summary(lm(y ~ ., data = d))",
-  mlvar           = "mlvar(d, vars = attr(d, 'vars'), id = 'id', day = 'day', beep = 'beep')"
+  mlvar           = "mlvar(d, vars = attr(d, 'vars'), id = 'id', day = 'day', beep = 'beep')",
+  probit          = "glm(y ~ x1 + x2, data = d, family = binomial(link = 'probit'))",
+  meta            = "metafor::rma(yi, vi, data = d)",
+  count           = "glm(y ~ x1 + x2, data = d, family = poisson)",
+  reliability     = "psych::alpha(d)",
+  gam             = "mgcv::gam(y ~ s(x1) + s(x2), data = d)",
+  nma             = "netmeta::netmeta(TE = yi, seTE = sqrt(vi), treat1, treat2, studlab = study, data = d)",
+  power           = "pwr::pwr.t.test(d = d$d, n = d$n, sig.level = d$alpha, type = d$type)",
+  cthmm           = "msm::msm(y ~ time, data = d, qmatrix = Q)"
 )
 
 .SIM_ALL_CASES <- c(

@@ -594,9 +594,11 @@ test_that("n_batch datasets vary across batch items", {
 test_that("type batch returns named list of all types", {
   result <- simulate_data("batch", seed = 1, n_batch = 3L)
   expect_type(result, "list")
-  expect_equal(length(result), 7L)
+  expect_equal(length(result), 15L)
   expected_names <- c("ttest", "anova", "correlation", "clusters",
-                      "factor_analysis", "prediction", "mlvar")
+                      "factor_analysis", "prediction", "mlvar",
+                      "probit", "meta", "count", "reliability",
+                      "gam", "nma", "power", "cthmm")
   expect_equal(sort(names(result)), sort(expected_names))
 })
 
