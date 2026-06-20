@@ -1,0 +1,116 @@
+---
+title: "Saqrlab Reference — Item Response Theory"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    theme: flatly
+    highlight: tango
+    df_print: paged
+    code_folding: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 5)
+suppressMessages(devtools::load_all("/Users/mohammedsaqr/Documents/Github/Saqrlab", quiet = TRUE))
+set.seed(1)
+```
+
+This reference covers `simulate_irt()`, which generates item-response data under
+a known Item Response Theory model with ground-truth item and person
+parameters. It supports the 1PL (Rasch), 2PL, and 3PL dichotomous models and
+the graded response model (GRM) for ordered polytomous items. Each example
+below is small, fast, and seeded so the results are reproducible.
+
+## `simulate_irt()`
+
+Generate item-response data under a known IRT model. The returned `saqr_sim`
+object carries the simulated `$data` (a person-by-item response grid) and the
+true item/person parameters in `$params`, so parameter recovery can be checked
+directly.
+
+**Signature**
+```{r}
+args(simulate_irt)
+```
+
+**Example — 1PL (Rasch)**
+
+In the 1PL model every item shares the same discrimination (fixed at 1); items
+differ only in difficulty.
+```{r}
+fit_1pl <- simulate_irt(n_persons = 300, n_items = 10, model = "1PL", seed = 1)
+fit_1pl
+head(fit_1pl$data)
+str(fit_1pl$params, max.level = 1)
+```
+
+**Example — 2PL**
+
+The 2PL model adds an item-specific discrimination parameter `a`.
+```{r}
+fit_2pl <- simulate_irt(n_persons = 400, n_items = 15, model = "2PL", seed = 2)
+head(fit_2pl$data)
+str(fit_2pl$params, max.level = 1)
+```
+
+**Example — 3PL**
+
+The 3PL model adds a lower-asymptote (guessing) parameter `c` (auto-set to 0.2).
+```{r}
+fit_3pl <- simulate_irt(n_persons = 400, n_items = 12, model = "3PL", seed = 3)
+head(fit_3pl$data)
+fit_3pl$params$c
+```
+
+**Example — GRM (graded response, 4 ordered categories)**
+
+For polytomous items, responses take values `0 ... n_categories - 1` and the
+true category thresholds are returned in `$params$thresholds`.
+```{r}
+fit_grm <- simulate_irt(n_persons = 400, n_items = 8, model = "GRM",
+                        n_categories = 4, seed = 4)
+head(fit_grm$data)
+str(fit_grm$params, max.level = 1)
+fit_grm$params$thresholds
+```
+
+## Parameter recovery
+
+For a 2PL fit, item proportion-correct should track true item difficulty `b`
+negatively (easier items are answered correctly more often), and person total
+score should track true ability `theta` positively.
+
+```{r}
+prop_correct <- colMeans(as.data.frame(fit_2pl))
+cor(prop_correct, fit_2pl$params$b)        # strongly negative
+
+total_score <- rowSums(as.data.frame(fit_2pl))
+cor(total_score, fit_2pl$params$theta)     # strongly positive
+```
+
+A plot of item proportion-correct against true difficulty `b` makes the
+recovery visible: the points fall along a clear downward trend.
+
+```{r}
+plot(fit_2pl$params$b, prop_correct,
+     pch = 19, col = "#2c7fb8",
+     xlab = "True item difficulty  b",
+     ylab = "Observed proportion correct",
+     main = sprintf("2PL recovery: cor = %.2f",
+                    cor(prop_correct, fit_2pl$params$b)))
+abline(lm(prop_correct ~ fit_2pl$params$b), col = "#d95f0e", lwd = 2)
+```
+
+## Optional: estimating with `mirt`
+
+When the `mirt` package is installed, the simulated data can be fit to confirm
+the generating parameters are recoverable by an external estimator. This chunk
+is skipped if `mirt` is not available.
+
+```{r mirt-recovery, eval=requireNamespace("mirt", quietly=TRUE)}
+mod <- mirt::mirt(as.data.frame(fit_2pl), 1, itemtype = "2PL", verbose = FALSE)
+est_b <- mirt::coef(mod, simplify = TRUE, IRTpars = TRUE)$items[, "b"]
+cor(est_b, fit_2pl$params$b)     # estimated vs. true difficulty
+```

@@ -1,5 +1,5 @@
 # ===========================================================================
-# saqr_sim S3 class — unified wrapper for simulation results
+# saqr_sim S3 class -- unified wrapper for simulation results
 # ===========================================================================
 
 #' Create a saqr_sim Object
@@ -23,6 +23,18 @@
 #' @param extras Named list of additional fields to attach (optional).
 #'
 #' @return An object of class \code{saqr_sim} (inherits from \code{list}).
+#'
+#' @examples
+#' sim <- saqr_sim(
+#'   data = data.frame(x = rnorm(10), y = rnorm(10)),
+#'   params = list(mean_x = 0, mean_y = 0),
+#'   type = "demo", seed = 1
+#' )
+#' sim
+#' names(sim)
+#' head(sim)
+#' dim(sim)
+#' sim$params
 #'
 #' @keywords internal
 #' @export
@@ -93,7 +105,7 @@ summary.saqr_sim <- function(object, ...) {
 
 
 # ---------------------------------------------------------------------------
-# as.data.frame — extract $data
+# as.data.frame -- extract $data
 # ---------------------------------------------------------------------------
 
 #' @export
@@ -103,7 +115,7 @@ as.data.frame.saqr_sim <- function(x, ...) {
 
 
 # ---------------------------------------------------------------------------
-# [ — delegate to $data so result[1:5, ] works
+# [ -- delegate to $data so result[1:5, ] works
 # ---------------------------------------------------------------------------
 
 #' @export
@@ -113,7 +125,7 @@ as.data.frame.saqr_sim <- function(x, ...) {
 
 
 # ---------------------------------------------------------------------------
-# dim / nrow / ncol — delegate to $data
+# dim / nrow / ncol -- delegate to $data
 # ---------------------------------------------------------------------------
 
 #' @export

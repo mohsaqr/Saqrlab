@@ -27,8 +27,8 @@ mixing.}
 \value{
 A \code{\link{saqr_sim}} object with:
 \describe{
-\item{\code{$data}}{data.frame with columns \code{x1}…\code{xd} and
-integer column \code{true_cluster} (1…k).}
+\item{\code{$data}}{data.frame with columns \code{x1}...\code{xd} and
+integer column \code{true_cluster} (1...k).}
 \item{\code{$params}}{list with \code{centers} (matrix),
 \code{sds} (k x d matrix), \code{props} (normalised), \code{n}
 (per-cluster sizes).}

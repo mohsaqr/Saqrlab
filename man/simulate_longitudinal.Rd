@@ -27,7 +27,7 @@ simulate_longitudinal(
 \item{tp}{Integer. Number of time points per subject. Default 50.}
 
 \item{vars}{Integer or character vector. If integer, the number of
-variables (named \code{V1}…\code{Vp}). If character, used as variable
+variables (named \code{V1}...\code{Vp}). If character, used as variable
 names directly. Default 4.}
 
 \item{temporal}{Numeric matrix (\code{p x p}). The VAR(1) coefficient matrix
@@ -79,7 +79,7 @@ cross-lagged effects to include. Default: \code{min(3, p*(p-1))}.}
 A \code{\link{saqr_sim}} object with:
 \describe{
 \item{\code{$data}}{data.frame with columns \code{id}, \code{time}
-(or \code{day}/\code{beep}), and \code{V1}…\code{Vp}.}
+(or \code{day}/\code{beep}), and \code{V1}...\code{Vp}.}
 \item{\code{$params}}{list with \code{temporal} (B matrix),
 \code{contemporaneous} (innovation correlation),
 \code{between} (person-mean covariance), \code{grand_means},

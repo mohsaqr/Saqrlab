@@ -28,7 +28,7 @@ mixing.}
 \item{n}{Positive integer. Total number of sequences to generate.}
 
 \item{seq_length}{Positive integer. Number of time-points per sequence
-(columns \code{T1}…\code{T\{seq_length\}}). Default 20.}
+(columns \code{T1}...\code{T\{seq_length\}}). Default 20.}
 
 \item{init_probs}{Either a numeric vector of initial state probabilities
 shared across clusters, a list of per-cluster vectors, or \code{NULL}
@@ -49,8 +49,8 @@ Defaults to \code{paste0("S", seq_len(n_states))}.}
 \value{
 A named list with elements:
 \describe{
-\item{\code{data}}{data.frame with columns \code{T1}…\code{T\{seq_length\}}
-(character state labels) and \code{true_cluster} (integer 1…K).}
+\item{\code{data}}{data.frame with columns \code{T1}...\code{T\{seq_length\}}
+(character state labels) and \code{true_cluster} (integer 1...K).}
 \item{\code{params}}{list with \code{trans_list} (the K matrices used),
 \code{props} (normalised mixing proportions), and \code{init_probs}
 (per-cluster initial probability vectors as a list).}
@@ -62,9 +62,9 @@ one of K Markov chains (clusters), each governed by its own transition
 matrix. Supports explicit matrix supply or automatic random generation.
 }
 \examples{
-m1 <- matrix(c(0.8, 0.2, 0.3, 0.7), nrow = 2,
+m1 <- matrix(c(0.8, 0.2, 0.3, 0.7), nrow = 2, byrow = TRUE,
              dimnames = list(c("A","B"), c("A","B")))
-m2 <- matrix(c(0.2, 0.8, 0.7, 0.3), nrow = 2,
+m2 <- matrix(c(0.2, 0.8, 0.7, 0.3), nrow = 2, byrow = TRUE,
              dimnames = list(c("A","B"), c("A","B")))
 r  <- simulate_seq_clusters(trans_list = list(m1, m2), n = 100, seed = 1)
 head(r$data)

@@ -1,0 +1,324 @@
+---
+title: "Saqrlab Reference — Batch, grid & sampling"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    theme: flatly
+    highlight: tango
+    df_print: paged
+    code_folding: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 5)
+suppressMessages(devtools::load_all("/Users/mohammedsaqr/Documents/Github/Saqrlab", quiet = TRUE))
+set.seed(1)
+```
+
+This page covers Saqrlab's orchestration layer: tools that run a simulation
+many times across a parameter grid, bootstrap edge-significance recovery, fit
+batches of TNA models, and summarize the resulting collections. Every example
+here is kept deliberately tiny (small grids, `num_runs <= 3`, `num_cores = 1`)
+so it runs in seconds; in practice you would use larger grids and parallel
+cores. A shared two-state Markov model is reused throughout.
+
+```{r shared-model}
+trans <- matrix(c(.7, .3, .4, .6), 2, 2, byrow = TRUE,
+                dimnames = list(c("A", "B"), c("A", "B")))
+Model <- list(weights = trans, inits = c(A = 0.5, B = 0.5))
+Model
+```
+
+## `run_grid_simulation()`
+
+Runs a TNA bootstrap recovery experiment across a grid of sample sizes,
+sequence lengths and missingness levels, returning one result element per
+parameter combination.
+
+**Signature**
+```{r}
+args(run_grid_simulation)
+```
+
+**Example**
+```{r}
+grid <- run_grid_simulation(
+  Model = Model,
+  stable_transitions = list(c("A", "B")),
+  num_runs = 2,
+  n_sequences_vec = 20,
+  seq_length_vec = 10,
+  num_cores = 1
+)
+length(grid)
+names(grid[[1]])
+```
+
+## `summarize_grid_results()`
+
+Aggregates a `run_grid_simulation()` result into overall-performance, edge-level
+and per-setting summaries; set `print_output = FALSE` to get the data back
+silently.
+
+**Signature**
+```{r}
+args(summarize_grid_results)
+```
+
+**Example**
+```{r}
+grid_summary <- summarize_grid_results(grid, print_output = FALSE)
+names(grid_summary)
+grid_summary$n_selected
+```
+
+## `analyze_grid_results()`
+
+Backward-compatible alias of `summarize_grid_results()` — identical behaviour
+and arguments.
+
+**Signature**
+```{r}
+args(analyze_grid_results)
+```
+
+**Example**
+```{r}
+identical(
+  analyze_grid_results(grid, print_output = FALSE)$n_selected,
+  summarize_grid_results(grid, print_output = FALSE)$n_selected
+)
+```
+
+## `run_bootstrap_simulation()`
+
+Repeats a single bootstrap edge-recovery experiment `num_runs` times for one
+fixed parameter setting and aggregates how reliably the known stable edges are
+recovered.
+
+**Signature**
+```{r}
+args(run_bootstrap_simulation)
+```
+
+**Example**
+```{r}
+boot <- run_bootstrap_simulation(
+  Model = Model,
+  stable_transitions = list(c("A", "B")),
+  num_runs = 2,
+  seq_length = 10,
+  n_sequences = 20,
+  num_cores = 1
+)
+names(boot)
+boot$successful_runs
+```
+
+## `run_bootstrap_iteration()`
+
+The single-iteration engine underneath `run_bootstrap_simulation()`: simulates
+one dataset from a transition matrix + initial probabilities, fits a model,
+bootstraps it, and scores edge recovery (TP/TN/FP/FN) against the known stable
+edges.
+
+**Signature**
+```{r}
+args(run_bootstrap_iteration)
+```
+
+**Example**
+```{r}
+iter <- run_bootstrap_iteration(
+  trans_matrix = trans,
+  init_probs = c(A = 0.5, B = 0.5),
+  stable_transitions = list(c("A", "B")),
+  seq_length = 10,
+  n_sequences = 20
+)
+names(iter)
+iter$per_edge
+```
+
+## `evaluate_bootstrap()`
+
+Backward-compatible alias of `run_bootstrap_iteration()`.
+
+**Signature**
+```{r}
+args(evaluate_bootstrap)
+```
+
+**Example**
+```{r}
+ev <- evaluate_bootstrap(
+  trans_matrix = trans,
+  init_probs = c(A = 0.5, B = 0.5),
+  stable_transitions = list(c("A", "B")),
+  seq_length = 10,
+  n_sequences = 20
+)
+names(ev)
+```
+
+## `run_network_simulation()`
+
+Simulates many replicate datasets from observed sequence data, fits one or more
+TNA model types to each, and returns tidy per-replicate `metrics` plus
+aggregated `summary_stats`.
+
+**Signature**
+```{r}
+args(run_network_simulation)
+```
+
+**Example**
+```{r}
+original_data <- simulate_sequences(
+  trans_matrix = trans, init_probs = c(A = 0.5, B = 0.5),
+  seq_length = 12, n_sequences = 30
+)
+net_sim <- run_network_simulation(
+  original_data_list = original_data,
+  sim_params = list(seq_length = 12, n_sequences = 30),
+  models = c("tna"),
+  comparisons = c("original"),
+  num_runs = 3
+)
+names(net_sim)
+head(net_sim$metrics)
+```
+
+## `summarize_simulation()`
+
+Summarizes a tidy simulation-metrics `data.frame` (such as
+`run_network_simulation()$metrics`), optionally grouped by one or more columns,
+reporting mean/sd/CI per numeric column.
+
+**Signature**
+```{r}
+args(summarize_simulation)
+```
+
+**Example**
+```{r}
+summarize_simulation(net_sim$metrics, by = "model_type")
+```
+
+## `summarize_networks()`
+
+Summarizes a list of fitted TNA models, reporting density, centrality and
+edge-count statistics per network plus an aggregate row.
+
+**Signature**
+```{r}
+args(summarize_networks)
+```
+
+**Example**
+```{r}
+datasets <- lapply(1:2, function(i) {
+  simulate_sequences(trans_matrix = trans, init_probs = c(A = 0.5, B = 0.5),
+                     seq_length = 12, n_sequences = 30)
+})
+models <- batch_fit_models(datasets, model_type = "tna", progress = FALSE)
+net_summary <- summarize_networks(models)
+names(net_summary)
+net_summary$n_networks
+```
+
+## `batch_fit_models()`
+
+Fits a TNA model type to each dataset in a list, returning a list of fitted
+models (with `NULL` entries where fitting failed). Supports optional parallel
+execution.
+
+**Signature**
+```{r}
+args(batch_fit_models)
+```
+
+**Example**
+```{r}
+models <- batch_fit_models(datasets, model_type = "tna", progress = FALSE)
+length(models)
+vapply(models, function(m) if (!is.null(m)) "OK" else "Failed", character(1))
+```
+
+## `batch_apply()`
+
+Applies a function over a list of objects (e.g. fitted models), with optional
+parallelism, progress reporting and simplification — a thin, list-friendly
+wrapper for batch extraction tasks.
+
+**Signature**
+```{r}
+args(batch_apply)
+```
+
+**Example**
+```{r}
+edge_counts <- batch_apply(
+  models,
+  function(m) sum(m$weights > 0, na.rm = TRUE),
+  progress = FALSE
+)
+unlist(edge_counts)
+```
+
+## `generate_param_grid()`
+
+Builds a parameter grid (one row per parameter combination) via random, Latin
+Hypercube, or regular-grid sampling. With no arguments it returns a small demo
+grid of default TNA parameters.
+
+**Signature**
+```{r}
+args(generate_param_grid)
+```
+
+**Example**
+```{r}
+head(generate_param_grid())
+
+ranges <- list(num_rows = c(50, 100), max_seq_length = c(10, 20),
+               stability_prob = c(0.7, 1.0))
+generate_param_grid(ranges, n = 4, method = "lhs")
+```
+
+## `create_param_grid()`
+
+Backward-compatible alias of `generate_param_grid()`.
+
+**Signature**
+```{r}
+args(create_param_grid)
+```
+
+**Example**
+```{r}
+create_param_grid(list(num_rows = c(50, 100)), n = 3, method = "random")
+```
+
+## `run_sampling_analysis()`
+
+Repeatedly subsamples the sequence data underlying a fitted TNA model, refits on
+each subsample, and reports the stability of edge weights and centralities
+across iterations.
+
+**Signature**
+```{r}
+args(run_sampling_analysis)
+```
+
+**Example**
+```{r}
+suppressMessages(library(tna))
+fit <- tna(group_regulation)
+samp <- run_sampling_analysis(fit, iterations = 5, sampling_percent = 0.3,
+                              seed = 1, verbose = FALSE)
+names(samp)
+head(samp$aggregated)
+```

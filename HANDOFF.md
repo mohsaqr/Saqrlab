@@ -1,74 +1,80 @@
-# Session Handoff — 2026-03-28
+# Session Handoff — 2026-06-20
 
-## Completed This Session
+## Completed This Session — Audit + modern-laboratory upgrade (v0.4.0)
 
-### 1. saqr_sim S3 class (`R/saqr_sim.R`)
-- Unified wrapper: every explicit-parameter simulation function returns `saqr_sim`
-- S3 methods: print, summary, as.data.frame, [, dim, head, tail, str, names
-- Backward-compatible: `$data` and `$params` still work, all existing tests pass unchanged
-- 45 tests in `tests/testthat/test-saqr_sim.R`
+Full audit + additive upgrade of Saqrlab into a "modern data-simulation laboratory."
+Hard constraint honoured throughout: **never break an existing function**, and never
+break the cross-package fixtures JStats/Carm depend on.
 
-### 2. Explicit-parameter statistical functions (`R/simulate_statistical.R`)
-- `simulate_ttest(n_a, n_b, mean_a, mean_b, sd_a, sd_b)` — params include `cohens_d`
-- `simulate_anova(n, means, sds)` — params include `eta_squared`; supports unequal groups
-- `simulate_correlation(n, sigma, means)` — params include `is_correlation`
-- `simulate_clusters(n, centers, sds, props)` — per-cluster sizes or proportions
-- `simulate_prediction(n, coefs, cat_levels, cat_effects)` — params include `r_squared`
-- 81 tests in `tests/testthat/test-simulate_statistical.R`
+### Baseline & result
+- Start: 559 tests passing.
+- End: **1173 tests passing, 0 failures, 0 skips.**
+- R CMD check (examples + R-code, vignette build skipped): **0 ERRORs**; new code adds no warnings/notes.
+- DESCRIPTION 0.3.0 -> 0.4.0; NAMESPACE 73 -> 87 exports.
 
-### 3. simulate_longitudinal() (`R/simulate_longitudinal.R`)
-- VAR(1) panel data for mlVAR/ESM: explicit temporal (B), contemporaneous, between matrices
-- ESM day/beep structure via `beeps_per_day` (day breaks reset carry-over)
-- Complexity injection: na, outliers, heavy_tailed, heteroscedastic, tiny_n
-- Auto-generated B guaranteed stationary via eigenvalue rescaling
-- 42 tests in `tests/testthat/test-simulate_longitudinal.R`
+### 1. Safety net (the "never break" machinery)
+- `tests/testthat/test-fixture-contract.R` + `helper-fixture-contract.R` +
+  `fixtures/fixture-contract-golden.rds`: cross-package tripwire pinning the EXACT
+  output of `simulate_data()` for the 6 fixture types x representative seeds that
+  generate JStats/Carm's ~1010 checked-in JSON fixtures. Always-run (not a
+  CRAN-skipped snapshot); negative-control verified it fires on drift.
+- `test-regress-{tna,compare,batch,misc}.R`: characterization + reproducibility
+  tests for the 45 previously-untested exported functions.
 
-### 4. Wrapped latent functions in saqr_sim (`R/simulate_latent.R`)
-- simulate_lpa, simulate_lca, simulate_regression, simulate_fa, simulate_seq_clusters
-- All return saqr_sim; 75 existing tests pass unchanged
+### 2. Bug fixes (8 exported functions were 100% broken — undefined helpers)
+- `R/helpers_internal.R` (NEW, internal/@noRd): `extract_transition_matrix()`,
+  `long_to_wide()`, `check_val_in_range()`, `safe_bind_rows()`.
+- `R/network_comparison.R`: fixed `compare_centralities` tibble-coercion bug.
+- Now working + tested: simulate_group_tna_networks, generate_group_tna_networks,
+  compare_networks, compare_centralities, compare_edge_recovery,
+  calculate_edge_recovery, summarize_grid_results, analyze_grid_results.
 
-### 5. Comprehensive manual (`docs/simulate_data-manual.md`)
-- 944-line reference covering all 12 simulation functions
-- Full signatures, return structure tables, working examples
-- Parameter Recovery Cookbook with complete worked examples for every function type
+### 3. New DGP modules (all return saqr_sim, base R, parameter-recovery tested)
+- `R/simulate_missing.R` — `inject_missingness()` MCAR/MAR/MNAR.
+- `R/simulate_multilevel.R` — `simulate_mlm()`, `simulate_growth()`.
+- `R/simulate_irt.R` — `simulate_irt()` 1PL/2PL/3PL/GRM.
+- `R/simulate_survival.R` — `simulate_survival()`.
+- `R/simulate_hmm.R` — `simulate_hmm()`.
 
-### 6. Updated CLAUDE.md
-- Rewrote to reflect post-split state (simulation-only package)
-- Removed all references to network estimation code that moved to Nestimate
+### 4. Laboratory infrastructure
+- `R/simulate.R` — `simulate(type, ...)` dispatcher + `list_simulators()`.
+- `R/validate_recovery.R` — `validate_recovery()` + `recovery_result` print/summary.
+- `R/scenarios.R` — `list_scenarios()`, `get_scenario()`, `run_scenario()`,
+  `tidy_simulation_results()`, `export_simulation()`.
+
+### 5. Check-cleanliness (pre-existing issues fixed)
+- `R/Saqrlab-package.R`: `@importFrom utils head tail str`, `@importFrom stats plogis rlnorm`,
+  registered dplyr-NSE globals.
+- `R/simulate_latent.R`: fixed buggy `simulate_seq_clusters` example (byrow=TRUE);
+  stripped non-ASCII from comments (all R/ comments ASCII-clean now).
+- DESCRIPTION Suggests += lme4, mirt, survival.
+- FEATURES.md/README.md/NEWS.md de-staled (removed Nestimate-moved references).
 
 ## Current State
-
-### Tests
-- **559 total assertions passing, 0 failures**
-- New this session: 45 (saqr_sim) + 81 (statistical) + 42 (longitudinal) = 168 new tests
-- All pre-existing tests unaffected
-
-### Uncommitted Changes
-All work from this session is **uncommitted**. `git status` shows:
-- **Modified**: CHANGES.md, CLAUDE.md, FEATURES.md, HANDOFF.md, LEARNINGS.md, NAMESPACE, R/simulate_latent.R, man/Saqrlab-package.Rd, man/simulate_onehot_data.Rd
-- **New (untracked)**: R/saqr_sim.R, R/simulate_longitudinal.R, R/simulate_statistical.R, man/saqr_sim.Rd, man/simulate_anova.Rd, man/simulate_clusters.Rd, man/simulate_correlation.Rd, man/simulate_longitudinal.Rd, man/simulate_prediction.Rd, man/simulate_ttest.Rd, tests/testthat/test-saqr_sim.R, tests/testthat/test-simulate_longitudinal.R, tests/testthat/test-simulate_statistical.R
-
-### Architecture: two simulation tiers
-1. **Explicit-parameter** (`simulate_ttest`, `simulate_anova`, etc.) → `saqr_sim` with `$params` containing ground truth. For parameter recovery testing.
-2. **Random-parameter** (`simulate_data()`) → bare `data.frame` with attributes. Random structure from seed. For stress/robustness testing. NOT wrapped in saqr_sim (incompatible interface — tests use `d$group`, `names(d)` directly).
+- Working tree has many new/modified files; **nothing committed or pushed** (awaiting user).
+- Full suite green (1173). Package R-CMD-check-clean except the pre-existing vignette issue below.
 
 ## Open Issues
-1. Nestimate still needs `git init` + push to GitHub
-2. Saqrlab DESCRIPTION needs `Imports: Nestimate` once Nestimate has a remote
-3. `simulate_data()` stays as bare data.frame — wrapping breaks 169 existing tests that treat result as data.frame
-4. Sequence functions (`simulate_sequences`, `simulate_tna_network`, etc.) not yet wrapped in saqr_sim
-5. No complexity injection yet on latent functions (simulate_lpa, etc.) or statistical functions
-6. docs/simulate_data-manual.md is local only — not yet pushed to GitHub
+1. **Pre-existing broken vignette (NOT fixed — out of scope):**
+   `vignettes/tna-workflow.Rmd` setup chunk runs
+   `remotes::install_github("mohsaqr/Sonnet@cograph_merged")` which 404s, so the
+   vignette build fails. It also has half-written/trailing-comma code. Blocks a
+   fully clean `R CMD check` (vignette stage only). Unrelated to simulation code.
+2. Other R CMD check NOTEs are environmental: `.superpowers/`, `docs/*cache`,
+   top-level session-artifact files (CHANGES/HANDOFF/LEARNINGS/CLAUDE.md, tmp logs).
+   Add an `.Rbuildignore` if a clean build tarball is wanted.
 
-## Next Steps (prioritised)
-1. Commit and push all session work to GitHub
-2. Push `docs/simulate_data-manual.md` to GitHub for public access
-3. Add complexity injection to explicit-parameter functions (simulate_ttest, simulate_lpa, etc.)
-4. Add more longitudinal DGPs: growth curve, RI-CLPM, DSEM
-5. Wire Nestimate as Saqrlab dependency
-6. Consider wrapping sequence functions in saqr_sim
+## Next Steps
+1. Review the diff; commit when ready (NOT done — git untouched per project rules).
+2. (Optional) Fix or remove `vignettes/tna-workflow.Rmd` so vignettes build.
+3. (Optional) Add `.Rbuildignore` for session artifacts + docs cache.
+4. (Optional) Add complexity injection to the new explicit-parameter simulators.
+5. (Optional) Wire a `simulate_data()`-tier guard regen step into release docs:
+   if the tripwire ever changes intentionally, regenerate JStats/Carm fixtures in lockstep.
 
 ## Context
 - Saqrlab: `/Users/mohammedsaqr/Documents/Github/Saqrlab/`
-- Nestimate: `/Users/mohammedsaqr/Documents/Github/Nestimate/` (not on git)
-- Manual: `docs/simulate_data-manual.md`
+- Fixture consumers: `/Users/mohammedsaqr/Documents/Github/JStats/validation/` (and Carm mirror).
+  Generators: `<JStats>/validation/r-reference/*-ref.R` call `simulate_data(type, seed=i)`.
+- Nestimate (sibling, network estimation): on CRAN v0.7.3.
+- Temp check logs (tmp_*.log) are session artifacts — safe to delete.

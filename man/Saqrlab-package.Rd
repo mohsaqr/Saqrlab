@@ -4,9 +4,30 @@
 \name{Saqrlab-package}
 \alias{Saqrlab}
 \alias{Saqrlab-package}
-\title{Saqrlab: Simulation and Analysis for Temporal Network Analysis}
+\title{Saqrlab: A Modern Laboratory for Data Simulation}
 \description{
-Simulation tools for temporal network analysis (TNA) research. Generates synthetic datasets with known ground-truth parameters for testing and validating statistical methods: Markov chain sequences, latent profiles, latent classes, regression, factor analysis, and sequence cluster structures. All simulation functions return list(data, params) for JSON-serializable access to ground-truth parameters.
+Saqrlab generates synthetic datasets with known ground-truth parameters so
+you can test and validate statistical methods. It spans classic designs
+(t-test, ANOVA, regression, factor analysis), modern data-generating
+processes (IRT, survival, multilevel, growth curves, hidden Markov,
+missing-data mechanisms), and a full Temporal Network Analysis toolkit.
+}
+\details{
+Two complementary tiers:
+\itemize{
+\item \strong{Explicit-parameter} simulators (e.g. \code{\link[=simulate_ttest]{simulate_ttest()}},
+\code{\link[=simulate_irt]{simulate_irt()}}, \code{\link[=simulate_mlm]{simulate_mlm()}}, and the \code{\link[=simulate]{simulate()}} dispatcher)
+return a \link{saqr_sim} object with \verb{$data} and the true \verb{$params}, for
+parameter-recovery testing.
+\item \strong{Random-parameter} generation via \code{\link[=simulate_data]{simulate_data()}} returns a
+bare data frame whose structure is invented from the seed, for
+stress/robustness testing.
+}
+
+Start with \code{\link[=list_simulators]{list_simulators()}} for the catalogue, \code{\link[=simulate]{simulate()}} to generate,
+and \code{\link[=validate_recovery]{validate_recovery()}} to score whether a fitted method recovered the
+truth. Browse the per-category HTML reference in the package's
+\verb{reference/} directory.
 }
 \author{
 \strong{Maintainer}: Mohammed Saqr \email{saqr@saqr.me}

@@ -29,7 +29,7 @@ complement). An error is raised if any auto-computed value is \eqn{\le 0}
 \value{
 A named list with elements:
 \describe{
-\item{\code{data}}{data.frame with columns \code{y1}…\code{yp}.}
+\item{\code{data}}{data.frame with columns \code{y1}...\code{yp}.}
 \item{\code{params}}{list with \code{loadings}, \code{phi}, \code{psi},
 and \code{sigma_implied} (the \eqn{p x p} model-implied covariance
 matrix).}

@@ -1,0 +1,211 @@
+---
+title: "Saqrlab Reference — Laboratory infrastructure"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    theme: flatly
+    highlight: tango
+    df_print: paged
+    code_folding: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 5)
+suppressMessages(devtools::load_all("/Users/mohammedsaqr/Documents/Github/Saqrlab", quiet = TRUE))
+set.seed(1)
+```
+
+This page documents Saqrlab's "laboratory" layer — the unified front door to the
+simulators. `simulate()` dispatches to any registered simulator by name and
+returns a tidy `saqr_sim` object; `validate_recovery()` checks how well an
+estimator recovers known ground-truth parameters; and the scenario system
+(`list_scenarios()` / `get_scenario()` / `run_scenario()`) packages named,
+multi-case experiments that can be tidied and exported to disk.
+
+## `saqr_sim()`
+
+Constructs the standard `saqr_sim` result object that wraps a simulated
+`data` frame together with its ground-truth `params`, the simulator `type`, and
+the `seed`. Every explicit-parameter simulator returns one of these.
+
+**Signature**
+```{r}
+args(saqr_sim)
+```
+
+**Example**
+```{r}
+sim <- saqr_sim(
+  data = data.frame(x = rnorm(10), y = rnorm(10)),
+  params = list(mean_x = 0, mean_y = 0),
+  type = "demo", seed = 1
+)
+sim
+```
+
+The class carries a full set of S3 methods so it behaves like a tidy result:
+
+```{r}
+class(sim)
+names(sim)             # data, params
+dim(sim)               # dims of the underlying data frame
+head(sim)              # head of $data
+summary(sim)           # data summary + parameter list
+sim$data |> head(3)    # the simulated data frame
+sim$params             # the ground-truth parameters
+as.data.frame(sim) |> head(3)  # tidy accessor -> the data frame
+```
+
+## `simulate()`
+
+The universal dispatcher: `simulate(type, ...)` routes to the named simulator
+with explicit named arguments and returns a `saqr_sim`. The `seed` argument
+makes any draw reproducible.
+
+**Signature**
+```{r}
+args(simulate)
+```
+
+**Example**
+```{r}
+ttest_sim <- simulate("ttest", n_a = 50, n_b = 50,
+                      mean_a = 0, mean_b = 0.5, seed = 1)
+ttest_sim
+head(ttest_sim)
+```
+
+## `list_simulators()`
+
+Returns the catalogue of registered simulator names with their descriptions as
+a tidy `data.frame`.
+
+**Signature**
+```{r}
+args(list_simulators)
+```
+
+**Example**
+```{r}
+list_simulators()
+```
+
+## `validate_recovery()`
+
+Compares a vector of estimated parameters against the ground-truth `params`
+stored in a `saqr_sim`, returning a `recovery_result` table of absolute and
+relative error with a within-tolerance flag per parameter.
+
+**Signature**
+```{r}
+args(validate_recovery)
+```
+
+**Example**
+
+End-to-end: simulate a regression with known coefficients, fit it with `lm()`,
+and feed the fitted coefficients back in as estimates. The estimate names must
+match the `coefs.*` parameter names stored by `simulate_regression()`.
+
+```{r}
+rsim <- simulate_regression(
+  coefs = c("(Intercept)" = 1, x1 = 2, x2 = -1.5),
+  predictor_sds = c(x1 = 1, x2 = 1),
+  error_sd = 1, n = 2000, seed = 7
+)
+names(rsim$params)   # confirm the coefs.* parameter names
+
+fit_lm <- lm(y ~ x1 + x2, data = rsim$data)
+est <- stats::setNames(coef(fit_lm), paste0("coefs.", names(coef(fit_lm))))
+
+recovery <- validate_recovery(rsim, estimates = est)
+recovery
+summary(recovery)
+```
+
+## `list_scenarios()`
+
+Lists the built-in named scenarios — pre-packaged, multi-case experiments — as a
+tidy `data.frame`.
+
+**Signature**
+```{r}
+args(list_scenarios)
+```
+
+**Example**
+```{r}
+list_scenarios()
+```
+
+## `get_scenario()`
+
+Returns the parameter specification(s) for a named scenario: the full list of
+cases, or a single case when `case` is supplied.
+
+**Signature**
+```{r}
+args(get_scenario)
+```
+
+**Example**
+```{r}
+power_spec <- get_scenario("power_ttest")
+length(power_spec)        # one entry per case
+power_spec[[1]]           # the first case's parameters
+
+get_scenario("power_ttest", case = 1)
+```
+
+## `run_scenario()`
+
+Executes every case of a named scenario with a single `seed`, returning a list
+of per-case `saqr_sim` results.
+
+**Signature**
+```{r}
+args(run_scenario)
+```
+
+**Example**
+```{r}
+scenario_run <- run_scenario("power_ttest", seed = 1)
+names(scenario_run)       # one element per case
+scenario_run[[1]]
+```
+
+## `tidy_simulation_results()`
+
+Flattens a `run_scenario()` result into a single tidy `data.frame`, stacking the
+cases with a `.case` column and joining in each case's parameters.
+
+**Signature**
+```{r}
+args(tidy_simulation_results)
+```
+
+**Example**
+```{r}
+tidy <- tidy_simulation_results(scenario_run)
+head(tidy)
+```
+
+## `export_simulation()`
+
+Writes a scenario run (or its tidied form) to a CSV file on disk, returning the
+path invisibly.
+
+**Signature**
+```{r}
+args(export_simulation)
+```
+
+**Example**
+```{r}
+out_path <- tempfile(fileext = ".csv")
+export_simulation(tidy, out_path)
+file.exists(out_path)
+head(read.csv(out_path))
+```

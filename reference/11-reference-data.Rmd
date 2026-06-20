@@ -1,0 +1,177 @@
+---
+title: "Saqrlab Reference — Reference data & utilities"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    theme: flatly
+    highlight: tango
+    df_print: paged
+    code_folding: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 5)
+suppressMessages(devtools::load_all("/Users/mohammedsaqr/Documents/Github/Saqrlab", quiet = TRUE))
+set.seed(1)
+```
+
+Saqrlab ships two curated reference datasets — `LEARNING_STATES` (learning-action
+verbs across 8 categories) and `GLOBAL_NAMES` (culturally diverse names by region)
+— plus accessor and selection helpers that turn them into ready-to-use state labels
+and node names. A small validation utility, `validate_sim_params()`, standardizes
+simulation parameter lists.
+
+## `LEARNING_STATES`
+
+A named list of learning-action verbs organized into 8 categories drawn from the
+learning-sciences literature.
+
+**Structure**
+```{r}
+length(LEARNING_STATES)
+names(LEARNING_STATES)
+lengths(LEARNING_STATES)
+lapply(LEARNING_STATES, head, 5)
+```
+
+## `GROUP_REGULATION_ACTIONS`
+
+A character vector of socially-shared regulation of learning (SSRL) action verbs,
+convenient as a ready-made state set for group-regulation simulations.
+
+**Structure**
+```{r}
+length(GROUP_REGULATION_ACTIONS)
+GROUP_REGULATION_ACTIONS
+```
+
+## `GLOBAL_NAMES`
+
+A named list of ~1000 culturally diverse first names, grouped by world region, for
+naming actors/nodes in simulations.
+
+**Structure**
+```{r}
+length(GLOBAL_NAMES)
+head(names(GLOBAL_NAMES), 10)
+lapply(GLOBAL_NAMES[c("western_europe", "arab", "east_asia")], head, 5)
+```
+
+## `get_learning_states()`
+
+Retrieve learning verbs by category, optionally taking a random sample and
+combining several categories.
+
+**Signature**
+```{r}
+args(get_learning_states)
+```
+
+**Example**
+```{r}
+# All category names
+names(get_learning_states())
+
+# Cognitive verbs only
+head(get_learning_states("cognitive"))
+
+# Random 6 verbs across two categories (seeded)
+get_learning_states(c("social", "cognitive"), n = 6, seed = 1)
+```
+
+## `select_states()` / `smart_select_states()`
+
+Intelligently select a set of `n_states` labels, balancing a primary and secondary
+category by `primary_ratio`. `smart_select_states()` is an alias for `select_states()`.
+
+**Signature**
+```{r}
+args(select_states)
+args(smart_select_states)
+```
+
+**Example**
+```{r}
+# Auto-strategy: number of categories scales with n_states
+select_states(8, seed = 42)
+
+# Explicit primary category
+smart_select_states(5, primary_categories = "metacognitive", seed = 1)
+```
+
+## `list_learning_categories()`
+
+Return a tidy data frame summarizing each learning-state category with its verb
+count and example verbs.
+
+**Signature**
+```{r}
+args(list_learning_categories)
+```
+
+**Example**
+```{r}
+list_learning_categories()
+```
+
+## `get_global_names()`
+
+Retrieve diverse first names, optionally sampling `n` of them and restricting to
+one or more regions.
+
+**Signature**
+```{r}
+args(get_global_names)
+```
+
+**Example**
+```{r}
+# 8 names from the Arab region (seeded)
+get_global_names(n = 8, regions = "arab", seed = 1)
+
+# Sample across all regions
+get_global_names(n = 6, seed = 1)
+```
+
+## `list_name_regions()`
+
+Return a tidy data frame summarizing each name region with its count and example
+names.
+
+**Signature**
+```{r}
+args(list_name_regions)
+```
+
+**Example**
+```{r}
+head(list_name_regions())
+```
+
+## `validate_sim_params()`
+
+Validate and standardize a list of simulation parameters, applying defaults and
+enforcing relationships (e.g. `min_na <= max_na <= seq_length`). Both new and
+legacy parameter names are accepted.
+
+**Signature**
+```{r}
+args(validate_sim_params)
+```
+
+**Example — valid call**
+```{r}
+validate_sim_params(list(
+  seq_length  = 50,
+  n_sequences = 200,
+  min_na      = 2,
+  max_na      = 10
+))
+```
+
+**Example — invalid call (wrapped in `try()` so the doc still renders)**
+```{r}
+try(validate_sim_params("not_a_list"))
+```

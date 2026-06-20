@@ -24,7 +24,7 @@ Default: all zeros.}
 \value{
 A \code{\link{saqr_sim}} object with:
 \describe{
-\item{\code{$data}}{data.frame with columns \code{x1}…\code{xp}.}
+\item{\code{$data}}{data.frame with columns \code{x1}...\code{xp}.}
 \item{\code{$params}}{list with \code{sigma} (the input matrix),
 \code{means}, \code{is_correlation} (logical).}
 }

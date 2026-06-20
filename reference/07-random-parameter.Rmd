@@ -1,0 +1,156 @@
+---
+title: "Saqrlab Reference — Random-parameter generation"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    theme: flatly
+    highlight: tango
+    df_print: paged
+    code_folding: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 5)
+suppressMessages(devtools::load_all("/Users/mohammedsaqr/Documents/Github/Saqrlab", quiet = TRUE))
+set.seed(1)
+```
+
+This reference covers `simulate_data()`, the seed-driven random-parameter
+generator. Unlike the explicit-parameter simulators, it returns a **bare**
+`data.frame` (not a `saqr_sim`), and the seed determines both the random data
+*and* the structural parameters (sample size, effect sizes, number of
+groups/variables) — so each seed yields a structurally unique, ready-to-analyse
+dataset. It also supports edge-case ("complexity") injection and batch
+generation.
+
+## `simulate_data()`
+
+A single dispatcher over many dataset types. Each dataset carries `type`,
+`info`, and `complexity` attributes; the `info` attribute is the intended
+analysis call for that type.
+
+**Signature**
+```{r}
+args(simulate_data)
+```
+
+The full catalogue of types:
+```{r}
+.SIM_VALID_TYPES
+```
+
+### Core types
+
+Each of these returns a bare `data.frame` ready for its intended analysis.
+
+```{r}
+d_ttest <- simulate_data("ttest", seed = 42)
+str(d_ttest)
+head(d_ttest)
+attributes(d_ttest)[c("type", "info", "complexity")]
+```
+
+```{r}
+d_anova <- simulate_data("anova", seed = 42)
+str(d_anova)
+table(d_anova$group)
+```
+
+```{r}
+d_cor <- simulate_data("correlation", seed = 42)
+str(d_cor)
+round(cor(d_cor), 2)
+```
+
+```{r}
+d_clusters <- simulate_data("clusters", seed = 42)
+str(d_clusters)
+table(d_clusters$true_cluster)
+```
+
+```{r}
+d_fa <- simulate_data("factor_analysis", seed = 42)
+str(d_fa)
+attr(d_fa, "n_factors")
+```
+
+```{r}
+d_pred <- simulate_data("prediction", seed = 42)
+str(d_pred)
+head(d_pred)
+```
+
+### Newer types
+
+The dispatcher also covers `"probit"`, `"count"`, `"meta"`, `"reliability"`,
+`"gam"`, `"nma"`, `"power"`, and `"cthmm"`. Their `info` attribute documents the
+intended analysis. (`"power"` returns a one-row list of inputs rather than a
+data frame.)
+
+```{r}
+newer <- c("probit", "count", "meta", "reliability",
+           "gam", "nma", "power", "cthmm")
+do.call(rbind, lapply(newer, function(tp) {
+  d <- simulate_data(tp, seed = 42)
+  data.frame(type = tp,
+             class = class(d)[1],
+             intended_analysis = attr(d, "info"),
+             row.names = NULL)
+}))
+```
+
+One worked example — a Poisson `count` dataset, ready for `glm(..., poisson)`:
+```{r}
+d_count <- simulate_data("count", seed = 42)
+str(d_count)
+head(d_count)
+```
+
+### Complexity (edge-case) injection
+
+Pass `complexity` to inject specific edge cases for stress testing. With
+`complexity = "na"`, missing values are introduced; with `"outliers"`, extreme
+values are added. The injected cases are recorded in the `complexity` attribute.
+
+```{r}
+d_na <- simulate_data("ttest", seed = 1, complexity = "na")
+sum(is.na(d_na))
+attr(d_na, "complexity")
+```
+
+```{r}
+d_out <- simulate_data("prediction", seed = 1, complexity = "outliers")
+attr(d_out, "complexity")
+summary(d_out$y)
+```
+
+You can request several at once, e.g. `complexity = c("na", "outliers")`:
+```{r}
+d_multi <- simulate_data("ttest", seed = 1, complexity = c("na", "outliers"))
+attr(d_multi, "complexity")
+```
+
+### Batch generation
+
+Pass `n_batch` to get a list of structurally distinct datasets (each with its
+own seed) instead of a single one. In batch mode the default complexity is
+`"auto"`, which randomly injects 0–3 edge cases per dataset (seed-driven, so
+fully reproducible).
+
+```{r}
+batch <- simulate_data("ttest", seed = 1, n_batch = 20)
+class(batch)
+length(batch)
+str(batch[[1]])
+attr(batch[[1]], "complexity")
+```
+
+Setting `type = "batch"` generates a batch of every type at once:
+```{r}
+all_batches <- simulate_data("batch", seed = 1, n_batch = 5)
+class(all_batches)
+names(all_batches)
+vapply(all_batches, length, integer(1))
+```

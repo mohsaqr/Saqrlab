@@ -10,14 +10,14 @@
 #'   scalar / vector recycled to that shape. Standard deviations within each
 #'   profile for each variable. All values must be positive.
 #' @param props Numeric vector of length \code{n_profiles}. Mixing
-#'   proportions. Need not sum to 1 — normalised internally.
+#'   proportions. Need not sum to 1 -- normalised internally.
 #' @param n Positive integer. Total sample size.
 #' @param seed Integer or NULL. Random seed for reproducibility.
 #'
 #' @return A named list with elements:
 #'   \describe{
-#'     \item{\code{data}}{data.frame with columns \code{y1}…\code{yp} and
-#'       \code{true_profile} (integer 1…K).}
+#'     \item{\code{data}}{data.frame with columns \code{y1}...\code{yp} and
+#'       \code{true_profile} (integer 1...K).}
 #'     \item{\code{params}}{list with \code{means}, \code{sds} (full matrix),
 #'       and \code{props} (as supplied, un-normalised).}
 #'   }
@@ -78,14 +78,14 @@ simulate_lpa <- function(means, sds, props, n, seed = NULL) {
 #'   Each column gives the probability that each item equals 1 for that class.
 #'   All values must be in \eqn{[0, 1]}.
 #' @param class_probs Numeric vector of length \code{n_classes}. Class mixing
-#'   proportions. Need not sum to 1 — normalised internally.
+#'   proportions. Need not sum to 1 -- normalised internally.
 #' @param n Positive integer. Total sample size.
 #' @param seed Integer or NULL. Random seed for reproducibility.
 #'
 #' @return A named list with elements:
 #'   \describe{
-#'     \item{\code{data}}{data.frame with binary columns \code{item1}…\code{itemm}
-#'       and integer column \code{true_class} (labels 1…K).}
+#'     \item{\code{data}}{data.frame with binary columns \code{item1}...\code{itemm}
+#'       and integer column \code{true_class} (labels 1...K).}
 #'     \item{\code{params}}{list with \code{item_probs} and \code{class_probs}
 #'       (as supplied, un-normalised).}
 #'   }
@@ -242,7 +242,7 @@ simulate_regression <- function(coefs, predictor_sds, error_sd, n, seed = NULL) 
 #'
 #' @return A named list with elements:
 #'   \describe{
-#'     \item{\code{data}}{data.frame with columns \code{y1}…\code{yp}.}
+#'     \item{\code{data}}{data.frame with columns \code{y1}...\code{yp}.}
 #'     \item{\code{params}}{list with \code{loadings}, \code{phi}, \code{psi},
 #'       and \code{sigma_implied} (the \eqn{p x p} model-implied covariance
 #'       matrix).}
@@ -264,7 +264,7 @@ simulate_regression <- function(coefs, predictor_sds, error_sd, n, seed = NULL) 
 #' @export
 simulate_fa <- function(loadings, phi = NULL, psi = NULL, n, seed = NULL) {
   if (!is.matrix(loadings) || !is.numeric(loadings)) {
-    stop("`loadings` must be a numeric matrix — for single-factor, use matrix(val, nrow = p, ncol = 1)")
+    stop("`loadings` must be a numeric matrix -- for single-factor, use matrix(val, nrow = p, ncol = 1)")
   }
   stopifnot(!anyNA(loadings), nrow(loadings) >= 1L, ncol(loadings) >= 1L)
   p <- nrow(loadings)
@@ -356,7 +356,7 @@ simulate_fa <- function(loadings, phi = NULL, psi = NULL, n, seed = NULL) {
 #'   mixing.
 #' @param n Positive integer. Total number of sequences to generate.
 #' @param seq_length Positive integer. Number of time-points per sequence
-#'   (columns \code{T1}…\code{T\{seq_length\}}). Default 20.
+#'   (columns \code{T1}...\code{T\{seq_length\}}). Default 20.
 #' @param init_probs Either a numeric vector of initial state probabilities
 #'   shared across clusters, a list of per-cluster vectors, or \code{NULL}
 #'   (uniform). Must be named consistently with the state names derived from
@@ -371,17 +371,17 @@ simulate_fa <- function(loadings, phi = NULL, psi = NULL, n, seed = NULL) {
 #'
 #' @return A named list with elements:
 #'   \describe{
-#'     \item{\code{data}}{data.frame with columns \code{T1}…\code{T\{seq_length\}}
-#'       (character state labels) and \code{true_cluster} (integer 1…K).}
+#'     \item{\code{data}}{data.frame with columns \code{T1}...\code{T\{seq_length\}}
+#'       (character state labels) and \code{true_cluster} (integer 1...K).}
 #'     \item{\code{params}}{list with \code{trans_list} (the K matrices used),
 #'       \code{props} (normalised mixing proportions), and \code{init_probs}
 #'       (per-cluster initial probability vectors as a list).}
 #'   }
 #'
 #' @examples
-#' m1 <- matrix(c(0.8, 0.2, 0.3, 0.7), nrow = 2,
+#' m1 <- matrix(c(0.8, 0.2, 0.3, 0.7), nrow = 2, byrow = TRUE,
 #'              dimnames = list(c("A","B"), c("A","B")))
-#' m2 <- matrix(c(0.2, 0.8, 0.7, 0.3), nrow = 2,
+#' m2 <- matrix(c(0.2, 0.8, 0.7, 0.3), nrow = 2, byrow = TRUE,
 #'              dimnames = list(c("A","B"), c("A","B")))
 #' r  <- simulate_seq_clusters(trans_list = list(m1, m2), n = 100, seed = 1)
 #' head(r$data)
@@ -443,7 +443,7 @@ simulate_seq_clusters <- function(
   }
 
   # ------------------------------------------------------------------
-  # Resolve init_probs → list of length K
+  # Resolve init_probs -> list of length K
   # ------------------------------------------------------------------
   n_st <- length(states)
   if (is.null(init_probs)) {
@@ -460,7 +460,7 @@ simulate_seq_clusters <- function(
   cluster_ids <- sample.int(K, size = n, replace = TRUE, prob = props)
 
   # ------------------------------------------------------------------
-  # Generate sequences  — one Markov chain per row
+  # Generate sequences  -- one Markov chain per row
   # ------------------------------------------------------------------
   .gen_one_seq <- function(k) {
     tm   <- trans_list[[k]]

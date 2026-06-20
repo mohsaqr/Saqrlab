@@ -1,6 +1,6 @@
 Package: Saqrlab
 Title: Simulation and Analysis for Temporal Network Analysis
-Version: 0.3.0
+Version: 0.4.0
 Authors@R: person("Mohammed", "Saqr", email = "saqr@saqr.me", role = c("aut", "cre"))
 Description: Simulation tools for temporal network analysis (TNA) research.
     Generates synthetic datasets with known ground-truth parameters for testing
@@ -33,6 +33,9 @@ Suggests:
     ggridges,
     cograph,
     glmnet,
-    lavaan
+    lavaan,
+    lme4,
+    mirt,
+    survival
 VignetteBuilder: knitr
 Config/testthat/edition: 3

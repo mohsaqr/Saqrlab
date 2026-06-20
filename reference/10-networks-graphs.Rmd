@@ -1,0 +1,124 @@
+---
+title: "Saqrlab Reference — Networks & graphs"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    theme: flatly
+    highlight: tango
+    df_print: paged
+    code_folding: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 5)
+suppressMessages(devtools::load_all("/Users/mohammedsaqr/Documents/Github/Saqrlab", quiet = TRUE))
+set.seed(1)
+```
+
+These functions build social-network and graph structures with named nodes drawn
+from the package's diverse name and learning-state pools. `simulate_igraph()` and
+`simulate_network()` return ready-to-plot graph objects across several classic
+random-graph models, while `simulate_edge_list()`, `simulate_long_data()`, and
+`simulate_onehot_data()` return tidy data frames for downstream analysis.
+
+## `simulate_igraph()`
+
+Create an `igraph` object using a chosen random-graph model (Erdős–Rényi,
+Barabási–Albert, Watts–Strogatz, SBM, and more), with named vertices and optional
+edge weights.
+
+**Signature**
+```{r}
+args(simulate_igraph)
+```
+
+**Example — Erdős–Rényi**
+```{r, eval=requireNamespace("igraph", quietly=TRUE)}
+g_er <- simulate_igraph(n = 15, model = "er", p = 0.15, seed = 42)
+g_er
+plot(g_er, vertex.size = 18, vertex.label.cex = 0.7, main = "Erdos-Renyi (n = 15)")
+```
+
+**Example — Barabási–Albert (scale-free)**
+```{r, eval=requireNamespace("igraph", quietly=TRUE)}
+g_ba <- simulate_igraph(n = 20, model = "ba", m_ba = 2, seed = 42)
+plot(g_ba, vertex.size = 14, vertex.label.cex = 0.6, main = "Barabasi-Albert (n = 20)")
+```
+
+**Example — Watts–Strogatz (small-world)**
+```{r, eval=requireNamespace("igraph", quietly=TRUE)}
+g_ws <- simulate_igraph(n = 20, model = "ws", nei = 2, p_rewire = 0.1, seed = 42)
+plot(g_ws, vertex.size = 14, vertex.label.cex = 0.6, main = "Watts-Strogatz (n = 20)")
+```
+
+## `simulate_network()`
+
+Create a statnet `network` object (same model menu as `simulate_igraph()`) with
+named vertices and optional edge weights.
+
+**Signature**
+```{r}
+args(simulate_network)
+```
+
+**Example**
+```{r, eval=requireNamespace("network", quietly=TRUE) && requireNamespace("sna", quietly=TRUE)}
+net <- simulate_network(n = 15, model = "er", seed = 42)
+net
+plot(net, displaylabels = TRUE, label.cex = 0.7, main = "statnet network (n = 15)")
+```
+
+## `simulate_edge_list()`
+
+Generate a directed/undirected weighted edge list for social-network analysis,
+with each node assigned to one of several classes.
+
+**Signature**
+```{r}
+args(simulate_edge_list)
+```
+
+**Example**
+```{r}
+edges <- simulate_edge_list(n_nodes = 12, n_classes = 3, seed = 42)
+str(edges)
+head(edges)
+```
+
+## `simulate_long_data()`
+
+Generate hierarchical long-format sequence data (one row per actor-event) with
+Actor, Achiever, Group, Course, Time, and Action columns — the canonical format
+for educational-process mining.
+
+**Signature**
+```{r}
+args(simulate_long_data)
+```
+
+**Example**
+```{r}
+long <- simulate_long_data(n_groups = 3, n_actors = 2, seed = 42)
+str(long)
+head(long)
+```
+
+## `simulate_onehot_data()`
+
+Generate the same hierarchical sequence structure as `simulate_long_data()` but
+with each state expanded into its own one-hot indicator column.
+
+**Signature**
+```{r}
+args(simulate_onehot_data)
+```
+
+**Example**
+```{r}
+onehot <- simulate_onehot_data(n_groups = 3, n_actors = 2, seed = 42)
+dim(onehot)
+str(onehot, list.len = 12)
+head(onehot)
+```

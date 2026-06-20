@@ -203,7 +203,7 @@ simulate_data <- function(type, seed = NULL, complexity = "clean",
 
 
 # ===========================================================================
-# Auto-complexity sampler (Gumbel-max trick — weighted, no-replacement, vectorized)
+# Auto-complexity sampler (Gumbel-max trick -- weighted, no-replacement, vectorized)
 # ===========================================================================
 
 .sample_auto_complexity <- function() {

@@ -34,4 +34,17 @@ as before. Additionally, \code{[} and \code{as.data.frame()} delegate to
 the underlying data, so existing code that subscripts or coerces the
 result keeps working.
 }
+\examples{
+sim <- saqr_sim(
+  data = data.frame(x = rnorm(10), y = rnorm(10)),
+  params = list(mean_x = 0, mean_y = 0),
+  type = "demo", seed = 1
+)
+sim
+names(sim)
+head(sim)
+dim(sim)
+sim$params
+
+}
 \keyword{internal}

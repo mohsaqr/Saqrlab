@@ -12,7 +12,7 @@ Each column gives the probability that each item equals 1 for that class.
 All values must be in \eqn{[0, 1]}.}
 
 \item{class_probs}{Numeric vector of length \code{n_classes}. Class mixing
-proportions. Need not sum to 1 — normalised internally.}
+proportions. Need not sum to 1 -- normalised internally.}
 
 \item{n}{Positive integer. Total sample size.}
 
@@ -21,8 +21,8 @@ proportions. Need not sum to 1 — normalised internally.}
 \value{
 A named list with elements:
 \describe{
-\item{\code{data}}{data.frame with binary columns \code{item1}…\code{itemm}
-and integer column \code{true_class} (labels 1…K).}
+\item{\code{data}}{data.frame with binary columns \code{item1}...\code{itemm}
+and integer column \code{true_class} (labels 1...K).}
 \item{\code{params}}{list with \code{item_probs} and \code{class_probs}
 (as supplied, un-normalised).}
 }

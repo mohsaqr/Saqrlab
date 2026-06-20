@@ -269,6 +269,14 @@ compare_centralities <- function(model1,
     }
   )
 
+  # tna::centralities() returns a tibble with a `state` column and positional
+  # rownames; coerce to a base data.frame keyed by state so measure columns drop
+  # to numeric vectors and alignment is by state name, not row position.
+  cent1 <- as.data.frame(cent1, stringsAsFactors = FALSE)
+  cent2 <- as.data.frame(cent2, stringsAsFactors = FALSE)
+  if (!is.null(cent1$state)) rownames(cent1) <- as.character(cent1$state)
+  if (!is.null(cent2$state)) rownames(cent2) <- as.character(cent2$state)
+
   # Align states
   states1 <- rownames(cent1)
   states2 <- rownames(cent2)
@@ -295,11 +303,11 @@ compare_centralities <- function(model1,
     v2 <- cent2[, measure]
 
     if (method %in% c("correlation", "both")) {
-      pearson <- if (sd(v1) > 0 && sd(v2) > 0) cor(v1, v2) else NA_real_
+      pearson <- if (isTRUE(sd(v1) > 0) && isTRUE(sd(v2) > 0)) cor(v1, v2) else NA_real_
       correlations[[paste0(measure, "_pearson")]] <- pearson
     }
     if (method %in% c("rank", "both")) {
-      spearman <- if (sd(v1) > 0 && sd(v2) > 0) {
+      spearman <- if (isTRUE(sd(v1) > 0) && isTRUE(sd(v2) > 0)) {
         cor(v1, v2, method = "spearman")
       } else {
         NA_real_

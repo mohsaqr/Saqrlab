@@ -1,0 +1,118 @@
+---
+title: "Saqrlab Reference — Missing-data mechanisms"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    theme: flatly
+    highlight: tango
+    df_print: paged
+    code_folding: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 5)
+suppressMessages(devtools::load_all("/Users/mohammedsaqr/Documents/Github/Saqrlab", quiet = TRUE))
+set.seed(1)
+```
+
+This reference covers `inject_missingness()`, a *transformer* that takes a
+complete data frame and injects `NA`s under a chosen missingness mechanism from
+the Rubin taxonomy — MCAR (completely at random), MAR (at random, driven by an
+observed predictor), and MNAR (not at random, driven by the missing value
+itself). The returned object carries a `"missing_info"` attribute recording
+exactly which cells were made missing.
+
+## `inject_missingness()`
+
+Inject missing values into target columns under a known mechanism. MAR requires
+an observed `predictor` column (which is itself never made missing); MNAR sets
+larger numeric values missing more often. All three mechanisms are calibrated so
+the realized missing fraction is approximately `prop`.
+
+**Signature**
+```{r}
+args(inject_missingness)
+```
+
+We start from a small complete data frame with a regression structure so that
+`x1` can serve as a MAR predictor of `y`.
+
+```{r}
+df <- simulate_prediction(
+  n = 500,
+  coefs = c("(Intercept)" = 1, x1 = 2, x2 = -1),
+  seed = 1
+)$data
+head(df)
+colSums(is.na(df))   # no missingness yet
+```
+
+**MCAR — missing completely at random**
+
+Every cell of the target columns is independently set missing with probability
+`prop`.
+```{r}
+mcar <- inject_missingness(df, mechanism = "MCAR", prop = 0.2, seed = 7)
+colSums(is.na(mcar))
+attr(mcar, "missing_info")$realized_prop
+str(attr(mcar, "missing_info"), max.level = 1)
+```
+
+**MAR — missing at random (driven by observed `x1`)**
+
+Here only `y` is targeted, and its missingness probability depends on the
+*observed* predictor `x1` — never on `y`'s own value.
+```{r}
+mar <- inject_missingness(df, mechanism = "MAR", prop = 0.2,
+                          cols = "y", predictor = "x1", seed = 7)
+colSums(is.na(mar))
+attr(mar, "missing_info")$realized_prop
+```
+
+The dependence on the predictor is visible: rows with missing `y` have a
+systematically different mean `x1` than rows with observed `y`.
+```{r}
+miss_y <- is.na(mar$y)
+tapply(df$x1, ifelse(miss_y, "y missing", "y observed"), mean)
+```
+
+**MNAR — missing not at random (driven by `y` itself)**
+
+The probability that `y` is missing depends on `y`'s own (latent) value: larger
+values are more likely to go missing.
+```{r}
+mnar <- inject_missingness(df, mechanism = "MNAR", prop = 0.2,
+                           cols = "y", seed = 7)
+colSums(is.na(mnar))
+attr(mnar, "missing_info")$realized_prop
+```
+
+The MNAR signature: the *observed* (non-missing) `y` mean is shifted relative to
+the full-data mean, because the largest values were preferentially removed.
+```{r}
+c(full_mean     = mean(df$y),
+  observed_mean = mean(mnar$y, na.rm = TRUE))
+```
+
+## Visualising the missingness pattern
+
+An `image()` of the missing-cell indicator shows where the `NA`s landed. Under
+MCAR they scatter uniformly across all columns; under MAR/MNAR they concentrate
+in the single targeted column `y`.
+
+```{r, fig.height=4}
+op <- par(mfrow = c(1, 3), mar = c(3, 4, 3, 1))
+show_pattern <- function(x, ttl) {
+  m <- is.na(x[, c("y", "x1", "x2")])
+  image(seq_len(ncol(m)), seq_len(nrow(m)), t(m),
+        col = c("#ece7f2", "#d95f0e"), axes = FALSE,
+        xlab = "", ylab = "row", main = ttl)
+  axis(1, at = seq_len(ncol(m)), labels = colnames(m))
+}
+show_pattern(mcar, "MCAR")
+show_pattern(mar,  "MAR (y ~ x1)")
+show_pattern(mnar, "MNAR (y ~ y)")
+par(op)
+```

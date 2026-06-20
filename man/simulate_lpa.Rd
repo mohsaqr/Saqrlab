@@ -15,7 +15,7 @@ scalar / vector recycled to that shape. Standard deviations within each
 profile for each variable. All values must be positive.}
 
 \item{props}{Numeric vector of length \code{n_profiles}. Mixing
-proportions. Need not sum to 1 — normalised internally.}
+proportions. Need not sum to 1 -- normalised internally.}
 
 \item{n}{Positive integer. Total sample size.}
 
@@ -24,8 +24,8 @@ proportions. Need not sum to 1 — normalised internally.}
 \value{
 A named list with elements:
 \describe{
-\item{\code{data}}{data.frame with columns \code{y1}…\code{yp} and
-\code{true_profile} (integer 1…K).}
+\item{\code{data}}{data.frame with columns \code{y1}...\code{yp} and
+\code{true_profile} (integer 1...K).}
 \item{\code{params}}{list with \code{means}, \code{sds} (full matrix),
 and \code{props} (as supplied, un-normalised).}
 }

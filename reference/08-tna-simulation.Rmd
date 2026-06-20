@@ -1,0 +1,340 @@
+---
+title: "Saqrlab Reference — TNA simulation"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    theme: flatly
+    highlight: tango
+    df_print: paged
+    code_folding: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 5)
+suppressMessages(devtools::load_all("/Users/mohammedsaqr/Documents/Github/Saqrlab", quiet = TRUE))
+set.seed(1)
+```
+
+The TNA-simulation family generates synthetic Temporal Network Analysis data with known ground-truth parameters. The `simulate_tna_*` functions build fitted `tna`/`group_tna` model objects (ready for the `tna` package), `simulate_*_matrix`/`simulate_htna` return transition matrices with node groupings for hierarchical/multilevel plots, and `generate_probabilities` produces the underlying Markov probabilities. The `generate_*` names are silent backward-compatibility aliases of their `simulate_*` counterparts and produce identical output. All examples below are seeded and kept small for fast rendering.
+
+## `simulate_tna_network()`
+
+Generate a single fitted TNA network model with learning-state names — the simplest way to obtain a ready-to-use `tna` object (`$weights`, `$inits`, `$labels`, `$data`).
+
+**Signature**
+```{r}
+args(simulate_tna_network)
+```
+
+**Example**
+```{r}
+model <- simulate_tna_network(n_states = 4, seed = 1)
+class(model)
+names(model)
+head(round(model$weights, 3))     # transition weights; rows sum to 1
+round(rowSums(model$weights), 3)
+# tna ships a plot method; guard it in case the suggested deps are absent
+invisible(try(plot(model), silent = TRUE))
+```
+
+## `simulate_tna_networks()`
+
+Simulate multiple independent TNA network objects for simulation studies, returning a named list of fitted `tna` models (no underlying data/probabilities). Alias: `generate_tna_networks()`.
+
+**Signature**
+```{r}
+args(simulate_tna_networks)
+```
+
+**Example**
+```{r}
+nets <- simulate_tna_networks(
+  n_networks = 2, n_states = 4, n_sequences = 30, seq_length = 10,
+  seed = 1, verbose = FALSE
+)
+length(nets)
+names(nets)
+class(nets[[1]])
+head(round(nets[[1]]$weights, 3))
+```
+
+## `simulate_tna_datasets()`
+
+Simulate complete TNA datasets: each element bundles the fitted `model`, the generating `transition_probs`/`initial_probs`, the simulated `sequences`, and a `params` list. Aliases: `generate_tna_datasets()`, `generate_sequence_data()`.
+
+**Signature**
+```{r}
+args(simulate_tna_datasets)
+```
+
+**Example**
+```{r}
+data <- simulate_tna_datasets(
+  n_datasets = 2, n_states = 4, n_sequences = 30, seq_length = 10,
+  seed = 1, verbose = FALSE
+)
+length(data)
+names(data)
+names(data[[1]])                       # model, params, probs, sequences
+data[[1]]$params$state_names
+head(data[[1]]$sequences, 3)
+round(rowSums(data[[1]]$transition_probs), 3)
+```
+
+## `simulate_group_tna_networks()`
+
+Simulate a grouped/clustered TNA model (class `group_tna`) — one TNA network per group (e.g. classrooms or teams), built from long-format sequence data. Alias: `generate_group_tna_networks()`.
+
+**Signature**
+```{r}
+args(simulate_group_tna_networks)
+```
+
+**Example**
+```{r}
+group_net <- simulate_group_tna_networks(
+  n_groups = 2, n_actors = 5, n_states = 3, seq_length_range = c(5, 8),
+  seed = 1, verbose = FALSE
+)
+class(group_net)
+length(group_net)                      # one tna model per group
+names(group_net)
+head(round(group_net[[1]]$weights, 3))
+```
+
+## `simulate_tna_matrix()`
+
+Simulate a transition matrix with node groupings, compatible with `tna::plot_htna()` (hierarchical) and `tna::plot_mlna()` (multilevel). Returns `list(matrix, node_types)`. A convenience wrapper around `simulate_htna()`. Alias: `generate_tna_matrix()`.
+
+**Signature**
+```{r}
+args(simulate_tna_matrix)
+```
+
+**Example**
+```{r}
+net <- simulate_tna_matrix(
+  nodes_per_group = 2, n_groups = 2,
+  group_names = c("Macro", "Micro"),
+  seed = 1, verbose = FALSE
+)
+names(net)
+dim(net$matrix)
+round(net$matrix, 3)
+round(rowSums(net$matrix), 3)          # transition matrix: rows sum to 1
+net$node_types                         # group -> node-name mapping
+```
+
+## `simulate_htna()`
+
+Simulate a transition matrix with multiple node *types* for hierarchical (HTNA), multilevel (MLNA), or multi-type (MTNA) analysis. Returns `list(matrix, node_types, type_names, n_nodes_per_type)`. `simulate_mlna()` and `simulate_mtna()` are aliases that produce identical output — choose the name matching your analysis context.
+
+**Signature**
+```{r}
+args(simulate_htna)
+```
+
+**Example**
+```{r}
+htna <- simulate_htna(n_nodes = 2, n_types = 2, seed = 1)
+names(htna)
+htna$type_names
+dim(htna$matrix)
+round(htna$matrix, 3)
+round(rowSums(htna$matrix), 3)
+# a quick heatmap of the transition structure
+image(htna$matrix, axes = FALSE, main = "simulate_htna() transition matrix")
+```
+
+## `simulate_mlna()`
+
+Multilevel-network alias of `simulate_htna()` — identical behaviour and return value; the name simply documents intent in multilevel (MLNA) workflows.
+
+**Signature**
+```{r}
+args(simulate_mlna)
+```
+
+**Example**
+```{r}
+mlna <- simulate_mlna(
+  n_nodes = 2,
+  type_names = c("Macro", "Meso", "Micro"),
+  seed = 1
+)
+mlna$type_names
+dim(mlna$matrix)
+round(rowSums(mlna$matrix), 3)
+```
+
+## `simulate_mtna()`
+
+Multi-type-network alias of `simulate_htna()` — identical behaviour and return value, named for multi-type (MTNA) workflows.
+
+**Signature**
+```{r}
+args(simulate_mtna)
+```
+
+**Example**
+```{r}
+mtna <- simulate_mtna(n_nodes = 2, n_types = 3, seed = 1)
+mtna$type_names
+dim(mtna$matrix)
+round(rowSums(mtna$matrix), 3)
+```
+
+## `simulate_matrix()`
+
+Generate a single simple network matrix (transition, frequency, co-occurrence, or adjacency) with learning-state node names. A transition matrix is row-normalised (rows sum to 1).
+
+**Signature**
+```{r}
+args(simulate_matrix)
+```
+
+**Example**
+```{r}
+mat <- simulate_matrix(n_nodes = 4, matrix_type = "transition", seed = 1)
+dim(mat)
+round(mat, 3)
+round(rowSums(mat), 3)                  # rows sum to 1 (empty rows -> 0)
+
+# co-occurrence is symmetric
+co <- simulate_matrix(n_nodes = 4, matrix_type = "co-occurrence", seed = 1)
+isSymmetric(co)
+```
+
+## `generate_tna_matrix()`
+
+Backward-compatibility alias of `simulate_tna_matrix()` — see that section for full documentation. It forwards all arguments unchanged.
+
+**Signature**
+```{r}
+args(generate_tna_matrix)
+```
+
+**Example**
+```{r}
+net <- generate_tna_matrix(nodes_per_group = 2, n_groups = 2, seed = 1, verbose = FALSE)
+identical(names(net), c("matrix", "node_types"))
+dim(net$matrix)
+```
+
+## `generate_tna_networks()`
+
+Backward-compatibility alias of `simulate_tna_networks()` — see that section for full documentation. It forwards all arguments unchanged.
+
+**Signature**
+```{r}
+args(generate_tna_networks)
+```
+
+**Example**
+```{r}
+nets <- generate_tna_networks(
+  n_networks = 2, n_states = 4, n_sequences = 30, seq_length = 10,
+  seed = 1, verbose = FALSE
+)
+length(nets)
+class(nets[[1]])
+```
+
+## `generate_tna_datasets()`
+
+Backward-compatibility alias of `simulate_tna_datasets()` — see that section for full documentation. It forwards all arguments unchanged.
+
+**Signature**
+```{r}
+args(generate_tna_datasets)
+```
+
+**Example**
+```{r}
+data <- generate_tna_datasets(
+  n_datasets = 2, n_states = 4, n_sequences = 30, seq_length = 10,
+  seed = 1, verbose = FALSE
+)
+length(data)
+names(data[[1]])
+```
+
+## `generate_group_tna_networks()`
+
+Backward-compatibility alias of `simulate_group_tna_networks()` — see that section for full documentation. It forwards all arguments unchanged.
+
+**Signature**
+```{r}
+args(generate_group_tna_networks)
+```
+
+**Example**
+```{r}
+g <- generate_group_tna_networks(
+  n_groups = 2, n_actors = 5, n_states = 3, seq_length_range = c(5, 8),
+  seed = 1, verbose = FALSE
+)
+class(g)
+length(g)
+```
+
+## `generate_probabilities()`
+
+Generate random transition probabilities and initial-state probabilities for a Markov chain (via `seqHMM`). Returns `list(initial_probs, transition_probs, state_names)`; transition-matrix rows sum to 1.
+
+**Signature**
+```{r}
+args(generate_probabilities)
+```
+
+**Example**
+```{r}
+probs <- generate_probabilities(n_states = 4, seed = 1)
+names(probs)
+probs$state_names
+round(probs$initial_probs, 3)
+sum(probs$initial_probs)                # initial probs sum to 1
+round(probs$transition_probs, 3)
+round(rowSums(probs$transition_probs), 3)
+```
+
+## `generate_sequence_data()`
+
+Backward-compatibility alias of `simulate_tna_datasets()` — see that section for full documentation. It forwards all arguments unchanged, returning the full datasets bundle (model + probabilities + sequences).
+
+**Signature**
+```{r}
+args(generate_sequence_data)
+```
+
+**Example**
+```{r}
+seqs <- generate_sequence_data(
+  n_datasets = 1, n_states = 4, n_sequences = 30, seq_length = 10,
+  seed = 1, verbose = FALSE
+)
+length(seqs)
+names(seqs[[1]])
+head(seqs[[1]]$sequences, 3)
+```
+
+## `sample_tna()`
+
+Take a fitted `tna` model (or a sequence `data.frame`), randomly sample a proportion of its rows, and re-estimate a new `tna` model with the same parameters. `sampling_percent` must be in `(0, 1]`. Useful for sampling-stability and bootstrap-style studies.
+
+**Signature**
+```{r}
+args(sample_tna)
+```
+
+**Example**
+```{r}
+model   <- simulate_tna_network(n_states = 4, seed = 1)
+sampled <- sample_tna(model, sampling_percent = 0.5)
+class(sampled)
+nrow(model$data)                        # rows in the original model
+nrow(sampled$data)                      # ~50% of the rows, re-estimated
+head(round(sampled$weights, 3))
+```

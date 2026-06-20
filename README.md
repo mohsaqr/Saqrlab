@@ -6,398 +6,169 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 <!-- badges: end -->
 
-**Simulation and Analysis Tools for Temporal Network Analysis (TNA)**
+**A modern laboratory for data simulation.**
 
-Saqrlab is an R package providing comprehensive tools for simulating, analyzing, and comparing Temporal Network Analysis models. Designed for educational researchers, it includes:
+Saqrlab generates synthetic datasets with **known ground-truth parameters** so you can test, validate, and benchmark statistical methods — does your estimator actually recover the truth you simulated? It spans classic designs (t-test, ANOVA, regression, factor analysis), modern data-generating processes (IRT, survival, multilevel, growth curves, hidden Markov, missing-data mechanisms), and a full Temporal Network Analysis (TNA) toolkit, all behind one consistent interface.
 
-- Markov chain sequence simulation with realistic learning state names
-- Multiple TNA model fitting (TNA, fTNA, cTNA, aTNA)
-- Network comparison metrics (correlation, RMSE, edge recovery)
-- Bootstrap and power analysis tools
-- Hierarchical/multilevel network support (HTNA/MLNA)
-- 180+ learning action verbs for educational simulations
+- **87 functions across 15 categories** — every one documented with a runnable example ([browse the HTML reference](reference/index.html)).
+- **One return type, `saqr_sim`** — every simulator gives you `$data` (a tidy data frame) and `$params` (the true generating parameters).
+- **A unified `simulate()` dispatcher**, scenario presets, and an automatic **`validate_recovery()`** scorer that checks whether a fitted method recovered the truth.
+- **1,173 tests, 0 failures**; ships a cross-package fixture-contract guard so generated data stays reproducible.
+
+> Network *estimation* (bootstrap, permutation, GLASSO, GIMME, MCML, …) lives in the sibling package [**Nestimate**](https://cran.r-project.org/package=Nestimate). Saqrlab is simulation-first.
 
 ## Installation
 
 ```r
-# Install from GitHub
-devtools::install_github("mohsaqr/Saqrlab")
+# install.packages("remotes")
+remotes::install_github("mohsaqr/Saqrlab")
 ```
 
-### Dependencies
+Core dependencies install automatically. A few simulators have optional, skip-guarded recovery checks that use `lme4`, `mirt`, `survival`, `igraph`, `network`, or `sna` — install them only if you want those extras.
 
-```r
-install.packages(c("tna", "seqHMM", "dplyr", "tidyr", "parallel",
-                   "future", "future.apply", "progressr", "lhs"))
-```
+## Quick start
 
-## Quick Start
+### One front door for every simulator
 
 ```r
 library(Saqrlab)
+
+list_simulators()                                  # the full catalogue, as a tidy table
+
+sim <- simulate("ttest", n_a = 50, n_b = 50, mean_a = 0, mean_b = 0.6, seed = 1)
+sim                                                # a saqr_sim: prints type, dims, params
+head(sim$data)                                     # the data
+sim$params                                         # the ground truth
+```
+
+### Simulate truth, then check recovery
+
+```r
+# Simulate a regression with known coefficients ...
+sim <- simulate_regression(
+  coefs         = c("(Intercept)" = 2, x1 = 3, x2 = -1),
+  predictor_sds = c(x1 = 1, x2 = 1),
+  error_sd      = 1, n = 1000, seed = 1
+)
+
+# ... fit a model ...
+fit <- lm(y ~ x1 + x2, data = sim$data)
+
+# ... and score how well it recovered the truth.
+estimates <- setNames(coef(fit), paste0("coefs.", names(coef(fit))))
+recovery  <- validate_recovery(sim, estimates = estimates)
+recovery            # per-parameter true vs estimate, error, within-tolerance
+summary(recovery)   # one-row scorecard: % within tolerance, mean error
+```
+
+### Modern data-generating processes
+
+```r
+simulate_irt(n_persons = 500, n_items = 20, model = "2PL", seed = 1)   # item responses
+simulate_survival(n = 300, censoring_rate = 0.3, seed = 1)            # time-to-event
+simulate_mlm(n_clusters = 30, cluster_size = 20, icc = 0.1, seed = 1) # students-in-classes
+simulate_hmm(n_sequences = 50, seq_length = 30, n_states = 2, seed = 1)
+
+# Inject realistic missingness (MCAR / MAR / MNAR) as a first-class step
+inject_missingness(sim$data, mechanism = "MAR", prop = 0.15, predictor = "x1", seed = 1)
+```
+
+### Ready-made experimental designs
+
+```r
+list_scenarios()                                   # named design recipes
+runs  <- run_scenario("power_ttest", seed = 1)     # runs every case, returns saqr_sim objects
+tidy_simulation_results(runs)                      # one tidy data frame across all cases
+```
+
+### Temporal Network Analysis
+
+```r
 library(tna)
 
-# Generate a TNA network in one line
-model <- simulate_tna_network(seed = 42)
-
-# Use with all tna functions
+model <- simulate_tna_network(n_states = 6, seed = 42)   # a fitted `tna` object
 plot(model)
 centralities(model)
-communities(model)
 ```
 
-## Function Reference
+## How it is organised: two simulation tiers
 
-### Data Simulation
+Saqrlab deliberately keeps **two complementary interfaces** — knowing which one you're using tells you what you get back:
 
-| Function | Description | Example |
-|----------|-------------|---------|
-| `simulate_tna_network()` | **Single fitted TNA model** | `simulate_tna_network(seed = 42)` |
-| `simulate_matrix()` | Simple transition matrix | `simulate_matrix(n_nodes = 5, seed = 42)` |
-| `simulate_htna()` | Multi-type HTNA/MLNA matrix | `simulate_htna(n_nodes = 5, n_types = 3)` |
-| `simulate_sequences()` | Markov chain sequences | `simulate_sequences(n_sequences = 100)` |
-| `simulate_sequences_advanced()` | Sequences with stability patterns | `simulate_sequences_advanced(...)` |
-| `simulate_long_data()` | Hierarchical group data | `simulate_long_data(n_groups = 5)` |
-| `simulate_onehot_data()` | One-hot encoded sequences | `simulate_onehot_data(n_sequences = 50)` |
-| `simulate_edge_list()` | Social network edge lists | `simulate_edge_list(n_nodes = 20)` |
+| Tier | Functions | Returns | Use it to |
+|------|-----------|---------|-----------|
+| **Explicit-parameter** | `simulate_ttest()`, `simulate_irt()`, `simulate_mlm()`, … (and `simulate(type, …)`) | a **`saqr_sim`** object with `$data` + `$params` | recover known truth — you pass the parameters in and check they come back out |
+| **Random-parameter** | `simulate_data(type, seed = i)` | a **bare `data.frame`** (params in attributes) | stress / robustness testing — the seed invents a structurally unique dataset |
 
-### Network Generation
+`saqr_sim` objects behave like their data frame for convenience (`head()`, `dim()`, `[`, `as.data.frame()`), while keeping `$params` for the ground truth.
 
-| Function | Description | Example |
-|----------|-------------|---------|
-| `simulate_tna_datasets()` | Complete TNA datasets | `simulate_tna_datasets(n_datasets = 5)` |
-| `simulate_tna_networks()` | Fitted TNA models | `simulate_tna_networks(n_networks = 5)` |
-| `simulate_group_tna_networks()` | Group TNA models | `simulate_group_tna_networks(n_groups = 5)` |
-| `simulate_tna_matrix()` | HTNA/MLNA matrices | `simulate_tna_matrix(n_states = 15)` |
-| `generate_probabilities()` | Random transition probs | `generate_probabilities(n_states = 5)` |
+## Function catalogue
 
-### Model Fitting & Extraction
+Each category is a self-contained HTML page with every function's signature and a **runnable example showing real output** (open [`reference/index.html`](reference/index.html) for the clickable index):
 
-| Function | Description | Example |
-|----------|-------------|---------|
-| `fit_network_model()` | Fit TNA models | `fit_network_model(data, "tna")` |
-| `extract_transition_matrix()` | Get transition matrix | `extract_transition_matrix(model)` |
-| `extract_initial_probs()` | Get initial probabilities | `extract_initial_probs(model)` |
-| `extract_edges()` | Get edge list | `extract_edges(model, threshold = 0.05)` |
+| Category | Funcs | What's inside |
+|----------|:----:|---------------|
+| [Statistical simulators](reference/01-statistical.html) | 5 | `simulate_ttest`, `simulate_anova`, `simulate_correlation`, `simulate_clusters`, `simulate_prediction` |
+| [Latent-variable models](reference/02-latent.html) | 5 | `simulate_lpa`, `simulate_lca`, `simulate_regression`, `simulate_fa`, `simulate_seq_clusters` |
+| [Longitudinal & multilevel](reference/03-longitudinal-multilevel.html) | 3 | `simulate_longitudinal` (VAR/ESM), `simulate_mlm`, `simulate_growth` |
+| [Item Response Theory](reference/04-irt.html) | 1 | `simulate_irt` (1PL/2PL/3PL/GRM) |
+| [Survival & hidden Markov](reference/05-survival-hmm.html) | 2 | `simulate_survival`, `simulate_hmm` |
+| [Missing-data mechanisms](reference/06-missing-data.html) | 1 | `inject_missingness` (MCAR/MAR/MNAR) |
+| [Random-parameter generation](reference/07-random-parameter.html) | 1 | `simulate_data` (15 types + complexity injection + batch) |
+| [TNA simulation](reference/08-tna-simulation.html) | 16 | `simulate_tna_network(s)`, `simulate_group_tna_networks`, `simulate_htna/mlna/mtna`, `generate_probabilities`, `sample_tna`, … |
+| [Sequences](reference/09-sequences.html) | 2 | `simulate_sequences`, `simulate_sequences_advanced` |
+| [Networks & graphs](reference/10-networks-graphs.html) | 5 | `simulate_igraph`, `simulate_network`, `simulate_edge_list`, `simulate_onehot_data`, `simulate_long_data` |
+| [Reference data & utilities](reference/11-reference-data.html) | 10 | `LEARNING_STATES`, `GLOBAL_NAMES`, `get_learning_states`, `select_states`, `validate_sim_params`, … |
+| [Comparison & model fitting](reference/12-comparison-fitting.html) | 10 | `fit_network_model`, `compare_networks`, `compare_centralities`, `compare_edge_recovery`, `cross_validate_tna`, … |
+| [Visualization](reference/13-visualization.html) | 3 | `plot_network_estimation`, `plot_sampling_distribution`, `plot_tna_comparison` |
+| [Batch, grid & sampling](reference/14-batch-grid-sampling.html) | 14 | `generate_param_grid`, `run_grid_simulation`, `run_bootstrap_simulation`, `summarize_grid_results`, … |
+| [Laboratory infrastructure](reference/15-lab-infrastructure.html) | 9 | `simulate`, `list_simulators`, `validate_recovery`, `list_scenarios`, `run_scenario`, `tidy_simulation_results`, `export_simulation`, `saqr_sim` |
 
-### Network Comparison
+## Learning states
 
-| Function | Description | Example |
-|----------|-------------|---------|
-| `compare_networks()` | Compare two networks | `compare_networks(model1, model2)` |
-| `compare_centralities()` | Compare centrality profiles | `compare_centralities(model1, model2)` |
-| `compare_edge_recovery()` | Edge recovery metrics | `compare_edge_recovery(orig, sim)` |
+Saqrlab ships 180+ learning-action verbs across 8 categories, used to give simulated TNA states human-readable names.
 
-### Data Conversion
-
-| Function | Description | Example |
-|----------|-------------|---------|
-| `wide_to_long()` | Wide to long format | `wide_to_long(sequences)` |
-| `long_to_wide()` | Long to wide format | `long_to_wide(data, "id", "Time", "Action")` |
-| `prepare_for_tna()` | Prepare for tna package | `prepare_for_tna(data)` |
-| `action_to_onehot()` | Convert to one-hot | `action_to_onehot(sequences)` |
-
-### Batch Processing
-
-| Function | Description | Example |
-|----------|-------------|---------|
-| `batch_fit_models()` | Fit multiple models | `batch_fit_models(data_list, "tna")` |
-| `batch_apply()` | Apply function to list | `batch_apply(models, extract_edges)` |
-
-### Bootstrap & Simulation
-
-| Function | Description | Example |
-|----------|-------------|---------|
-| `run_bootstrap_simulation()` | Bootstrap analysis | `run_bootstrap_simulation(data, 100)` |
-| `run_grid_simulation()` | Parameter grid search | `run_grid_simulation(param_grid)` |
-| `run_network_simulation()` | Model comparison study | `run_network_simulation(...)` |
-| `run_bootstrap_iteration()` | Evaluate bootstrap results | `run_bootstrap_iteration(results, model)` |
-| `summarize_grid_results()` | Analyze grid output | `summarize_grid_results(grid_results)` |
-
-### Learning States
-
-| Function | Description | Example |
-|----------|-------------|---------|
-| `get_learning_states()` | Get verbs by category | `get_learning_states("metacognitive")` |
-| `list_learning_categories()` | Show categories | `list_learning_categories()` |
-| `select_states()` | Intelligent selection | `select_states(10)` |
-| `LEARNING_STATES` | Full dataset (180+ verbs) | `LEARNING_STATES$cognitive` |
-| `GLOBAL_NAMES` | 300 diverse names | `head(GLOBAL_NAMES, 20)` |
-
-### Utilities
-
-| Function | Description | Example |
-|----------|-------------|---------|
-| `generate_param_grid()` | Parameter grids | `generate_param_grid(n = c(50, 100))` |
-| `validate_sim_params()` | Validate parameters | `validate_sim_params(params)` |
-| `summarize_simulation()` | Summary stats | `summarize_simulation(results)` |
-| `summarize_networks()` | Network summaries | `summarize_networks(model_list)` |
-
-## Extensive Examples
-
-### Example 1: Basic TNA Workflow
+| Category | Examples |
+|----------|----------|
+| metacognitive | Plan, Monitor, Evaluate, Reflect, Regulate |
+| cognitive | Read, Study, Analyze, Summarize, Connect |
+| behavioral | Practice, Annotate, Research, Review, Revise |
+| social | Collaborate, Discuss, Seek_help, Explain, Share |
+| motivational | Focus, Persist, Explore, Create, Commit |
+| affective | Enjoy, Appreciate, Value, Curious, Cope |
+| group_regulation | Adapt, Cohesion, Consensus, Coregulate, Plan |
+| lms | View, Access, Download, Submit, Navigate |
 
 ```r
-library(Saqrlab)
-library(tna)
-
-# Simulate sequences with metacognitive states
-sequences <- simulate_sequences(
-  n_sequences = 200,
-  seq_length = 25,
-  n_states = 6,
-  categories = c("metacognitive", "cognitive"),
-  seed = 42
-)
-
-# Fit TNA model
-model <- fit_network_model(sequences, "tna")
-
-# Analyze
-plot(model)
-centralities(model)
-
-# Extract components
-trans_mat <- extract_transition_matrix(model)
-edges <- extract_edges(model, threshold = 0.05)
+list_learning_categories()                          # all categories, as a table
+get_learning_states("metacognitive", n = 5, seed = 1)
+select_states(10, primary_categories = "metacognitive", seed = 1)
 ```
 
-### Example 2: Hierarchical TNA (HTNA)
+## Quality & reproducibility
 
-```r
-library(Saqrlab)
-library(tna)
-
-# Generate 25-node multi-type matrix (5 types x 5 nodes)
-net <- simulate_htna(seed = 42)
-
-# View structure
-dim(net$matrix)        # 25 x 25
-names(net$node_types)  # 5 types
-
-# Visualize with tna package
-plot_htna(net$matrix, net$node_types, layout = "polygon")
-
-# Custom configuration
-net <- simulate_htna(
-  n_nodes = 4,
-  n_types = 3,
-  type_names = c("Planning", "Execution", "Reflection"),
-  within_prob = 0.5,    # High within-type connectivity
-  between_prob = 0.15,  # Low between-type connectivity
-  seed = 42
-)
-```
-
-### Example 3: Group TNA Analysis
-
-```r
-library(Saqrlab)
-library(tna)
-
-# Generate hierarchical data (actors in groups in courses)
-long_data <- simulate_long_data(
-  n_groups = 5,
-  n_actors = c(8, 12),    # Variable group sizes
-  n_courses = 3,
-  categories = "group_regulation",
-  seq_length_range = c(10, 25),
-  achiever_levels = c("High", "Low"),
-  seed = 42
-)
-
-# View structure
-head(long_data)
-table(long_data$Group, long_data$Achiever)
-
-# Convert to wide format
-wide_data <- long_to_wide(
-  long_data,
-  id_col = "Actor",
-  time_col = "Time",
-  action_col = "Action"
-)
-
-# Fit model
-model <- fit_network_model(wide_data, "tna")
-```
-
-### Example 4: Bootstrap Power Analysis
-
-```r
-library(Saqrlab)
-library(tna)
-
-# Create parameter grid for power analysis
-power_grid <- generate_param_grid(
-  param_ranges = list(
-    n_sequences = c(25, 300),
-    seq_length = c(15, 40),
-    n_states = c(4, 8)
-  ),
-  n = 50,
-  method = "lhs"
-)
-
-# Run power analysis (50 replications per condition)
-power_results <- run_grid_simulation(
-  param_grid = power_grid,
-  n_runs_per_setting = 50,
-  model_type = "tna",
-  parallel = TRUE,
-  seed = 42
-)
-
-# Analyze results
-analysis <- summarize_grid_results(power_results)
-summary_by_n <- summarize_simulation(
-  power_results,
-  by = "n_sequences",
-  metrics = c("mean", "sd", "ci")
-)
-
-# Find minimum sample size for r >= 0.90
-min_n <- summary_by_n$n_sequences[
-  which(summary_by_n$correlation_mean >= 0.90)[1]
-]
-```
-
-### Example 5: Model Comparison Study
-
-```r
-library(Saqrlab)
-library(tna)
-
-# Generate ground truth
-true_probs <- generate_probabilities(n_states = 6, seed = 42)
-
-# Simulate sequences
-sequences <- simulate_sequences(
-  trans_matrix = true_probs$transition_matrix,
-  init_probs = true_probs$initial_probs,
-  n_sequences = 200,
-  seq_length = 30
-)
-
-# Fit all model types
-models <- list(
-  tna = fit_network_model(sequences, "tna"),
-  ftna = fit_network_model(sequences, "ftna"),
-  ctna = fit_network_model(sequences, "ctna"),
-  atna = fit_network_model(sequences, "atna")
-)
-
-# Compare to TNA as reference
-comparisons <- lapply(names(models)[-1], function(m) {
-  comp <- compare_networks(models$tna, models[[m]])
-  data.frame(
-    model = m,
-    correlation = comp$metrics$correlation,
-    rmse = comp$metrics$rmse
-  )
-})
-do.call(rbind, comparisons)
-
-# Edge recovery analysis
-recovery <- compare_edge_recovery(
-  original = list(weights = true_probs$transition_matrix),
-  simulated = models$tna,
-  threshold = 0.05
-)
-cat("F1 Score:", recovery$f1_score)
-```
-
-### Example 6: Custom Learning States
-
-```r
-library(Saqrlab)
-
-# View available categories
-list_learning_categories()
-
-# Get metacognitive verbs
-meta_verbs <- get_learning_states("metacognitive")
-
-# Get 10 random verbs from cognitive + behavioral
-mixed_verbs <- get_learning_states(
-  c("cognitive", "behavioral"),
-  n = 10,
-  seed = 42
-)
-
-# Smart selection based on network size
-states_5 <- select_states(5, seed = 42)   # Single category
-states_15 <- select_states(15, seed = 42) # Multiple categories
-
-# Biased selection
-srl_states <- select_states(
-  n_states = 10,
-  primary_categories = "metacognitive",
-  secondary_categories = "cognitive",
-  primary_ratio = 0.7,  # 70% metacognitive
-  seed = 42
-)
-
-# Use in simulation
-sequences <- simulate_sequences(
-  n_sequences = 100,
-  seq_length = 20,
-  n_states = 6,
-  categories = c("metacognitive", "motivational"),
-  seed = 42
-)
-```
-
-## Learning States Reference
-
-Saqrlab includes 180+ learning action verbs in 8 categories:
-
-| Category | Count | Examples |
-|----------|-------|----------|
-| metacognitive | 20 | Plan, Monitor, Evaluate, Reflect, Regulate, Adjust |
-| cognitive | 30 | Read, Study, Analyze, Summarize, Memorize, Connect |
-| behavioral | 30 | Practice, Annotate, Research, Review, Revise, Write |
-| social | 30 | Collaborate, Discuss, Seek_help, Question, Explain, Share |
-| motivational | 30 | Focus, Persist, Explore, Create, Strive, Commit |
-| affective | 30 | Enjoy, Appreciate, Value, Interest, Curious, Cope |
-| group_regulation | 9 | Adapt, Cohesion, Consensus, Coregulate, Plan, Monitor |
-| lms | 30 | View, Access, Download, Upload, Submit, Navigate |
-
-```r
-# Access directly
-LEARNING_STATES$metacognitive
-
-# Or use helper function
-get_learning_states("social", n = 5, seed = 42)
-```
+- **1,173 tests, 0 failures** (`Rscript -e 'devtools::test()'`); package R code passes `R CMD check` cleanly.
+- Every simulator is reproducible: the same `seed` gives identical output.
+- A **cross-package fixture-contract guard** pins the exact output of `simulate_data()` for the seeds that generate downstream JSON fixtures, so reproducibility can't silently drift.
+- Every example in the HTML reference and in roxygen is executed — the outputs you see are real.
 
 ## Documentation
 
-- `?Saqrlab` - Package overview
-- `vignette("introduction")` - Getting started
-- `vignette("simulation-guide")` - Complete simulation guide
-- `vignette("tna-workflow")` - End-to-end analysis
-- `vignette("htna-mlna")` - Hierarchical/multilevel networks
-- `vignette("bootstrap-power")` - Power analysis
-- `vignette("learning-states")` - Learning states reference
+- **[HTML function reference](reference/index.html)** — one page per category, every function with a live example.
+- [`FEATURES.md`](FEATURES.md) — concise feature list. [`NEWS.md`](NEWS.md) — changelog.
+- `?Saqrlab` and `?<function>` in R for the manual pages.
 
 ## Citation
 
-If you use Saqrlab in your research, please cite:
-
 ```
-Saqr, M. (2025). Saqrlab: Simulation and Analysis Tools for Temporal Network
-Analysis. R package version 0.1.0. https://github.com/mohsaqr/Saqrlab
+Saqr, M. (2025). Saqrlab: A Modern Laboratory for Data Simulation.
+R package version 0.4.0. https://github.com/mohsaqr/Saqrlab
 ```
 
 ## License
 
-MIT License. See [LICENSE](LICENSE) for details.
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit issues or pull requests at [GitHub](https://github.com/mohsaqr/Saqrlab).
+MIT License — see [LICENSE](LICENSE).
 
 ## Author
 
-**Mohammed Saqr** - [saqr@saqr.me](mailto:saqr@saqr.me)
+**Mohammed Saqr** — [saqr@saqr.me](mailto:saqr@saqr.me). Contributions welcome via [GitHub](https://github.com/mohsaqr/Saqrlab).

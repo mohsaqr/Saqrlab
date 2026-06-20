@@ -1,5 +1,47 @@
 # Saqrlab Changes
 
+### 2026-06-20 — Codex line-by-line review fixes
+Independent Codex review of all new/changed code. Math confirmed correct (IRT, survival, multilevel, growth, dispatcher). Five reproduced correctness bugs fixed (+16 regression tests, suite 1173 -> 1189):
+- R/simulate_missing.R: MAR/MNAR missingness undershot `prop` for prop>0.5 (post-scale clamp deflated the mean). Now clamp-aware: a root-find sets the multiplier so expected missingness == prop (verified 0.9 -> 0.903, still predictor-correlated).
+- R/network_comparison.R: `compare_centralities()` crashed with <2 shared states / NA centralities (`if (sd(NA) > 0)`); guarded with `isTRUE()`.
+- R/helpers_internal.R: `long_to_wide()` crashed on zero-row input (`max(integer(0))`) and fabricated all-NA rows for NA ids -> guarded; `safe_bind_rows()` coerced factor+character column conflicts to NA -> factors normalized to character first.
+- R/simulate_hmm.R: transition draw could return NA when a row's cumsum drifted below 1 in floating point -> last CDF bucket pinned to 1.
+- tests/testthat/test-codex-fixes.R: regression tests for all five.
+Remaining Codex findings (input-integer/seed validation hardening, singular-Cholesky guards at cor=±1, validate_recovery nested-list flattening) logged as optional hardening, not yet applied.
+
+### 2026-06-20 — Audit + modern-laboratory upgrade (v0.4.0, additive/never-break)
+Full audit and additive upgrade. Baseline 559 tests -> **1173 tests, 0 failures**. Strict additive-only contract: no existing signature/return changed; `simulate_data()` RNG/structural output is byte-identical (guarded). R CMD check (examples + R-code): 0 ERRORs from the new code.
+
+Safety net:
+- tests/testthat/test-fixture-contract.R + helper-fixture-contract.R + fixtures/fixture-contract-golden.rds: cross-package fixture tripwire. Pins exact `simulate_data()` output (column contract + 10-sig-digit value fingerprints) for the 6 types x seeds that generate JStats/Carm's ~1010 checked-in JSON fixtures, so any RNG/structural drift fails in Saqrlab's own suite first. Always-run (not a CRAN-skipped snapshot); negative-control verified to fire on drift.
+- tests/testthat/test-regress-{tna,compare,batch,misc}.R: characterization + reproducibility tests for the 45 previously-untested exported functions.
+
+Bug fixes (functions were 100% broken via undefined helpers -- now working + tested):
+- R/helpers_internal.R: implemented missing internal helpers `extract_transition_matrix()`, `long_to_wide()`, `check_val_in_range()`, `safe_bind_rows()`. Unblocks simulate_group_tna_networks/generate_group_tna_networks; compare_networks/compare_centralities/compare_edge_recovery/calculate_edge_recovery; summarize_grid_results/analyze_grid_results.
+- R/network_comparison.R: fixed compare_centralities tibble-coercion bug (tna::centralities() returns a tibble keyed by `state`; coerce to base data.frame keyed by state).
+
+New DGP modules (all return `saqr_sim`, base R, parameter-recovery tested):
+- R/simulate_missing.R: `inject_missingness()` -- MCAR/MAR/MNAR with calibrated rates + metadata.
+- R/simulate_multilevel.R: `simulate_mlm()` (nesting, ICC, random slopes), `simulate_growth()` (latent growth curve).
+- R/simulate_irt.R: `simulate_irt()` -- 1PL/2PL/3PL/GRM.
+- R/simulate_survival.R: `simulate_survival()` -- Weibull/exponential/Gompertz hazards + censoring.
+- R/simulate_hmm.R: `simulate_hmm()` -- hidden-Markov sequences with true latent paths.
+
+New laboratory infrastructure:
+- R/simulate.R: `simulate(type, ...)` unified dispatcher + `list_simulators()` (16 simulators).
+- R/validate_recovery.R: `validate_recovery(sim, estimates)` -- scores recovery of simulated ground truth; tidy `recovery_result` with print/summary.
+- R/scenarios.R: `list_scenarios()`, `get_scenario()`, `run_scenario()` + `tidy_simulation_results()`, `export_simulation()`.
+
+Check-cleanliness (pre-existing issues surfaced by first real R CMD check):
+- R/Saqrlab-package.R: added `@importFrom utils head tail str` and `@importFrom stats plogis rlnorm` (fixes "object 'head' not found" namespace-load failure); registered dplyr-NSE globals.
+- R/simulate_latent.R: fixed buggy `simulate_seq_clusters` example (rows must sum to 1 -> byrow=TRUE); stripped non-ASCII from comments. All R/ comments ASCII-clean (global_names.R name data intentionally preserved).
+
+- DESCRIPTION: 0.3.0 -> 0.4.0; added Suggests lme4, mirt, survival.
+- NAMESPACE: 73 -> 87 exports (regenerated).
+- FEATURES.md/README.md/NEWS.md: removed stale references to functions that moved to Nestimate; NEWS 0.4.0 entry.
+- Tests: 1173 passing, 0 failures (was 559).
+- Known pre-existing issue NOT addressed: vignettes/tna-workflow.Rmd setup chunk runs remotes::install_github("mohsaqr/Sonnet@...") which 404s and blocks vignette build (unrelated to simulation code).
+
 ### 2026-03-28 — Unified saqr_sim class + explicit-parameter simulation functions
 - R/saqr_sim.R: New S3 class `saqr_sim` wrapping all simulation returns. Provides print, summary, as.data.frame, [, dim, head, tail, str, names methods. Backward-compatible: $data and $params still work.
 - R/simulate_statistical.R: New explicit-parameter functions: `simulate_ttest()`, `simulate_anova()`, `simulate_correlation()`, `simulate_clusters()`, `simulate_prediction()`. All return saqr_sim with $params containing ground-truth values (Cohen's d, eta-squared, population R², true cluster centers, etc.).

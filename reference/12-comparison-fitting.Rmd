@@ -1,0 +1,280 @@
+---
+title: "Saqrlab Reference — Network comparison & model fitting"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    theme: flatly
+    highlight: tango
+    df_print: paged
+    code_folding: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 5)
+suppressMessages(devtools::load_all("/Users/mohammedsaqr/Documents/Github/Saqrlab", quiet = TRUE))
+set.seed(1)
+```
+
+This reference covers Saqrlab's model-fitting and network-comparison verbs. The
+fitting helper (`fit_network_model()`) wraps the `tna` package, the pairwise
+comparators (`compare_networks()`, `compare_centralities()`,
+`compare_edge_recovery()`) score how similar two networks are, and the
+simulation-driven comparators (`compare_estimation()`,
+`compare_network_estimation()`, `compare_reliability()`, `cross_validate_tna()`)
+repeatedly fit models to assess estimation stability and recovery.
+
+Note: the pairwise `compare_*` verbs require both networks to share the same set
+of states (the same alphabet), so every example below builds matched-state
+inputs.
+
+## `fit_network_model()`
+
+Fit a TNA model (`tna`, `ftna`, `ctna`, `atna`, or `group_tna`) to wide-format
+sequence data using a single unified interface over the `tna` package.
+
+**Signature**
+```{r}
+args(fit_network_model)
+```
+
+**Example**
+```{r}
+set.seed(1)
+trans_mat <- matrix(c(
+  0.7, 0.2, 0.1,
+  0.3, 0.5, 0.2,
+  0.2, 0.3, 0.5
+), nrow = 3, byrow = TRUE)
+rownames(trans_mat) <- colnames(trans_mat) <- c("A", "B", "C")
+init_probs <- c(A = 0.5, B = 0.3, C = 0.2)
+
+sequences <- simulate_sequences(
+  transition_matrix = trans_mat,
+  initial_probabilities = init_probs,
+  max_seq_length = 15,
+  num_rows = 40
+)
+
+model_tna <- fit_network_model(sequences, "tna")
+class(model_tna)
+```
+
+## `compare_networks()`
+
+Compare two fitted networks (or weight-matrix lists) over a shared set of states,
+returning correlation, RMSE, and edge-difference metrics plus an edge-level table.
+
+**Signature**
+```{r}
+args(compare_networks)
+```
+
+**Example**
+```{r}
+states <- c("A", "B", "C")
+mk <- function(s) {
+  set.seed(s)
+  list(weights = matrix(runif(9), 3, 3, dimnames = list(states, states)))
+}
+
+cmp <- compare_networks(mk(1), mk(2))
+cmp$metrics
+head(cmp$edge_comparison)
+```
+
+## `compare_centralities()`
+
+Compare centrality measures (e.g. OutStrength, InStrength, Betweenness) between
+two fitted `tna` models built over a shared alphabet, via correlation and rank
+agreement.
+
+**Signature**
+```{r}
+args(compare_centralities)
+```
+
+**Example**
+```{r}
+mkseq <- function(s) {
+  set.seed(s)
+  as.data.frame(matrix(sample(c("A", "B", "C"), 20 * 8, replace = TRUE), 20, 8))
+}
+t1 <- tna::tna(mkseq(1))
+t2 <- tna::tna(mkseq(2))
+
+cc <- compare_centralities(t1, t2)
+cc$correlations
+```
+
+## `compare_edge_recovery()`
+
+Score how well one network recovers the edges of another (treated as ground
+truth), returning a confusion-matrix style summary: precision, recall, F1,
+accuracy, and Jaccard.
+
+**Signature**
+```{r}
+args(compare_edge_recovery)
+```
+
+**Example**
+```{r}
+states <- c("A", "B", "C")
+mk <- function(s) {
+  set.seed(s)
+  list(weights = matrix(runif(9), 3, 3, dimnames = list(states, states)))
+}
+
+rec <- compare_edge_recovery(mk(1), mk(2))
+rec$precision
+rec$recall
+rec$f1_score
+```
+
+## `calculate_edge_recovery()`
+
+Alias of `compare_edge_recovery()` — identical behaviour and return value,
+provided for naming convenience.
+
+**Signature**
+```{r}
+args(calculate_edge_recovery)
+```
+
+**Example**
+```{r}
+states <- c("A", "B", "C")
+mk <- function(s) {
+  set.seed(s)
+  list(weights = matrix(runif(9), 3, 3, dimnames = list(states, states)))
+}
+
+identical(
+  calculate_edge_recovery(mk(1), mk(2)),
+  compare_edge_recovery(mk(1), mk(2))
+)
+```
+
+## `compare_network_estimation()`
+
+Compare multiple TNA model types on a single dataset by repeated independent-subset
+sampling, ranking them by mean Pearson correlation between sample and remaining
+models.
+
+**Signature**
+```{r}
+args(compare_network_estimation)
+```
+
+**Example**
+```{r}
+set.seed(1)
+seqs <- simulate_sequences(
+  transition_matrix = trans_mat,
+  initial_probabilities = init_probs,
+  max_seq_length = 15,
+  num_rows = 40
+)
+
+ne <- compare_network_estimation(
+  seqs,
+  model_types = c("tna", "ftna"),
+  iterations = 2,
+  seed = 1,
+  verbose = FALSE
+)
+ne$ranking
+ne$winner
+```
+
+## `compare_tna_models()`
+
+Backward-compatibility alias of `compare_network_estimation()` — same arguments
+and return value.
+
+**Signature**
+```{r}
+args(compare_tna_models)
+```
+
+**Example**
+```{r}
+identical(compare_tna_models, compare_network_estimation)
+```
+
+## `compare_estimation()`
+
+Run many simulations comparing how well different TNA model types recover a known
+ground-truth transition structure (via `tna::compare()`), returning per-model
+summaries, a ranking, and the winning model.
+
+**Signature**
+```{r}
+args(compare_estimation)
+```
+
+**Example**
+```{r}
+ce <- compare_estimation(
+  models = c("tna", "ftna"),
+  n_simulations = 2,
+  n_sequences = 20,
+  seq_length = 12,
+  n_states = 3,
+  seed = 1,
+  verbose = FALSE,
+  parallel = FALSE
+)
+ce$summary
+ce$winner
+```
+
+## `compare_reliability()`
+
+Assess split-half reliability (`tna::reliability()`) across simulated data
+conditions sampled from user-specified ranges, returning a
+`tna_reliability_comparison` object.
+
+**Signature**
+```{r}
+args(compare_reliability)
+```
+
+**Example**
+```{r}
+cr <- compare_reliability(
+  n_simulations = 2,
+  n_sequences = 30,
+  seq_length = 12,
+  n_states = 3,
+  reliability_iter = 5,
+  seed = 1,
+  verbose = FALSE,
+  parallel = FALSE
+)
+cr$summary
+```
+
+## `cross_validate_tna()`
+
+Cross-validate several TNA model types on the same data by repeated sampling,
+returning per-model-type sampling results for performance comparison.
+
+**Signature**
+```{r}
+args(cross_validate_tna)
+```
+
+**Example**
+```{r}
+cv <- cross_validate_tna(
+  seqs,
+  model_types = c("relative", "frequency"),
+  iterations = 2,
+  seed = 1,
+  verbose = FALSE
+)
+names(cv)
+```

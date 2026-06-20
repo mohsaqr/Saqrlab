@@ -1,0 +1,16 @@
+^Saqrlab\.Rproj$
+^\.Rproj\.user$
+^\.superpowers$
+^docs$
+^tmp$
+^tmp_.*\.log$
+^Rplots\.pdf$
+^_pkgdown\.yml$
+^CHANGES\.md$
+^HANDOFF\.md$
+^LEARNINGS\.md$
+^FEATURES\.md$
+^CLAUDE\.md$
+^AGENTS\.md$
+^\.github$
+^reference$

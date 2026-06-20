@@ -195,7 +195,7 @@ simulate_anova <- function(n, means, sds = 1, labels = NULL, seed = NULL) {
 #'
 #' @return A \code{\link{saqr_sim}} object with:
 #'   \describe{
-#'     \item{\code{$data}}{data.frame with columns \code{x1}…\code{xp}.}
+#'     \item{\code{$data}}{data.frame with columns \code{x1}...\code{xp}.}
 #'     \item{\code{$params}}{list with \code{sigma} (the input matrix),
 #'       \code{means}, \code{is_correlation} (logical).}
 #'   }
@@ -281,8 +281,8 @@ simulate_correlation <- function(n, sigma, means = NULL, var_names = NULL,
 #'
 #' @return A \code{\link{saqr_sim}} object with:
 #'   \describe{
-#'     \item{\code{$data}}{data.frame with columns \code{x1}…\code{xd} and
-#'       integer column \code{true_cluster} (1…k).}
+#'     \item{\code{$data}}{data.frame with columns \code{x1}...\code{xd} and
+#'       integer column \code{true_cluster} (1...k).}
 #'     \item{\code{$params}}{list with \code{centers} (matrix),
 #'       \code{sds} (k x d matrix), \code{props} (normalised), \code{n}
 #'       (per-cluster sizes).}

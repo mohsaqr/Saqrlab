@@ -1,0 +1,116 @@
+---
+title: "Saqrlab Reference — Sequences"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    theme: flatly
+    highlight: tango
+    df_print: paged
+    code_folding: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 5)
+suppressMessages(devtools::load_all("/Users/mohammedsaqr/Documents/Github/Saqrlab", quiet = TRUE))
+set.seed(1)
+```
+
+These functions generate wide-format categorical state sequences from Markov
+chains, suitable for sequence analysis and TNA model fitting. `simulate_sequences()`
+draws from a (possibly auto-generated) transition matrix, while
+`simulate_sequences_advanced()` layers stable/unstable transition dynamics on top
+to mimic habit formation and disruption.
+
+## `simulate_sequences()`
+
+Generate one row per sequence by walking a Markov chain over a set of states,
+auto-generating a random transition matrix (optionally labelled with learning-state
+verbs) when none is supplied.
+
+**Signature**
+```{r}
+args(simulate_sequences)
+```
+
+**Example**
+```{r}
+seqs <- simulate_sequences(
+  n_sequences = 8,
+  seq_length  = 6,
+  n_states    = 4,
+  include_na  = FALSE,
+  seed        = 42
+)
+dim(seqs)
+head(seqs)
+```
+
+Returning the ground-truth parameters alongside the sequences:
+
+```{r}
+res <- simulate_sequences(
+  n_sequences    = 8,
+  seq_length     = 6,
+  n_states       = 4,
+  include_params = TRUE,
+  seed           = 42
+)
+names(res)
+round(res$transition_matrix, 2)
+```
+
+Using learning-state verbs as the state labels:
+
+```{r}
+seqs_ls <- simulate_sequences(
+  n_sequences         = 6,
+  seq_length          = 6,
+  n_states            = 4,
+  use_learning_states = TRUE,
+  categories          = "cognitive",
+  include_na          = FALSE,
+  seed                = 7
+)
+head(seqs_ls)
+```
+
+## `simulate_sequences_advanced()`
+
+Generate Markov sequences with explicit *stable* transition pairs (followed with
+high probability) and a configurable *unstable* mode for the remaining draws,
+producing sequences with realistic persistence and disruption patterns.
+
+**Signature**
+```{r}
+args(simulate_sequences_advanced)
+```
+
+**Example**
+```{r}
+adv <- simulate_sequences_advanced(
+  n_sequences = 8,
+  seq_length  = 6,
+  n_states    = 4,
+  include_na  = FALSE,
+  seed        = 42
+)
+dim(adv)
+head(adv)
+```
+
+Forcing stable transitions between specific state pairs:
+
+```{r}
+adv_stable <- simulate_sequences_advanced(
+  n_sequences       = 8,
+  seq_length        = 6,
+  states            = c("A", "B", "C", "D"),
+  stable_transitions = list(c("A", "B"), c("C", "D")),
+  stability_prob    = 0.9,
+  include_na        = FALSE,
+  seed              = 123
+)
+head(adv_stable)
+```
