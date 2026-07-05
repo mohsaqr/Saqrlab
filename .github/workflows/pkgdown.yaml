@@ -41,6 +41,14 @@ jobs:
         run: pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)
         shell: Rscript {0}
 
+      - name: Strip internal artifact pages from the site
+        # pkgdown 2.1.x renders every root-level .md as a page; keep internal
+        # workflow artifacts (CLAUDE/HANDOFF/LEARNINGS/CHANGES/FEATURES) out of
+        # the published site. NEWS.md still powers the real news/ changelog.
+        run: |
+          rm -f docs/CLAUDE.html docs/HANDOFF.html docs/LEARNINGS.html \
+                docs/CHANGES.html docs/FEATURES.html
+
       - name: Deploy to GitHub pages
         if: github.event_name != 'pull_request'
         uses: JamesIves/github-pages-deploy-action@v4.5.0

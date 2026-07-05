@@ -29,6 +29,15 @@ and \code{\link[=validate_recovery]{validate_recovery()}} to score whether a fit
 truth. Browse the per-category HTML reference in the package's
 \verb{reference/} directory.
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://mohsaqr.github.io/Saqrlab/}
+  \item \url{https://github.com/mohsaqr/Saqrlab}
+  \item Report bugs at \url{https://github.com/mohsaqr/Saqrlab/issues}
+}
+
+}
 \author{
 \strong{Maintainer}: Mohammed Saqr \email{saqr@saqr.me}
 

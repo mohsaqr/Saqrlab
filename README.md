@@ -1,16 +1,19 @@
-# Saqrlab <img src="man/figures/logo.png" align="right" height="139" />
+# Saqrlab
 
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/mohsaqr/Saqrlab/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/mohsaqr/Saqrlab/actions/workflows/R-CMD-check.yaml)
+[![pkgdown](https://github.com/mohsaqr/Saqrlab/actions/workflows/pkgdown.yaml/badge.svg)](https://github.com/mohsaqr/Saqrlab/actions/workflows/pkgdown.yaml)
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 <!-- badges: end -->
+
+📖 **Documentation site: <https://mohsaqr.github.io/Saqrlab/>**
 
 **A modern laboratory for data simulation.**
 
 Saqrlab generates synthetic datasets with **known ground-truth parameters** so you can test, validate, and benchmark statistical methods — does your estimator actually recover the truth you simulated? It spans classic designs (t-test, ANOVA, regression, factor analysis), modern data-generating processes (IRT, survival, multilevel, growth curves, hidden Markov, missing-data mechanisms), and a full Temporal Network Analysis (TNA) toolkit, all behind one consistent interface.
 
-- **87 functions across 15 categories** — every one documented with a runnable example ([browse the HTML reference](reference/index.html)).
+- **87 functions across 15 categories** — every one documented with a runnable example ([browse the function reference](https://mohsaqr.github.io/Saqrlab/reference/) or the [runnable guides](https://mohsaqr.github.io/Saqrlab/guides/index.html)).
 - **One return type, `saqr_sim`** — every simulator gives you `$data` (a tidy data frame) and `$params` (the true generating parameters).
 - **A unified `simulate()` dispatcher**, scenario presets, and an automatic **`validate_recovery()`** scorer that checks whether a fitted method recovered the truth.
 - **1,173 tests, 0 failures**; ships a cross-package fixture-contract guard so generated data stays reproducible.
@@ -104,25 +107,25 @@ Saqrlab deliberately keeps **two complementary interfaces** — knowing which on
 
 ## Function catalogue
 
-Each category is a self-contained HTML page with every function's signature and a **runnable example showing real output** (open [`reference/index.html`](reference/index.html) for the clickable index):
+Each category is a self-contained HTML page with every function's signature and a **runnable example showing real output** (open the [guides index](https://mohsaqr.github.io/Saqrlab/guides/index.html) for the clickable overview):
 
 | Category | Funcs | What's inside |
 |----------|:----:|---------------|
-| [Statistical simulators](reference/01-statistical.html) | 5 | `simulate_ttest`, `simulate_anova`, `simulate_correlation`, `simulate_clusters`, `simulate_prediction` |
-| [Latent-variable models](reference/02-latent.html) | 5 | `simulate_lpa`, `simulate_lca`, `simulate_regression`, `simulate_fa`, `simulate_seq_clusters` |
-| [Longitudinal & multilevel](reference/03-longitudinal-multilevel.html) | 3 | `simulate_longitudinal` (VAR/ESM), `simulate_mlm`, `simulate_growth` |
-| [Item Response Theory](reference/04-irt.html) | 1 | `simulate_irt` (1PL/2PL/3PL/GRM) |
-| [Survival & hidden Markov](reference/05-survival-hmm.html) | 2 | `simulate_survival`, `simulate_hmm` |
-| [Missing-data mechanisms](reference/06-missing-data.html) | 1 | `inject_missingness` (MCAR/MAR/MNAR) |
-| [Random-parameter generation](reference/07-random-parameter.html) | 1 | `simulate_data` (15 types + complexity injection + batch) |
-| [TNA simulation](reference/08-tna-simulation.html) | 16 | `simulate_tna_network(s)`, `simulate_group_tna_networks`, `simulate_htna/mlna/mtna`, `generate_probabilities`, `sample_tna`, … |
-| [Sequences](reference/09-sequences.html) | 2 | `simulate_sequences`, `simulate_sequences_advanced` |
-| [Networks & graphs](reference/10-networks-graphs.html) | 5 | `simulate_igraph`, `simulate_network`, `simulate_edge_list`, `simulate_onehot_data`, `simulate_long_data` |
-| [Reference data & utilities](reference/11-reference-data.html) | 10 | `LEARNING_STATES`, `GLOBAL_NAMES`, `get_learning_states`, `select_states`, `validate_sim_params`, … |
-| [Comparison & model fitting](reference/12-comparison-fitting.html) | 10 | `fit_network_model`, `compare_networks`, `compare_centralities`, `compare_edge_recovery`, `cross_validate_tna`, … |
-| [Visualization](reference/13-visualization.html) | 3 | `plot_network_estimation`, `plot_sampling_distribution`, `plot_tna_comparison` |
-| [Batch, grid & sampling](reference/14-batch-grid-sampling.html) | 14 | `generate_param_grid`, `run_grid_simulation`, `run_bootstrap_simulation`, `summarize_grid_results`, … |
-| [Laboratory infrastructure](reference/15-lab-infrastructure.html) | 9 | `simulate`, `list_simulators`, `validate_recovery`, `list_scenarios`, `run_scenario`, `tidy_simulation_results`, `export_simulation`, `saqr_sim` |
+| [Statistical simulators](https://mohsaqr.github.io/Saqrlab/guides/01-statistical.html) | 5 | `simulate_ttest`, `simulate_anova`, `simulate_correlation`, `simulate_clusters`, `simulate_prediction` |
+| [Latent-variable models](https://mohsaqr.github.io/Saqrlab/guides/02-latent.html) | 5 | `simulate_lpa`, `simulate_lca`, `simulate_regression`, `simulate_fa`, `simulate_seq_clusters` |
+| [Longitudinal & multilevel](https://mohsaqr.github.io/Saqrlab/guides/03-longitudinal-multilevel.html) | 3 | `simulate_longitudinal` (VAR/ESM), `simulate_mlm`, `simulate_growth` |
+| [Item Response Theory](https://mohsaqr.github.io/Saqrlab/guides/04-irt.html) | 1 | `simulate_irt` (1PL/2PL/3PL/GRM) |
+| [Survival & hidden Markov](https://mohsaqr.github.io/Saqrlab/guides/05-survival-hmm.html) | 2 | `simulate_survival`, `simulate_hmm` |
+| [Missing-data mechanisms](https://mohsaqr.github.io/Saqrlab/guides/06-missing-data.html) | 1 | `inject_missingness` (MCAR/MAR/MNAR) |
+| [Random-parameter generation](https://mohsaqr.github.io/Saqrlab/guides/07-random-parameter.html) | 1 | `simulate_data` (15 types + complexity injection + batch) |
+| [TNA simulation](https://mohsaqr.github.io/Saqrlab/guides/08-tna-simulation.html) | 16 | `simulate_tna_network(s)`, `simulate_group_tna_networks`, `simulate_htna/mlna/mtna`, `generate_probabilities`, `sample_tna`, … |
+| [Sequences](https://mohsaqr.github.io/Saqrlab/guides/09-sequences.html) | 2 | `simulate_sequences`, `simulate_sequences_advanced` |
+| [Networks & graphs](https://mohsaqr.github.io/Saqrlab/guides/10-networks-graphs.html) | 5 | `simulate_igraph`, `simulate_network`, `simulate_edge_list`, `simulate_onehot_data`, `simulate_long_data` |
+| [Reference data & utilities](https://mohsaqr.github.io/Saqrlab/guides/11-reference-data.html) | 10 | `LEARNING_STATES`, `GLOBAL_NAMES`, `get_learning_states`, `select_states`, `validate_sim_params`, … |
+| [Comparison & model fitting](https://mohsaqr.github.io/Saqrlab/guides/12-comparison-fitting.html) | 10 | `fit_network_model`, `compare_networks`, `compare_centralities`, `compare_edge_recovery`, `cross_validate_tna`, … |
+| [Visualization](https://mohsaqr.github.io/Saqrlab/guides/13-visualization.html) | 3 | `plot_network_estimation`, `plot_sampling_distribution`, `plot_tna_comparison` |
+| [Batch, grid & sampling](https://mohsaqr.github.io/Saqrlab/guides/14-batch-grid-sampling.html) | 14 | `generate_param_grid`, `run_grid_simulation`, `run_bootstrap_simulation`, `summarize_grid_results`, … |
+| [Laboratory infrastructure](https://mohsaqr.github.io/Saqrlab/guides/15-lab-infrastructure.html) | 9 | `simulate`, `list_simulators`, `validate_recovery`, `list_scenarios`, `run_scenario`, `tidy_simulation_results`, `export_simulation`, `saqr_sim` |
 
 ## Learning states
 
@@ -154,7 +157,7 @@ select_states(10, primary_categories = "metacognitive", seed = 1)
 
 ## Documentation
 
-- **[HTML function reference](reference/index.html)** — one page per category, every function with a live example.
+- **[HTML function reference](https://mohsaqr.github.io/Saqrlab/guides/index.html)** — one page per category, every function with a live example.
 - [`FEATURES.md`](FEATURES.md) — concise feature list. [`NEWS.md`](NEWS.md) — changelog.
 - `?Saqrlab` and `?<function>` in R for the manual pages.
 

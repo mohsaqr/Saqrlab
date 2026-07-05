@@ -13,4 +13,4 @@
 ^CLAUDE\.md$
 ^AGENTS\.md$
 ^\.github$
-^reference$
+^pkgdown$

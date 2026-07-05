@@ -9,6 +9,8 @@ Description: Simulation tools for temporal network analysis (TNA) research.
     All simulation functions return list(data, params) for JSON-serializable
     access to ground-truth parameters.
 License: MIT + file LICENSE
+URL: https://mohsaqr.github.io/Saqrlab/, https://github.com/mohsaqr/Saqrlab
+BugReports: https://github.com/mohsaqr/Saqrlab/issues
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
