@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Saqrlab Function Reference (v0.4.0)</title>
+<style>
+  :root { --accent:#2c3e50; --accent2:#18bc9c; --bg:#f7f9fa; --card:#fff; --muted:#6c757d; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; color:#2c3e50; background:var(--bg); line-height:1.5; }
+  a { color:var(--accent2); }
+  header { background:var(--accent); color:#fff; padding:2.4rem 1.5rem 2rem; }
+  header .wrap { max-width:1100px; margin:0 auto; }
+  header h1 { margin:0 0 .3rem; font-size:1.9rem; }
+  header p { margin:.25rem 0; opacity:.92; }
+  header code { background:rgba(255,255,255,.15); padding:.1rem .4rem; border-radius:4px; }
+  main { max-width:1100px; margin:0 auto; padding:1.6rem 1.5rem 3rem; }
+  .meta { color:var(--muted); margin:0 0 1.6rem; font-size:.95rem; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:1.1rem; }
+  .card { background:var(--card); border:1px solid #e3e8ec; border-radius:10px; padding:1.05rem 1.2rem 1.1rem; transition:box-shadow .15s,transform .15s,border-color .15s; display:flex; flex-direction:column; cursor:pointer; }
+  .card:hover { box-shadow:0 8px 26px rgba(44,62,80,.14); transform:translateY(-2px); border-color:var(--accent2); }
+  .card h2 { margin:0 0 .15rem; font-size:1.14rem; }
+  .card h2 a { color:var(--accent); text-decoration:none; }
+  .card h2 a:hover { color:var(--accent2); text-decoration:underline; }
+  .card .desc { color:var(--muted); font-size:.9rem; margin:.1rem 0 .7rem; }
+  .badge { display:inline-block; background:var(--accent2); color:#fff; font-size:.72rem; font-weight:600; border-radius:20px; padding:.05rem .55rem; margin-left:.45rem; vertical-align:middle; }
+  .fns { margin:0 0 .7rem; display:flex; flex-wrap:wrap; gap:.3rem; }
+  .chip { text-decoration:none; }
+  .chip code { font-size:.8rem; background:#eef3f5; color:#2c3e50; padding:.12rem .4rem; border-radius:5px; display:inline-block; border:1px solid #e0e7ea; transition:background .12s,color .12s; }
+  .chip:hover code { background:var(--accent2); color:#fff; border-color:var(--accent2); }
+  .open { margin-top:auto; font-size:.85rem; font-weight:600; text-decoration:none; }
+  .open:hover { text-decoration:underline; }
+  footer { max-width:1100px; margin:0 auto; padding:0 1.5rem 2.5rem; color:var(--muted); font-size:.85rem; }
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <h1>Saqrlab &mdash; Function Reference</h1>
+  <p>A modern laboratory for data simulation. Version <code>0.4.0</code> &middot; 87 functions across 15 categories.</p>
+  <p>Click any <strong>function name</strong> to jump straight to its documented example, or click a card to open the whole category.</p>
+</div></header>
+<main>
+  <p class="meta">Every example was executed during rendering &mdash; the outputs and figures on each page are real.</p>
+  <div class="grid">
+
+    <div class="card" data-href="01-statistical.html">
+      <h2><a href="01-statistical.html">Statistical simulators</a><span class="badge">5</span></h2>
+      <p class="desc">Explicit-parameter datasets with known effect sizes for parameter-recovery testing.</p>
+      <div class="fns"><a class="chip" href="01-statistical.html#simulate_ttest"><code>simulate_ttest</code></a><a class="chip" href="01-statistical.html#simulate_anova"><code>simulate_anova</code></a><a class="chip" href="01-statistical.html#simulate_correlation"><code>simulate_correlation</code></a><a class="chip" href="01-statistical.html#simulate_clusters"><code>simulate_clusters</code></a><a class="chip" href="01-statistical.html#simulate_prediction"><code>simulate_prediction</code></a></div>
+      <a class="open" href="01-statistical.html">Open category &rarr;</a>
+    </div>
+
+    <div class="card" data-href="02-latent.html">
+      <h2><a href="02-latent.html">Latent-variable models</a><span class="badge">5</span></h2>
+      <p class="desc">Latent profiles/classes, regression, factor analysis, and sequence clusters.</p>
+      <div class="fns"><a class="chip" href="02-latent.html#simulate_lpa"><code>simulate_lpa</code></a><a class="chip" href="02-latent.html#simulate_lca"><code>simulate_lca</code></a><a class="chip" href="02-latent.html#simulate_regression"><code>simulate_regression</code></a><a class="chip" href="02-latent.html#simulate_fa"><code>simulate_fa</code></a><a class="chip" href="02-latent.html#simulate_seq_clusters"><code>simulate_seq_clusters</code></a></div>
+      <a class="open" href="02-latent.html">Open category &rarr;</a>
+    </div>
+
+    <div class="card" data-href="03-longitudinal-multilevel.html">
+      <h2><a href="03-longitudinal-multilevel.html">Longitudinal & multilevel</a><span class="badge">3</span></h2>
+      <p class="desc">VAR(1) panel/ESM data, students-in-classes nesting, latent growth curves.</p>
+      <div class="fns"><a class="chip" href="03-longitudinal-multilevel.html#simulate_longitudinal"><code>simulate_longitudinal</code></a><a class="chip" href="03-longitudinal-multilevel.html#simulate_mlm"><code>simulate_mlm</code></a><a class="chip" href="03-longitudinal-multilevel.html#simulate_growth"><code>simulate_growth</code></a></div>
+      <a class="open" href="03-longitudinal-multilevel.html">Open category &rarr;</a>
+    </div>
+
+    <div class="card" data-href="04-irt.html">
+      <h2><a href="04-irt.html">Item Response Theory</a><span class="badge">1</span></h2>
+      <p class="desc">1PL / 2PL / 3PL / GRM item responses with known item and ability parameters.</p>
+      <div class="fns"><a class="chip" href="04-irt.html#simulate_irt"><code>simulate_irt</code></a></div>
+      <a class="open" href="04-irt.html">Open category &rarr;</a>
+    </div>
+
+    <div class="card" data-href="05-survival-hmm.html">
+      <h2><a href="05-survival-hmm.html">Survival & hidden Markov</a><span class="badge">2</span></h2>
+      <p class="desc">Time-to-event data with censoring, and hidden-Markov sequences with true latent paths.</p>
+      <div class="fns"><a class="chip" href="05-survival-hmm.html#simulate_survival"><code>simulate_survival</code></a><a class="chip" href="05-survival-hmm.html#simulate_hmm"><code>simulate_hmm</code></a></div>
+      <a class="open" href="05-survival-hmm.html">Open category &rarr;</a>
+    </div>
+
+    <div class="card" data-href="06-missing-data.html">
+      <h2><a href="06-missing-data.html">Missing-data mechanisms</a><span class="badge">1</span></h2>
+      <p class="desc">First-class MCAR / MAR / MNAR injection with calibrated rates and metadata.</p>
+      <div class="fns"><a class="chip" href="06-missing-data.html#inject_missingness"><code>inject_missingness</code></a></div>
+      <a class="open" href="06-missing-data.html">Open category &rarr;</a>
+    </div>
+
+    <div class="card" data-href="07-random-parameter.html">
+      <h2><a href="07-random-parameter.html">Random-parameter generation</a><span class="badge">1</span></h2>
+      <p class="desc">Seed-driven datasets (15 types) with complexity injection and batch generation.</p>
+      <div class="fns"><a class="chip" href="07-random-parameter.html#simulate_data"><code>simulate_data</code></a></div>
+      <a class="open" href="07-random-parameter.html">Open category &rarr;</a>
+    </div>
+
+    <div class="card" data-href="08-tna-simulation.html">
+      <h2><a href="08-tna-simulation.html">TNA simulation</a><span class="badge">16</span></h2>
+      <p class="desc">Transition networks, group/hierarchical/multitype TNA, matrices and probabilities.</p>
+      <div class="fns"><a class="chip" href="08-tna-simulation.html#simulate_tna_network"><code>simulate_tna_network</code></a><a class="chip" href="08-tna-simulation.html#simulate_tna_networks"><code>simulate_tna_networks</code></a><a class="chip" href="08-tna-simulation.html#simulate_tna_matrix"><code>simulate_tna_matrix</code></a><a class="chip" href="08-tna-simulation.html#simulate_tna_datasets"><code>simulate_tna_datasets</code></a><a class="chip" href="08-tna-simulation.html#simulate_group_tna_networks"><code>simulate_group_tna_networks</code></a><a class="chip" href="08-tna-simulation.html#simulate_htna"><code>simulate_htna</code></a><a class="chip" href="08-tna-simulation.html#simulate_mlna"><code>simulate_mlna</code></a><a class="chip" href="08-tna-simulation.html#simulate_mtna"><code>simulate_mtna</code></a><a class="chip" href="08-tna-simulation.html#simulate_matrix"><code>simulate_matrix</code></a><a class="chip" href="08-tna-simulation.html#generate_tna_matrix"><code>generate_tna_matrix</code></a><a class="chip" href="08-tna-simulation.html#generate_tna_networks"><code>generate_tna_networks</code></a><a class="chip" href="08-tna-simulation.html#generate_tna_datasets"><code>generate_tna_datasets</code></a><a class="chip" href="08-tna-simulation.html#generate_group_tna_networks"><code>generate_group_tna_networks</code></a><a class="chip" href="08-tna-simulation.html#generate_probabilities"><code>generate_probabilities</code></a><a class="chip" href="08-tna-simulation.html#generate_sequence_data"><code>generate_sequence_data</code></a><a class="chip" href="08-tna-simulation.html#sample_tna"><code>sample_tna</code></a></div>
+      <a class="open" href="08-tna-simulation.html">Open category &rarr;</a>
+    </div>
+
+    <div class="card" data-href="09-sequences.html">
+      <h2><a href="09-sequences.html">Sequences</a><span class="badge">2</span></h2>
+      <p class="desc">Markov-chain sequences and stability/instability sequence patterns.</p>
+      <div class="fns"><a class="chip" href="09-sequences.html#simulate_sequences"><code>simulate_sequences</code></a><a class="chip" href="09-sequences.html#simulate_sequences_advanced"><code>simulate_sequences_advanced</code></a></div>
+      <a class="open" href="09-sequences.html">Open category &rarr;</a>
+    </div>
+
+    <div class="card" data-href="10-networks-graphs.html">
+      <h2><a href="10-networks-graphs.html">Networks & graphs</a><span class="badge">5</span></h2>
+      <p class="desc">igraph / statnet graphs, edge lists, one-hot encodings, hierarchical long data.</p>
+      <div class="fns"><a class="chip" href="10-networks-graphs.html#simulate_igraph"><code>simulate_igraph</code></a><a class="chip" href="10-networks-graphs.html#simulate_network"><code>simulate_network</code></a><a class="chip" href="10-networks-graphs.html#simulate_edge_list"><code>simulate_edge_list</code></a><a class="chip" href="10-networks-graphs.html#simulate_onehot_data"><code>simulate_onehot_data</code></a><a class="chip" href="10-networks-graphs.html#simulate_long_data"><code>simulate_long_data</code></a></div>
+      <a class="open" href="10-networks-graphs.html">Open category &rarr;</a>
+    </div>
+
+    <div class="card" data-href="11-reference-data.html">
+      <h2><a href="11-reference-data.html">Reference data & utilities</a><span class="badge">10</span></h2>
+      <p class="desc">Learning-state vocabularies, global names, selection helpers, parameter validation.</p>
+      <div class="fns"><a class="chip" href="11-reference-data.html#learning_states"><code>LEARNING_STATES</code></a><a class="chip" href="11-reference-data.html#global_names"><code>GLOBAL_NAMES</code></a><a class="chip" href="11-reference-data.html#group_regulation_actions"><code>GROUP_REGULATION_ACTIONS</code></a><a class="chip" href="11-reference-data.html#get_learning_states"><code>get_learning_states</code></a><a class="chip" href="11-reference-data.html#get_global_names"><code>get_global_names</code></a><a class="chip" href="11-reference-data.html#list_learning_categories"><code>list_learning_categories</code></a><a class="chip" href="11-reference-data.html#list_name_regions"><code>list_name_regions</code></a><a class="chip" href="11-reference-data.html#select_states-smart_select_states"><code>select_states</code></a><a class="chip" href="11-reference-data.html#select_states-smart_select_states"><code>smart_select_states</code></a><a class="chip" href="11-reference-data.html#validate_sim_params"><code>validate_sim_params</code></a></div>
+      <a class="open" href="11-reference-data.html">Open category &rarr;</a>
+    </div>
+
+    <div class="card" data-href="12-comparison-fitting.html">
+      <h2><a href="12-comparison-fitting.html">Comparison & model fitting</a><span class="badge">10</span></h2>
+      <p class="desc">Fit TNA models and compare networks, centralities, edge recovery, reliability.</p>
+      <div class="fns"><a class="chip" href="12-comparison-fitting.html#fit_network_model"><code>fit_network_model</code></a><a class="chip" href="12-comparison-fitting.html#compare_networks"><code>compare_networks</code></a><a class="chip" href="12-comparison-fitting.html#compare_centralities"><code>compare_centralities</code></a><a class="chip" href="12-comparison-fitting.html#compare_edge_recovery"><code>compare_edge_recovery</code></a><a class="chip" href="12-comparison-fitting.html#calculate_edge_recovery"><code>calculate_edge_recovery</code></a><a class="chip" href="12-comparison-fitting.html#compare_network_estimation"><code>compare_network_estimation</code></a><a class="chip" href="12-comparison-fitting.html#compare_estimation"><code>compare_estimation</code></a><a class="chip" href="12-comparison-fitting.html#compare_reliability"><code>compare_reliability</code></a><a class="chip" href="12-comparison-fitting.html#compare_tna_models"><code>compare_tna_models</code></a><a class="chip" href="12-comparison-fitting.html#cross_validate_tna"><code>cross_validate_tna</code></a></div>
+      <a class="open" href="12-comparison-fitting.html">Open category &rarr;</a>
+    </div>
+
+    <div class="card" data-href="13-visualization.html">
+      <h2><a href="13-visualization.html">Visualization</a><span class="badge">3</span></h2>
+      <p class="desc">Plot estimation comparisons, sampling distributions, and TNA comparisons.</p>
+      <div class="fns"><a class="chip" href="13-visualization.html#plot_network_estimation"><code>plot_network_estimation</code></a><a class="chip" href="13-visualization.html#plot_sampling_distribution"><code>plot_sampling_distribution</code></a><a class="chip" href="13-visualization.html#plot_tna_comparison"><code>plot_tna_comparison</code></a></div>
+      <a class="open" href="13-visualization.html">Open category &rarr;</a>
+    </div>
+
+    <div class="card" data-href="14-batch-grid-sampling.html">
+      <h2><a href="14-batch-grid-sampling.html">Batch, grid & sampling</a><span class="badge">14</span></h2>
+      <p class="desc">Parameter grids, batch fitting, bootstrap/grid/network simulation, result summaries.</p>
+      <div class="fns"><a class="chip" href="14-batch-grid-sampling.html#generate_param_grid"><code>generate_param_grid</code></a><a class="chip" href="14-batch-grid-sampling.html#create_param_grid"><code>create_param_grid</code></a><a class="chip" href="14-batch-grid-sampling.html#batch_apply"><code>batch_apply</code></a><a class="chip" href="14-batch-grid-sampling.html#batch_fit_models"><code>batch_fit_models</code></a><a class="chip" href="14-batch-grid-sampling.html#run_grid_simulation"><code>run_grid_simulation</code></a><a class="chip" href="14-batch-grid-sampling.html#run_bootstrap_simulation"><code>run_bootstrap_simulation</code></a><a class="chip" href="14-batch-grid-sampling.html#run_bootstrap_iteration"><code>run_bootstrap_iteration</code></a><a class="chip" href="14-batch-grid-sampling.html#run_network_simulation"><code>run_network_simulation</code></a><a class="chip" href="14-batch-grid-sampling.html#run_sampling_analysis"><code>run_sampling_analysis</code></a><a class="chip" href="14-batch-grid-sampling.html#summarize_grid_results"><code>summarize_grid_results</code></a><a class="chip" href="14-batch-grid-sampling.html#analyze_grid_results"><code>analyze_grid_results</code></a><a class="chip" href="14-batch-grid-sampling.html#evaluate_bootstrap"><code>evaluate_bootstrap</code></a><a class="chip" href="14-batch-grid-sampling.html#summarize_networks"><code>summarize_networks</code></a><a class="chip" href="14-batch-grid-sampling.html#summarize_simulation"><code>summarize_simulation</code></a></div>
+      <a class="open" href="14-batch-grid-sampling.html">Open category &rarr;</a>
+    </div>
+
+    <div class="card" data-href="15-lab-infrastructure.html">
+      <h2><a href="15-lab-infrastructure.html">Laboratory infrastructure</a><span class="badge">9</span></h2>
+      <p class="desc">Unified dispatcher, parameter-recovery scoring, scenario presets, tidy/export.</p>
+      <div class="fns"><a class="chip" href="15-lab-infrastructure.html#simulate"><code>simulate</code></a><a class="chip" href="15-lab-infrastructure.html#list_simulators"><code>list_simulators</code></a><a class="chip" href="15-lab-infrastructure.html#validate_recovery"><code>validate_recovery</code></a><a class="chip" href="15-lab-infrastructure.html#list_scenarios"><code>list_scenarios</code></a><a class="chip" href="15-lab-infrastructure.html#get_scenario"><code>get_scenario</code></a><a class="chip" href="15-lab-infrastructure.html#run_scenario"><code>run_scenario</code></a><a class="chip" href="15-lab-infrastructure.html#tidy_simulation_results"><code>tidy_simulation_results</code></a><a class="chip" href="15-lab-infrastructure.html#export_simulation"><code>export_simulation</code></a><a class="chip" href="15-lab-infrastructure.html#saqr_sim"><code>saqr_sim</code></a></div>
+      <a class="open" href="15-lab-infrastructure.html">Open category &rarr;</a>
+    </div>
+
+  </div>
+</main>
+<footer>Generated for Saqrlab 0.4.0. Each linked page is fully self-contained (figures and outputs embedded).</footer>
+<script>
+  // Make the whole card clickable, while keeping inner links (chips, title) working.
+  document.querySelectorAll(".card").forEach(function(card){
+    card.addEventListener("click", function(e){
+      if (e.target.closest("a")) return;            // a real link was clicked
+      window.location.href = card.getAttribute("data-href");
+    });
+  });
+</script>
+</body>
+</html>
+

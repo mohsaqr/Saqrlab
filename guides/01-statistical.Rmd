@@ -1,0 +1,135 @@
+---
+title: "Saqrlab Reference — Statistical simulators"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    theme: flatly
+    highlight: tango
+    df_print: paged
+    code_folding: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 5)
+suppressMessages(devtools::load_all("/Users/mohammedsaqr/Documents/Github/Saqrlab", quiet = TRUE))
+set.seed(1)
+```
+
+The statistical simulators generate datasets with fully specified ground-truth
+parameters for the most common analyses: two-group comparisons, one-way ANOVA,
+correlated multivariate normal data, Gaussian-mixture clusters, and regression
+prediction. Each function returns a `saqr_sim` object with `$data` (a tidy
+`data.frame`) and `$params` (the true parameters used to generate it), so you
+can verify that an estimator recovers the truth.
+
+## `simulate_ttest()`
+
+Generate data for a two-group comparison with fully specified ground-truth
+means and standard deviations, designed so that `t.test(score ~ group)`
+recovers the true difference at large `n`.
+
+**Signature**
+```{r}
+args(simulate_ttest)
+```
+
+**Example**
+```{r}
+r <- simulate_ttest(n_a = 50, n_b = 50, mean_a = 100, mean_b = 105, seed = 1)
+head(r$data)
+t.test(score ~ group, data = r$data)
+r$params
+```
+
+## `simulate_anova()`
+
+Generate data for a one-way ANOVA with fully specified group means and standard
+deviations, designed so that `aov(score ~ group)` recovers the true group
+effects at large `n`.
+
+**Signature**
+```{r}
+args(simulate_anova)
+```
+
+**Example**
+```{r}
+r <- simulate_anova(n = 30, means = c(10, 12, 15), seed = 1)
+head(r$data)
+summary(aov(score ~ group, data = r$data))
+r$params
+```
+
+## `simulate_correlation()`
+
+Generate multivariate normal data from an explicit correlation (or covariance)
+matrix, designed so that `cor(r$data)` recovers `sigma` at large `n`.
+
+**Signature**
+```{r}
+args(simulate_correlation)
+```
+
+**Example**
+```{r}
+R <- matrix(c(1, 0.6, 0.3,
+              0.6, 1, 0.5,
+              0.3, 0.5, 1), nrow = 3)
+r <- simulate_correlation(n = 200, sigma = R, seed = 1)
+head(r$data)
+cor(r$data)            # should approximate R
+r$params$sigma         # the true matrix
+```
+
+## `simulate_clusters()`
+
+Generate multivariate data from a mixture of Gaussians with fully specified
+cluster centers and standard deviations — ground truth is known, so clustering
+algorithms can be benchmarked against it.
+
+**Signature**
+```{r}
+args(simulate_clusters)
+```
+
+**Example**
+```{r}
+centers <- matrix(c(0, 0,
+                    5, 5,
+                    10, 0), nrow = 3, byrow = TRUE)
+r <- simulate_clusters(n = 300, centers = centers, seed = 1)
+head(r$data)
+str(r$params)
+```
+
+```{r clusters-plot, fig.cap="First two columns coloured by true cluster."}
+plot(x2 ~ x1, data = r$data, col = r$data$true_cluster, pch = 19,
+     main = "simulate_clusters(): three Gaussian clusters")
+```
+
+## `simulate_prediction()`
+
+Generate a regression dataset with continuous and categorical predictors, a
+non-linear term, and known ground-truth coefficients — a richer version of
+`simulate_regression()` for testing prediction workflows.
+
+**Signature**
+```{r}
+args(simulate_prediction)
+```
+
+**Example**
+```{r}
+r <- simulate_prediction(
+  n = 200,
+  coefs = c("(Intercept)" = 5, x1 = 2, x2 = -1),
+  cat_levels = list(treatment = c("control", "drug_a", "drug_b")),
+  cat_effects = list(treatment = c(0, 3, 5)),
+  error_sd = 2, seed = 42
+)
+head(r$data)
+summary(lm(y ~ ., data = r$data))
+str(r$params)
+```

@@ -1,0 +1,410 @@
+---
+title: "mlVAR Network Analysis — Soyster et al. (2022)"
+subtitle: "Alcohol Use & Affect: Temporal, Contemporaneous, and Between-Subjects Networks"
+output:
+  html_document:
+    theme: flatly
+    toc: true
+    toc_float: true
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE, message = FALSE, warning = FALSE,
+  fig.width = 9, fig.height = 9, dpi = 150
+)
+devtools::load_all("..", quiet = TRUE)
+```
+
+## Data
+
+**openESM 0035** (Soyster et al., 2022): 33 participants, ~129 ESM measurements
+each. Six affect/craving variables measured repeatedly throughout the day.
+
+```{r data}
+ds <- openesm::get_dataset("0035_soyster")
+d <- as.data.frame(ds$data)
+d <- d[!is.na(d$day), ]
+d <- d[order(d$id, d$day, d$creation_time), ]
+d$beep <- as.integer(ave(seq_len(nrow(d)), d$id, d$day, FUN = seq_along))
+
+vars <- c("stressed", "depressed", "calm", "happy", "angry", "craving")
+
+cat(sprintf("Participants: %d\n", length(unique(d$id))))
+cat(sprintf("Observations: %d\n", nrow(d)))
+cat(sprintf("Variables: %s\n", paste(vars, collapse = ", ")))
+```
+
+## Estimation
+
+```{r fit}
+fit <- mlvar(d, vars = vars, id = "id", day = "day", beep = "beep")
+print(fit)
+```
+
+```{r shared-setup}
+# --- Shared visual configuration ---
+
+# Short labels for cleaner display
+short_labels <- c("STR", "DEP", "CAL", "HAP", "ANG", "CRV")
+
+# Node colors by variable type:
+#   Negative affect (stressed, depressed, angry) = warm tones
+#   Positive affect (calm, happy)                = cool tones
+#   Craving                                      = amber
+node_colors <- c(
+  "#E74C3C",   # stressed  — red
+
+"#8E44AD",   # depressed — purple
+  "#2ECC71",   # calm      — green
+  "#3498DB",   # happy     — blue
+  "#E67E22",   # angry     — orange
+  "#F1C40F"    # craving   — gold
+)
+
+# Consistent circular layout so node positions are comparable across networks
+n_vars <- length(vars)
+angles <- seq(0, 2 * pi, length.out = n_vars + 1)[seq_len(n_vars)]
+# Rotate so first node is at top
+angles <- angles - pi / 2
+shared_layout <- cbind(cos(angles), sin(angles))
+
+# Threshold temporal network to significant edges (p < 0.05)
+B <- fit$temporal
+sig_mask <- matrix(TRUE, nrow(B), ncol(B))
+for (k in seq_along(vars)) {
+  sig_mask[k, ] <- fit$coefs[[k]]$p < 0.05
+}
+B_sig <- B * sig_mask
+rownames(B_sig) <- short_labels
+colnames(B_sig) <- short_labels
+
+# Label the other matrices too
+contemp <- fit$contemporaneous
+rownames(contemp) <- short_labels
+colnames(contemp) <- short_labels
+
+between <- fit$between
+rownames(between) <- short_labels
+colnames(between) <- short_labels
+```
+
+## Temporal Network
+
+Directed lag-1 regression coefficients. An edge from node *j* to node *i* means
+that variable *j* at time *t*−1 predicts variable *i* at time *t*. Only
+statistically significant edges shown (*p* < .05).
+
+```{r temporal, fig.width=9, fig.height=9}
+cograph::splot(
+  B_sig,
+  layout = shared_layout,
+  directed = TRUE,
+  title = "Temporal Network (lag-1, p < .05)",
+
+  # Nodes
+  node_size = 8,
+  node_fill = node_colors,
+  node_border_color = "gray20",
+  node_border_width = 1.5,
+  label_size = 0.9,
+  label_color = "white",
+  label_fontface = "bold",
+
+  # Edges — teal positive, crimson negative
+  edge_positive_color = "#1ABC9C",
+  edge_negative_color = "#E74C3C",
+  edge_width_range = c(0.5, 5),
+  edge_alpha = 0.85,
+  arrow_size = 1.2,
+
+  # Edge labels
+  edge_labels = TRUE,
+  edge_label_size = 0.75,
+  edge_label_color = "gray20",
+  edge_label_bg = "white",
+  edge_label_fontface = "bold",
+
+  # Background
+  background = "#FAFAFA"
+)
+```
+
+## Contemporaneous Network
+
+Undirected partial correlations among within-person residuals, estimated via
+EBIC-GLASSO. These capture same-time-point associations after removing
+temporal (lagged) effects.
+
+```{r contemporaneous, fig.width=9, fig.height=9}
+cograph::splot(
+  contemp,
+  layout = shared_layout,
+  directed = FALSE,
+  title = "Contemporaneous Network (EBIC-GLASSO)",
+
+  # Nodes
+  node_size = 8,
+  node_fill = node_colors,
+  node_border_color = "gray20",
+  node_border_width = 1.5,
+  label_size = 0.9,
+  label_color = "white",
+  label_fontface = "bold",
+
+  # Edges — blue positive, red negative
+  edge_positive_color = "#2980B9",
+  edge_negative_color = "#C0392B",
+  edge_width_range = c(0.5, 6),
+  edge_alpha = 0.8,
+
+  # Edge labels
+  edge_labels = TRUE,
+  edge_label_size = 0.75,
+  edge_label_color = "gray20",
+  edge_label_bg = "white",
+  edge_label_fontface = "bold",
+
+  # Background
+  background = "#FAFAFA"
+)
+```
+
+## Between-Subjects Network
+
+Undirected partial correlations among person-level means, estimated via
+EBIC-GLASSO. These represent stable trait-level associations across
+individuals.
+
+```{r between, fig.width=9, fig.height=9}
+cograph::splot(
+  between,
+  layout = shared_layout,
+  directed = FALSE,
+  title = "Between-Subjects Network (EBIC-GLASSO)",
+
+  # Nodes
+  node_size = 8,
+  node_fill = node_colors,
+  node_border_color = "gray20",
+  node_border_width = 1.5,
+  label_size = 0.9,
+  label_color = "white",
+  label_fontface = "bold",
+
+  # Edges — green positive, rose negative
+  edge_positive_color = "#27AE60",
+  edge_negative_color = "#E74C3C",
+  edge_width_range = c(0.5, 6),
+  edge_alpha = 0.8,
+
+  # Edge labels
+  edge_labels = TRUE,
+  edge_label_size = 0.75,
+  edge_label_color = "gray20",
+  edge_label_bg = "white",
+  edge_label_fontface = "bold",
+
+  # Background
+  background = "#FAFAFA"
+)
+```
+
+## All Three Networks
+
+```{r triptych, fig.width=18, fig.height=7}
+old_par <- par(mfrow = c(1, 3), mar = c(1, 1, 3, 1))
+
+# --- Temporal ---
+cograph::splot(
+  B_sig,
+  layout = shared_layout,
+  directed = TRUE,
+  title = "Temporal",
+  node_size = 7,
+  node_fill = node_colors,
+  node_border_color = "gray20",
+  node_border_width = 1,
+  label_size = 0.8,
+  label_color = "white",
+  label_fontface = "bold",
+  edge_positive_color = "#1ABC9C",
+  edge_negative_color = "#E74C3C",
+  edge_width_range = c(0.4, 4),
+  edge_alpha = 0.85,
+  arrow_size = 1,
+  edge_labels = TRUE,
+  edge_label_size = 0.6,
+  edge_label_color = "gray20",
+  edge_label_bg = "white",
+  background = "#FAFAFA"
+)
+
+# --- Contemporaneous ---
+cograph::splot(
+  contemp,
+  layout = shared_layout,
+  directed = FALSE,
+  title = "Contemporaneous",
+  node_size = 7,
+  node_fill = node_colors,
+  node_border_color = "gray20",
+  node_border_width = 1,
+  label_size = 0.8,
+  label_color = "white",
+  label_fontface = "bold",
+  edge_positive_color = "#2980B9",
+  edge_negative_color = "#C0392B",
+  edge_width_range = c(0.4, 5),
+  edge_alpha = 0.8,
+  edge_labels = TRUE,
+  edge_label_size = 0.6,
+  edge_label_color = "gray20",
+  edge_label_bg = "white",
+  background = "#FAFAFA"
+)
+
+# --- Between ---
+cograph::splot(
+  between,
+  layout = shared_layout,
+  directed = FALSE,
+  title = "Between-Subjects",
+  node_size = 7,
+  node_fill = node_colors,
+  node_border_color = "gray20",
+  node_border_width = 1,
+  label_size = 0.8,
+  label_color = "white",
+  label_fontface = "bold",
+  edge_positive_color = "#27AE60",
+  edge_negative_color = "#E74C3C",
+  edge_width_range = c(0.4, 5),
+  edge_alpha = 0.8,
+  edge_labels = TRUE,
+  edge_label_size = 0.6,
+  edge_label_color = "gray20",
+  edge_label_bg = "white",
+  background = "#FAFAFA"
+)
+
+par(old_par)
+```
+
+## Dark Theme Variant
+
+```{r dark-triptych, fig.width=18, fig.height=7}
+dark_bg <- "#1C1C2E"
+dark_node_colors <- c(
+  "#FF6B6B",   # stressed
+  "#C084FC",   # depressed
+  "#4ADE80",   # calm
+  "#60A5FA",   # happy
+  "#FB923C",   # angry
+  "#FACC15"    # craving
+)
+
+old_par <- par(mfrow = c(1, 3), mar = c(1, 1, 3, 1))
+
+cograph::splot(
+  B_sig,
+  layout = shared_layout,
+  directed = TRUE,
+  title = "Temporal",
+  title_size = 1.4,
+  node_size = 7,
+  node_fill = dark_node_colors,
+  node_border_color = "#FFFFFF40",
+  node_border_width = 1,
+  label_size = 0.8,
+  label_color = "white",
+  label_fontface = "bold",
+  edge_positive_color = "#34D399",
+  edge_negative_color = "#FB7185",
+  edge_width_range = c(0.5, 4),
+  edge_alpha = 0.9,
+  arrow_size = 1,
+  edge_labels = TRUE,
+  edge_label_size = 0.6,
+  edge_label_color = "#E2E8F0",
+  edge_label_bg = "#2D2D44",
+  background = dark_bg
+)
+
+cograph::splot(
+  contemp,
+  layout = shared_layout,
+  directed = FALSE,
+  title = "Contemporaneous",
+  title_size = 1.4,
+  node_size = 7,
+  node_fill = dark_node_colors,
+  node_border_color = "#FFFFFF40",
+  node_border_width = 1,
+  label_size = 0.8,
+  label_color = "white",
+  label_fontface = "bold",
+  edge_positive_color = "#60A5FA",
+  edge_negative_color = "#FB7185",
+  edge_width_range = c(0.5, 5),
+  edge_alpha = 0.9,
+  edge_labels = TRUE,
+  edge_label_size = 0.6,
+  edge_label_color = "#E2E8F0",
+  edge_label_bg = "#2D2D44",
+  background = dark_bg
+)
+
+cograph::splot(
+  between,
+  layout = shared_layout,
+  directed = FALSE,
+  title = "Between-Subjects",
+  title_size = 1.4,
+  node_size = 7,
+  node_fill = dark_node_colors,
+  node_border_color = "#FFFFFF40",
+  node_border_width = 1,
+  label_size = 0.8,
+  label_color = "white",
+  label_fontface = "bold",
+  edge_positive_color = "#4ADE80",
+  edge_negative_color = "#FB7185",
+  edge_width_range = c(0.5, 5),
+  edge_alpha = 0.9,
+  edge_labels = TRUE,
+  edge_label_size = 0.6,
+  edge_label_color = "#E2E8F0",
+  edge_label_bg = "#2D2D44",
+  background = dark_bg
+)
+
+par(old_par)
+```
+
+## Temporal Coefficients
+
+```{r coefficients}
+summary(fit)
+```
+
+## Speed
+
+```{r speed}
+t_our <- system.time(
+  mlvar(d, vars = vars, id = "id", day = "day", beep = "beep")
+)["elapsed"]
+
+t_ref <- system.time(
+  suppressWarnings(mlVAR::mlVAR(
+    d, vars = vars, idvar = "id", dayvar = "day", beepvar = "beep",
+    lags = 1, estimator = "lmer", temporal = "fixed",
+    contemporaneous = "fixed", scale = FALSE, verbose = FALSE
+  ))
+)["elapsed"]
+
+cat(sprintf("Saqrlab mlvar():  %.3f seconds\n", t_our))
+cat(sprintf("mlVAR::mlVAR():   %.3f seconds\n", t_ref))
+cat(sprintf("Speedup:          %.0fx\n", t_ref / t_our))
+```

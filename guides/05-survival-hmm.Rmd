@@ -1,0 +1,128 @@
+---
+title: "Saqrlab Reference — Survival & hidden Markov"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    theme: flatly
+    highlight: tango
+    df_print: paged
+    code_folding: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 5)
+suppressMessages(devtools::load_all("/Users/mohammedsaqr/Documents/Github/Saqrlab", quiet = TRUE))
+set.seed(1)
+```
+
+This reference covers two time-to-event / latent-process simulators.
+`simulate_survival()` draws right-censored survival data from a Cox
+proportional-hazards generative model with known log hazard ratios, and
+`simulate_hmm()` produces observed symbol sequences from a discrete hidden
+Markov model with known transition and emission matrices. Both return a
+`saqr_sim` object whose `$params` hold the ground truth.
+
+## `simulate_survival()`
+
+Generate right-censored survival data from a Cox proportional-hazards model
+with a parametric baseline hazard (Weibull, exponential, or Gompertz). The data
+are built so that `coxph(Surv(time, status) ~ ., data)` recovers the true
+`betas` at large `n`.
+
+**Signature**
+```{r}
+args(simulate_survival)
+```
+
+**Example**
+
+The data frame has `time`, a `status` indicator (1 = event, 0 = censored), and
+the covariates `X1 ... Xp`.
+```{r}
+r <- simulate_survival(n = 400, n_covariates = 2, seed = 1)
+r
+head(as.data.frame(r))
+r$params$betas
+r$params$realized_censoring_rate
+```
+
+A second configuration with binary covariates and an exponential baseline:
+```{r}
+r2 <- simulate_survival(n = 500, betas = c(0.8, -0.5),
+                        baseline = "exponential",
+                        covariate_type = "binary", seed = 42)
+summary(r2)
+```
+
+**Visualising event vs. censoring times**
+
+Overlaid histograms of observed times, split by whether the observation was an
+event or was censored, show the censoring structure.
+```{r}
+surv_df <- as.data.frame(r)
+ev   <- surv_df$time[surv_df$status == 1]
+cens <- surv_df$time[surv_df$status == 0]
+brk  <- seq(0, max(surv_df$time) + 1, length.out = 25)
+
+hist(ev, breaks = brk, col = "#2c7fb880", border = "white",
+     xlab = "Observed time", main = "Event vs. censoring times",
+     ylim = c(0, max(hist(ev, breaks = brk, plot = FALSE)$counts,
+                     hist(cens, breaks = brk, plot = FALSE)$counts)))
+hist(cens, breaks = brk, col = "#d95f0e80", border = "white", add = TRUE)
+legend("topright", fill = c("#2c7fb880", "#d95f0e80"),
+       legend = c("event (status = 1)", "censored (status = 0)"), bty = "n")
+```
+
+**Optional: Kaplan–Meier and recovery with `survival`**
+
+When the `survival` package is installed, a Kaplan–Meier curve and a Cox fit
+confirm the generating effects. Skipped if `survival` is unavailable.
+```{r km-cox, eval=requireNamespace("survival", quietly=TRUE)}
+km <- survival::survfit(survival::Surv(time, status) ~ 1, data = surv_df)
+plot(km, col = "#2c7fb8", lwd = 2, xlab = "Time", ylab = "Survival probability",
+     main = "Kaplan–Meier estimate")
+
+cox <- survival::coxph(survival::Surv(time, status) ~ X1 + X2, data = surv_df)
+data.frame(true = r$params$betas, estimated = unname(coef(cox)))
+```
+
+## `simulate_hmm()`
+
+Generate observed symbol sequences from a discrete hidden Markov model. For each
+sequence a latent state path is drawn from the Markov chain (`init`, `trans`),
+and each hidden state emits an observed symbol via the `emission` matrix. The
+true latent paths are returned in `$params$hidden_paths`.
+
+**Signature**
+```{r}
+args(simulate_hmm)
+```
+
+**Example**
+
+The data are long-format: one row per (`sequence_id`, `time`) with the observed
+`symbol`. The true transition and emission matrices live in `$params`.
+```{r}
+h <- simulate_hmm(n_sequences = 100, seq_length = 40, seed = 1)
+h
+head(as.data.frame(h))
+h$params$trans
+h$params$emission
+```
+
+A second, explicit three-state model:
+```{r}
+tr <- matrix(c(0.8, 0.1, 0.1,
+               0.1, 0.8, 0.1,
+               0.1, 0.1, 0.8), nrow = 3, byrow = TRUE)
+em <- matrix(c(0.7, 0.2, 0.1,
+               0.1, 0.7, 0.2,
+               0.2, 0.1, 0.7), nrow = 3, byrow = TRUE)
+h2 <- simulate_hmm(n_sequences = 80, seq_length = 50, n_states = 3,
+                   n_symbols = 3, trans = tr, emission = em, seed = 42)
+summary(h2)
+dim(h2$params$hidden_paths)
+h2$params$hidden_paths[1:3, 1:10]
+```

@@ -1,0 +1,136 @@
+---
+title: "Saqrlab Reference — Latent-variable models"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    theme: flatly
+    highlight: tango
+    df_print: paged
+    code_folding: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 5)
+suppressMessages(devtools::load_all("/Users/mohammedsaqr/Documents/Github/Saqrlab", quiet = TRUE))
+set.seed(1)
+```
+
+The latent-variable simulators generate data with known latent structure:
+latent profiles (LPA) and classes (LCA), linear regression, factor models, and
+sequence clusters governed by per-cluster Markov chains. Each returns a
+`saqr_sim` object exposing `$data` and the explicit ground-truth `$params`, so
+parameter recovery can be checked directly.
+
+## `simulate_lpa()`
+
+Generate continuous-indicator data with known latent profile structure. All
+distributional parameters are specified explicitly so that recovery can be
+verified.
+
+**Signature**
+```{r}
+args(simulate_lpa)
+```
+
+**Example**
+```{r}
+means <- matrix(c(0, 0, 10, 10), nrow = 2, ncol = 2)
+r <- simulate_lpa(means = means, sds = 0.5, props = c(0.5, 0.5), n = 200, seed = 1)
+head(r$data)
+str(r$params)
+```
+
+```{r lpa-plot, fig.cap="First two indicators coloured by true profile."}
+lab <- r$data[[grep("class|profile|true", names(r$data), value = TRUE)[1]]]
+plot(r$data[[1]], r$data[[2]], col = as.integer(factor(lab)), pch = 19,
+     xlab = names(r$data)[1], ylab = names(r$data)[2],
+     main = "simulate_lpa(): two latent profiles")
+```
+
+## `simulate_lca()`
+
+Generate binary-indicator data with known latent class structure. All item
+response probabilities are specified explicitly.
+
+**Signature**
+```{r}
+args(simulate_lca)
+```
+
+**Example**
+```{r}
+item_probs <- matrix(c(0.9, 0.1, 0.9, 0.1,
+                       0.1, 0.9, 0.1, 0.9), nrow = 4, ncol = 2)
+r <- simulate_lca(item_probs = item_probs, class_probs = c(0.5, 0.5),
+                  n = 200, seed = 1)
+head(r$data)
+str(r$params)
+```
+
+## `simulate_regression()`
+
+Generate a linear-regression dataset with fully specified ground-truth
+coefficients and predictor standard deviations, designed so that
+`lm(y ~ ., data = r$data)` recovers the true coefficients at large `n`.
+
+**Signature**
+```{r}
+args(simulate_regression)
+```
+
+**Example**
+```{r}
+coefs <- c("(Intercept)" = 2, x1 = 3, x2 = -1)
+r <- simulate_regression(coefs = coefs,
+                         predictor_sds = c(x1 = 1, x2 = 1),
+                         error_sd = 0.5, n = 500, seed = 42)
+head(r$data)
+coef(lm(y ~ ., data = r$data))   # should be close to c(2, 3, -1)
+str(r$params)
+```
+
+## `simulate_fa()`
+
+Generate multivariate normal data from an explicit factor model. The implied
+covariance matrix \(\Sigma = \Lambda \Phi \Lambda' + \Psi\) is fully specified
+and stored for direct comparison with estimated covariances.
+
+**Signature**
+```{r}
+args(simulate_fa)
+```
+
+**Example**
+```{r}
+# Two orthogonal factors, 6 indicators (3 per factor)
+loadings <- matrix(c(0.8, 0.7, 0.6, 0,   0,   0,
+                     0,   0,   0,   0.8, 0.7, 0.6),
+                   nrow = 6, ncol = 2)  # byrow = FALSE (default)
+r <- simulate_fa(loadings = loadings, n = 500, seed = 1)
+head(r$data)                  # y1..y6
+r$params$sigma_implied        # implied covariance matrix
+```
+
+## `simulate_seq_clusters()`
+
+Generate wide-format sequence data where each row is drawn from one of K Markov
+chains (clusters), each governed by its own transition matrix. Matrices can be
+supplied explicitly or generated at random.
+
+**Signature**
+```{r}
+args(simulate_seq_clusters)
+```
+
+**Example**
+```{r}
+m1 <- matrix(c(0.8, 0.2, 0.3, 0.7), nrow = 2, byrow = TRUE,
+             dimnames = list(c("A","B"), c("A","B")))
+m2 <- matrix(c(0.2, 0.8, 0.7, 0.3), nrow = 2, byrow = TRUE,
+             dimnames = list(c("A","B"), c("A","B")))
+r <- simulate_seq_clusters(trans_list = list(m1, m2), n = 100, seed = 1)
+head(r$data)
+str(r$params)
+```

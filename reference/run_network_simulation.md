@@ -1,0 +1,135 @@
+# Run Network Analysis Simulations
+
+Run TNA simulations comparing fitted models to original data. Supports
+multiple model types, comparison modes, and parallel processing.
+
+## Usage
+
+``` r
+run_network_simulation(
+  original_data_list,
+  sim_params = NULL,
+  models = c("tna"),
+  comparisons = c("original"),
+  num_runs = 3,
+  parallel = FALSE,
+  scaling = "minmax"
+)
+```
+
+## Arguments
+
+- original_data_list:
+
+  A list of data frames containing original sequence data, or a single
+  data frame. Used as reference for comparisons.
+
+- sim_params:
+
+  Simulation parameters. Can be:
+
+  - NULL (uses defaults).
+
+  - A list of parameters.
+
+  - A data frame where each row is a parameter combination.
+
+- models:
+
+  Character vector of model types to simulate. Options: "tna", "ftna",
+  "ctna", "atna". Default: c("tna").
+
+- comparisons:
+
+  Character vector of comparison types. Options:
+
+  "original"
+
+  :   Compare simulated models to original data.
+
+  "across_models"
+
+  :   Compare different model types against each other.
+
+  "ftna_reference"
+
+  :   Compare all models to their ftna counterparts.
+
+  Default: c("original").
+
+- num_runs:
+
+  Integer. Number of simulation runs per parameter set. Default: 3.
+
+- parallel:
+
+  Logical. Whether to use parallel processing. Default: FALSE.
+
+- scaling:
+
+  Character. Scaling method for comparisons. Options: "none", "minmax",
+  "zscore". Default: "minmax".
+
+## Value
+
+A list containing:
+
+- metrics:
+
+  Data frame of all comparison metrics from all runs.
+
+- summary_stats:
+
+  Aggregated summary statistics by model and comparison type.
+
+- parameters:
+
+  List of simulation parameters used.
+
+## Details
+
+For each parameter combination and original dataset, the function:
+
+1.  Extracts transition probabilities from the original TNA model.
+
+2.  Generates simulated sequences using those probabilities.
+
+3.  Fits the specified model types to the simulated sequences.
+
+4.  Computes comparison metrics against reference models.
+
+Parallel processing uses the future.apply package when enabled.
+
+## Examples
+
+``` r
+if (FALSE) { # \dontrun{
+# Create some original sequence data
+trans_mat <- matrix(c(
+  0.7, 0.2, 0.1,
+  0.3, 0.5, 0.2,
+  0.2, 0.3, 0.5
+), nrow = 3, byrow = TRUE)
+rownames(trans_mat) <- colnames(trans_mat) <- c("A", "B", "C")
+init_probs <- c(A = 0.5, B = 0.3, C = 0.2)
+
+original_data <- simulate_sequences(
+  trans_matrix = trans_mat,
+  init_probs = init_probs,
+  seq_length = 30,
+  n_sequences = 100
+)
+
+# Run simulations comparing tna and ftna models
+results <- run_network_simulation(
+  original_data_list = original_data,
+  sim_params = list(seq_length = 30, n_sequences = 100),
+  models = c("tna", "ftna"),
+  comparisons = c("original"),
+  num_runs = 5
+)
+
+# View summary statistics
+results$summary_stats
+} # }
+```

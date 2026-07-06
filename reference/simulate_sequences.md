@@ -1,0 +1,284 @@
+# Simulate Markov Chain Sequences (Basic)
+
+Generate sequences of states from a Markov chain. Can either use
+provided transition matrix and initial probabilities, or auto-generate
+random ones with optional learning state names.
+
+## Usage
+
+``` r
+simulate_sequences(
+  n_sequences = 1000,
+  seq_length = 20,
+  n_states = 8,
+  states = NULL,
+  use_learning_states = TRUE,
+  categories = "all",
+  smart_select = TRUE,
+  trans_matrix = NULL,
+  init_probs = NULL,
+  na_range = c(0, 0),
+  include_na = TRUE,
+  include_params = FALSE,
+  seed = NULL,
+  num_rows = NULL,
+  max_seq_length = NULL,
+  state_names = NULL,
+  learning_categories = NULL,
+  transition_matrix = NULL,
+  initial_probabilities = NULL,
+  min_na = NULL,
+  max_na = NULL,
+  return_params = NULL
+)
+```
+
+## Arguments
+
+- n_sequences:
+
+  Integer. Number of sequences (rows) to generate. Default: 1000.
+
+- seq_length:
+
+  Integer. Maximum length of each sequence. Default: 20.
+
+- n_states:
+
+  Integer. Number of states when auto-generating probabilities. Ignored
+  if `trans_matrix` is provided. Default: 5.
+
+- states:
+
+  Character vector. Names for states when auto-generating. If NULL, uses
+  letters (A, B, C, ...) or learning states if enabled. Ignored if
+  `trans_matrix` is provided. Default: NULL.
+
+- use_learning_states:
+
+  Logical. If TRUE and auto-generating, uses realistic learning action
+  verbs as state names. Default: TRUE.
+
+- categories:
+
+  Character vector. Categories of learning states to use. Options:
+  "metacognitive", "cognitive", "behavioral", "social", "motivational",
+  "affective", "group_regulation", or "all". Only used if
+  `use_learning_states = TRUE`. Default: "all".
+
+- smart_select:
+
+  Logical. If TRUE, intelligently selects learning states based on
+  n_states. Only used if `use_learning_states = TRUE`. Default: TRUE.
+
+- trans_matrix:
+
+  Square numeric matrix of transition probabilities. Rows must sum to 1.
+  Row names define state names. If NULL, random probabilities are
+  generated based on `n_states`. Default: NULL.
+
+- init_probs:
+
+  Named numeric vector of initial state probabilities. Must sum to 1. If
+  NULL, random probabilities are generated. Default: NULL.
+
+- na_range:
+
+  Integer vector of length 2 (min, max) or single integer (min=max).
+  Range of NA values per sequence. Default: c(0, 0).
+
+- include_na:
+
+  Logical. Whether to include NAs in sequences. Default: TRUE.
+
+- include_params:
+
+  Logical. If TRUE, returns a list with sequences and the generating
+  parameters. Default: FALSE.
+
+- seed:
+
+  Integer or NULL. Random seed for reproducibility. Default: NULL.
+
+- num_rows:
+
+  Deprecated. Use `n_sequences` instead.
+
+- max_seq_length:
+
+  Deprecated. Use `seq_length` instead.
+
+- state_names:
+
+  Deprecated. Use `states` instead.
+
+- learning_categories:
+
+  Deprecated. Use `categories` instead.
+
+- transition_matrix:
+
+  Deprecated. Use `trans_matrix` instead.
+
+- initial_probabilities:
+
+  Deprecated. Use `init_probs` instead.
+
+- min_na:
+
+  Deprecated. Use `na_range` instead.
+
+- max_na:
+
+  Deprecated. Use `na_range` instead.
+
+- return_params:
+
+  Deprecated. Use `include_params` instead.
+
+## Value
+
+If `include_params = FALSE` (default), a data frame with `n_sequences`
+rows and `seq_length` columns. Each row is a sequence of state names,
+potentially with trailing NAs.
+
+If `include_params = TRUE`, a list containing:
+
+- sequences: The data frame of sequences.
+
+- transition_matrix: The transition probability matrix used.
+
+- initial_probabilities: The initial probabilities used.
+
+- state_names: The state names used.
+
+## Details
+
+The function generates sequences by:
+
+1.  Sampling an initial state from `init_probs`.
+
+2.  For each subsequent position, sampling the next state based on the
+    current state's row in `trans_matrix`.
+
+3.  If `include_na` is TRUE, trailing NAs are added to achieve a random
+    number of NAs within `na_range`.
+
+**Auto-generation mode**: When `trans_matrix` is NULL, the function
+automatically generates random transition probabilities and initial
+probabilities using
+[`seqHMM::simulate_transition_probs()`](https://rdrr.io/pkg/seqHMM/man/simulate_pars.html)
+and
+[`seqHMM::simulate_initial_probs()`](https://rdrr.io/pkg/seqHMM/man/simulate_pars.html).
+
+**Learning States**: When `use_learning_states = TRUE`, state names are
+drawn from a curated collection of 180+ student learning action verbs:
+
+- **metacognitive**: Plan, Monitor, Evaluate, Reflect, ...
+
+- **cognitive**: Read, Study, Analyze, Summarize, ...
+
+- **behavioral**: Practice, Annotate, Research, Review, ...
+
+- **social**: Collaborate, Discuss, Explain, Share, ...
+
+- **motivational**: Focus, Persist, Explore, Strive, ...
+
+- **affective**: Enjoy, Appreciate, Cope, Curious, ...
+
+- **group_regulation**: Adapt, Cohesion, Consensus, ...
+
+## See also
+
+[`simulate_sequences_advanced`](https://pak.dynasite.org/Saqrlab/reference/simulate_sequences_advanced.md)
+for sequences with stability modes,
+[`simulate_long_data`](https://pak.dynasite.org/Saqrlab/reference/simulate_long_data.md)
+for long-format educational data,
+[`get_learning_states`](https://pak.dynasite.org/Saqrlab/reference/get_learning_states.md)
+for available learning state verbs,
+[`simulate_tna_networks`](https://pak.dynasite.org/Saqrlab/reference/simulate_tna_networks.md)
+for generating complete TNA networks.
+
+## Examples
+
+``` r
+if (FALSE) { # \dontrun{
+# Simplest usage: all defaults (1000 sequences, 20 length, 5 states, learning states)
+sequences <- simulate_sequences(seed = 42)
+
+# Explicit new parameter names
+sequences <- simulate_sequences(
+  n_sequences = 100,
+  seq_length = 15,
+  n_states = 6,
+  use_learning_states = TRUE,
+  categories = c("metacognitive", "cognitive"),
+  seed = 42
+)
+
+# Method 1: Provide your own transition matrix
+trans_mat <- matrix(c(
+  0.7, 0.2, 0.1,
+  0.3, 0.5, 0.2,
+  0.2, 0.3, 0.5
+), nrow = 3, byrow = TRUE)
+rownames(trans_mat) <- colnames(trans_mat) <- c("A", "B", "C")
+init_probs <- c(A = 0.5, B = 0.3, C = 0.2)
+
+sequences <- simulate_sequences(
+  trans_matrix = trans_mat,
+  init_probs = init_probs,
+  seq_length = 20,
+  n_sequences = 100
+)
+
+# Method 2: Auto-generate with letter names
+sequences <- simulate_sequences(
+  seq_length = 20,
+  n_sequences = 100,
+  n_states = 5,
+  use_learning_states = FALSE,
+  seed = 42
+)
+
+# Method 3: Auto-generate with learning state names
+sequences <- simulate_sequences(
+  seq_length = 25,
+  n_sequences = 150,
+  n_states = 6,
+  use_learning_states = TRUE,
+  categories = c("metacognitive", "cognitive"),
+  seed = 123
+)
+
+# Method 4: Get sequences AND the generating parameters
+result <- simulate_sequences(
+  seq_length = 20,
+  n_sequences = 100,
+  n_states = 4,
+  use_learning_states = TRUE,
+  include_params = TRUE,
+  seed = 42
+)
+result$sequences          # The sequences
+result$transition_matrix  # The random transition matrix
+result$state_names        # e.g., c("Plan", "Monitor", "Read", "Practice")
+
+# Method 5: Custom state names
+sequences <- simulate_sequences(
+  seq_length = 20,
+  n_sequences = 100,
+  n_states = 4,
+  states = c("Explore", "Learn", "Practice", "Master"),
+  seed = 42
+)
+
+# Old parameter names still work (backward compatible)
+sequences <- simulate_sequences(
+  num_rows = 100,
+  max_seq_length = 15,
+  state_names = c("A", "B", "C"),
+  seed = 42
+)
+} # }
+```

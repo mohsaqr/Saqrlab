@@ -1,0 +1,208 @@
+# Run Bootstrap Simulation Across Multiple Runs
+
+Simulate and analyze edge recovery across multiple bootstrap runs.
+Aggregates results to compute overall performance metrics and edge-level
+significance.
+
+## Usage
+
+``` r
+run_bootstrap_simulation(
+  Model,
+  stable_transitions,
+  num_runs,
+  seq_length = 20,
+  n_sequences = 100,
+  stability_prob = 0.95,
+  unstable_mode = "random_jump",
+  unstable_random_transition_prob = 0.5,
+  unstable_perturb_noise = 0.5,
+  unlikely_prob_threshold = 0.1,
+  na_range = c(0, 0),
+  include_na = TRUE,
+  consistency_range = c(0.75, 1.25),
+  level = 0.05,
+  num_cores = parallel::detectCores() - 1,
+  max_seq_length = NULL,
+  num_rows = NULL,
+  min_na = NULL,
+  max_na = NULL
+)
+```
+
+## Arguments
+
+- Model:
+
+  A TNA model object with `weights` (transition matrix) and `inits`
+  (initial probabilities).
+
+- stable_transitions:
+
+  List of character vectors defining ground truth stable transitions.
+  Each vector contains two state names (from, to).
+
+- num_runs:
+
+  Integer. Number of simulation runs to perform.
+
+- seq_length:
+
+  Integer. Maximum sequence length.
+
+- n_sequences:
+
+  Integer. Number of sequences per run.
+
+- stability_prob:
+
+  Numeric in (0 to 1). Probability of following stable transitions.
+  Default: 0.95.
+
+- unstable_mode:
+
+  Character. Mode for unstable transitions: "random_jump",
+  "perturb_prob", or "unlikely_jump". Default: "random_jump".
+
+- unstable_random_transition_prob:
+
+  Numeric in (0 to 1). Probability of unstable action. Default: 0.5.
+
+- unstable_perturb_noise:
+
+  Numeric in (0 to 1). Noise for perturbation mode. Default: 0.5.
+
+- unlikely_prob_threshold:
+
+  Numeric in (0 to 1). Threshold for unlikely transitions. Default: 0.1.
+
+- na_range:
+
+  Integer vector of length 2 (min, max) or single integer. Range of NA
+  values per sequence. Default: c(0, 0).
+
+- include_na:
+
+  Logical. Whether to include NAs. Default: TRUE.
+
+- consistency_range:
+
+  Numeric vector of length 2. Bootstrap consistency range. Default:
+  c(0.75, 1.25).
+
+- level:
+
+  Numeric in (0,1). Significance level. Default: 0.05.
+
+- num_cores:
+
+  Integer. Number of cores for parallel processing. Default:
+  detectCores() - 1.
+
+- max_seq_length:
+
+  Deprecated. Use `seq_length` instead.
+
+- num_rows:
+
+  Deprecated. Use `n_sequences` instead.
+
+- min_na:
+
+  Deprecated. Use `na_range` instead.
+
+- max_na:
+
+  Deprecated. Use `na_range` instead.
+
+## Value
+
+A list containing:
+
+- aggregated_summary:
+
+  List with:
+
+  - overall_performance: Data frame with Sensitivity, Specificity, FPR,
+    FNR.
+
+  - edge_significance: Data frame with per-edge recovery rates and
+    statistics.
+
+- individual_runs:
+
+  List with:
+
+  - list_of_summaries: Bootstrap summaries from each run.
+
+  - list_of_per_edge_performance: Per-edge results from each run.
+
+- successful_runs:
+
+  Number of successfully completed runs.
+
+## Details
+
+For each run, the function calls
+[`run_bootstrap_iteration()`](https://pak.dynasite.org/Saqrlab/reference/run_bootstrap_iteration.md)
+and accumulates TP/TN/FP/FN counts. After all runs, it computes:
+
+- **Overall Performance**: Aggregated sensitivity (TPR), specificity
+  (TNR), false positive rate (FPR), and false negative rate (FNR).
+
+- **Edge Significance**: For each edge, the number of times it was
+  detected as significant, average p-value, average weight, and recovery
+  rate.
+
+Parallel processing uses
+[`parallel::mclapply()`](https://rdrr.io/r/parallel/mclapply.html).
+
+## Examples
+
+``` r
+if (FALSE) { # \dontrun{
+# First create a TNA model from some data
+trans_mat <- matrix(c(
+  0.6, 0.3, 0.1,
+  0.2, 0.6, 0.2,
+  0.1, 0.2, 0.7
+), nrow = 3, byrow = TRUE)
+rownames(trans_mat) <- colnames(trans_mat) <- c("A", "B", "C")
+
+# Create a mock Model object
+Model <- list(
+  weights = trans_mat,
+  inits = c(A = 0.33, B = 0.34, C = 0.33)
+)
+
+# Define stable transitions
+stable <- list(c("A", "B"), c("B", "C"))
+
+# Run bootstrap simulation
+results <- run_bootstrap_simulation(
+  Model = Model,
+  stable_transitions = stable,
+  num_runs = 50,
+  seq_length = 30,
+  n_sequences = 100,
+  stability_prob = 0.95,
+  unstable_mode = "random_jump",
+  num_cores = 4
+)
+
+# View overall performance
+results$aggregated_summary$overall_performance
+
+# View edge-level results
+results$aggregated_summary$edge_significance
+
+# Old parameter names still work
+results <- run_bootstrap_simulation(
+  Model = Model,
+  stable_transitions = stable,
+  num_runs = 50,
+  max_seq_length = 30,
+  num_rows = 100
+)
+} # }
+```

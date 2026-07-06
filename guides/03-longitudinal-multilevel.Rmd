@@ -1,0 +1,113 @@
+---
+title: "Saqrlab Reference — Longitudinal & multilevel"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    theme: flatly
+    highlight: tango
+    df_print: paged
+    code_folding: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 5)
+suppressMessages(devtools::load_all("/Users/mohammedsaqr/Documents/Github/Saqrlab", quiet = TRUE))
+set.seed(1)
+```
+
+The longitudinal and multilevel simulators generate nested and time-structured
+data with known generating parameters: VAR(1) multilevel time series for mlVAR /
+RI-CLPM, two-level (cluster-nested) data with a target intraclass correlation,
+and linear latent growth-curve trajectories. Each returns a `saqr_sim` object
+with `$data` and the true `$params`.
+
+## `simulate_longitudinal()`
+
+Generate multilevel time-series data (a VAR(1) process with temporal,
+contemporaneous, and between-person layers) suitable for testing mlVAR,
+RI-CLPM, latent growth, and similar longitudinal models.
+
+**Signature**
+```{r}
+args(simulate_longitudinal)
+```
+
+**Example**
+```{r}
+# 30 subjects, 60 time points, 3 variables
+r <- simulate_longitudinal(n = 30, tp = 60, vars = 3, seed = 42)
+head(r$data)
+r$params$temporal   # the true VAR(1) matrix
+
+# Explicit temporal structure
+B <- matrix(c(0.4,  0.0, 0.1,
+              0.2,  0.3, 0.0,
+              0.0, -0.1, 0.5), nrow = 3, byrow = TRUE)
+r2 <- simulate_longitudinal(n = 50, tp = 100, vars = 3, temporal = B, seed = 1)
+str(r2$params, max.level = 1)
+```
+
+## `simulate_mlm()`
+
+Generate two-level data where level-1 units are nested within clusters, with a
+target intraclass correlation and a fixed slope on the first predictor (and an
+optional cluster random slope), designed so both are recovered at large
+`n_clusters`. The core example below does not require `lme4`; an optional fit is
+shown afterwards.
+
+**Signature**
+```{r}
+args(simulate_mlm)
+```
+
+**Example**
+```{r}
+r <- simulate_mlm(n_clusters = 40, cluster_size = 25, slope = 0.8,
+                  icc = 0.2, seed = 1)
+print(r)
+head(r$data)
+str(r$params)
+```
+
+```{r mlm-lme4, eval=requireNamespace("lme4", quietly=TRUE)}
+# Optional: recover the fixed slope and ICC with lme4
+m <- lme4::lmer(y ~ x1 + (1 | cluster_id), data = r$data)
+lme4::fixef(m)
+print(lme4::VarCorr(m))
+```
+
+## `simulate_growth()`
+
+Generate longitudinal data from a linear latent growth-curve model: each
+subject draws a random intercept and slope from a bivariate normal, then
+\(y_{it} = b_{0i} + b_{1i}\,t + e_{it}\) with `time` coded `0..(n_time - 1)`.
+Returned in long format.
+
+**Signature**
+```{r}
+args(simulate_growth)
+```
+
+**Example**
+```{r}
+r <- simulate_growth(n = 300, n_time = 6, slope_mean = 2,
+                     intercept_sd = 1.5, seed = 1)
+print(r)
+head(r$data)
+str(r$params)
+```
+
+```{r growth-plot, fig.cap="Trajectories of a few subjects."}
+d <- r$data
+ids <- head(unique(d$subject), 8)
+sub <- d[d$subject %in% ids, ]
+plot(sub$time, sub$y, type = "n",
+     xlab = "time", ylab = "y",
+     main = "simulate_growth(): individual trajectories")
+invisible(lapply(split(sub, sub$subject), function(s) {
+  s <- s[order(s$time), ]
+  lines(s$time, s$y, col = as.integer(factor(s$subject[1], levels = ids)), lwd = 2)
+}))
+```

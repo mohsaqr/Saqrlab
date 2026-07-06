@@ -1,0 +1,108 @@
+---
+title: "Saqrlab Reference — Visualization"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    theme: flatly
+    highlight: tango
+    df_print: paged
+    code_folding: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 5)
+suppressMessages(devtools::load_all("/Users/mohammedsaqr/Documents/Github/Saqrlab", quiet = TRUE))
+set.seed(1)
+```
+
+This reference covers Saqrlab's `ggplot2`-based plotting verbs for comparison
+results. `plot_network_estimation()` visualizes the output of
+`compare_network_estimation()`, `plot_tna_comparison()` plots the per-iteration
+metric distributions from a comparison, and `plot_sampling_distribution()` draws
+a single metric's distribution from `run_sampling_analysis()`. Each example first
+builds the minimal result object the plot consumes, then renders the figure.
+
+```{r build-inputs}
+# Shared inputs: simulate sequences, fit a model, and run the comparisons
+# that the plotting verbs consume.
+set.seed(1)
+trans_mat <- matrix(c(
+  0.7, 0.2, 0.1,
+  0.3, 0.5, 0.2,
+  0.2, 0.3, 0.5
+), nrow = 3, byrow = TRUE)
+rownames(trans_mat) <- colnames(trans_mat) <- c("A", "B", "C")
+init_probs <- c(A = 0.5, B = 0.3, C = 0.2)
+
+seqs <- simulate_sequences(
+  transition_matrix = trans_mat,
+  initial_probabilities = init_probs,
+  max_seq_length = 12,
+  num_rows = 40
+)
+
+estimation <- compare_network_estimation(
+  seqs,
+  model_types = c("tna", "ftna"),
+  iterations = 15,
+  seed = 1,
+  verbose = FALSE
+)
+
+model <- fit_network_model(seqs, "tna")
+sampling <- run_sampling_analysis(model, iterations = 15, seed = 1, verbose = FALSE)
+```
+
+## `plot_network_estimation()`
+
+Plot the distribution of a metric (default Pearson) across sampling iterations for
+each model type from a `compare_network_estimation()` result, returning a `ggplot`
+object.
+
+**Signature**
+```{r}
+args(plot_network_estimation)
+```
+
+**Example**
+```{r plot-network-estimation, eval=requireNamespace("ggplot2", quietly = TRUE)}
+plot_network_estimation(estimation, metric_name = "Pearson", plot_type = "histogram")
+```
+
+## `plot_sampling_distribution()`
+
+Plot the distribution of a single metric within a category (e.g. Pearson within
+"Correlations") from the `individual` data frame of a `run_sampling_analysis()`
+result, returning a `ggplot` object.
+
+**Signature**
+```{r}
+args(plot_sampling_distribution)
+```
+
+**Example**
+```{r plot-sampling-distribution, eval=requireNamespace("ggplot2", quietly = TRUE)}
+plot_sampling_distribution(
+  sampling$individual,
+  category = "Correlations",
+  metric = "Pearson"
+)
+```
+
+## `plot_tna_comparison()`
+
+Plot per-iteration comparison metrics (histogram, boxplot, ridgeline, bar, or
+density) from the `individual` data frame of a comparison result, returning a
+`ggplot` object.
+
+**Signature**
+```{r}
+args(plot_tna_comparison)
+```
+
+**Example**
+```{r plot-tna-comparison, eval=requireNamespace("ggplot2", quietly = TRUE)}
+plot_tna_comparison(estimation$individual, plot_type = "boxplot", metric_name = "Pearson")
+```

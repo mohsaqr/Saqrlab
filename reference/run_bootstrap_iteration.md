@@ -1,0 +1,217 @@
+# Run Bootstrap Iteration for a Single Simulation Run
+
+Performs a single bootstrap evaluation run: generates sequences, fits a
+TNA model, runs bootstrap analysis, and computes classification metrics
+for edge detection compared to ground truth stable transitions.
+
+## Usage
+
+``` r
+run_bootstrap_iteration(
+  trans_matrix = NULL,
+  init_probs = NULL,
+  stable_transitions,
+  seq_length = 20,
+  n_sequences = 100,
+  stability_prob = 0.95,
+  unstable_mode = "random_jump",
+  unstable_random_transition_prob = 0.5,
+  unstable_perturb_noise = 0.5,
+  unlikely_prob_threshold = 0.1,
+  na_range = c(0, 0),
+  include_na = TRUE,
+  consistency_range = c(0.75, 1.25),
+  level = 0.05,
+  transition_matrix = NULL,
+  initial_probabilities = NULL,
+  max_seq_length = NULL,
+  num_rows = NULL,
+  min_na = NULL,
+  max_na = NULL
+)
+
+evaluate_bootstrap(...)
+```
+
+## Arguments
+
+- trans_matrix:
+
+  Square numeric matrix of transition probabilities. Rows must sum to 1.
+  Row names define state names.
+
+- init_probs:
+
+  Named numeric vector of initial state probabilities. Must sum to 1.
+
+- stable_transitions:
+
+  List of character vectors. Each vector contains two state names
+  defining a stable (ground truth) transition pair.
+
+- seq_length:
+
+  Integer. Maximum length of each sequence.
+
+- n_sequences:
+
+  Integer. Number of sequences to generate.
+
+- stability_prob:
+
+  Numeric in (0 to 1). Probability of following stable transitions.
+
+- unstable_mode:
+
+  Character. Mode for unstable transitions: "random_jump",
+  "perturb_prob", or "unlikely_jump".
+
+- unstable_random_transition_prob:
+
+  Numeric in (0 to 1). Probability of unstable action.
+
+- unstable_perturb_noise:
+
+  Numeric in (0 to 1). Noise factor for perturbation mode.
+
+- unlikely_prob_threshold:
+
+  Numeric in (0 to 1). Threshold for unlikely transitions.
+
+- na_range:
+
+  Integer vector of length 2 (min, max) or single integer (min=max).
+  Range of NA values per sequence. Default: c(0, 0).
+
+- include_na:
+
+  Logical. Whether to include NAs.
+
+- consistency_range:
+
+  Numeric vector of length 2. Range for bootstrap consistency analysis
+  (e.g., c(0.75, 1.25)).
+
+- level:
+
+  Numeric in (0,1). Significance level for p-value threshold (e.g.,
+  0.05).
+
+- transition_matrix:
+
+  Deprecated. Use `trans_matrix` instead.
+
+- initial_probabilities:
+
+  Deprecated. Use `init_probs` instead.
+
+- max_seq_length:
+
+  Deprecated. Use `seq_length` instead.
+
+- num_rows:
+
+  Deprecated. Use `n_sequences` instead.
+
+- min_na:
+
+  Deprecated. Use `na_range` instead.
+
+- max_na:
+
+  Deprecated. Use `na_range` instead.
+
+- ...:
+
+  Arguments passed to `run_bootstrap_iteration`.
+
+## Value
+
+A list containing:
+
+- per_edge:
+
+  Data frame with per-edge results including ground truth, bootstrap
+  significance, TP/TN/FP/FN, p-values, and metrics.
+
+- bootstrap_summary_raw:
+
+  Raw bootstrap summary from tna::bootstrap.
+
+- TP_matrix:
+
+  Matrix of true positives by edge.
+
+- TN_matrix:
+
+  Matrix of true negatives by edge.
+
+- FP_matrix:
+
+  Matrix of false positives by edge.
+
+- FN_matrix:
+
+  Matrix of false negatives by edge.
+
+Returns NULL if bootstrap fails.
+
+## Details
+
+The function:
+
+1.  Generates sequences using
+    [`simulate_sequences_advanced()`](https://pak.dynasite.org/Saqrlab/reference/simulate_sequences_advanced.md).
+
+2.  Fits a TNA model and runs bootstrap analysis.
+
+3.  Creates a ground truth matrix from stable_transitions.
+
+4.  Compares bootstrap-significant edges to ground truth.
+
+5.  Computes TP, TN, FP, FN and derived metrics per edge.
+
+An edge is considered "significant" if its p-value \< level.
+
+## Examples
+
+``` r
+if (FALSE) { # \dontrun{
+# Create transition matrix
+trans_mat <- matrix(c(
+  0.6, 0.3, 0.1,
+  0.2, 0.6, 0.2,
+  0.1, 0.2, 0.7
+), nrow = 3, byrow = TRUE)
+rownames(trans_mat) <- colnames(trans_mat) <- c("A", "B", "C")
+init_probs <- c(A = 0.33, B = 0.34, C = 0.33)
+
+# Define ground truth stable edges
+stable <- list(c("A", "B"), c("B", "C"))
+
+# Run single bootstrap evaluation
+result <- run_bootstrap_iteration(
+  trans_matrix = trans_mat,
+  init_probs = init_probs,
+  stable_transitions = stable,
+  seq_length = 30,
+  n_sequences = 100,
+  stability_prob = 0.95,
+  unstable_mode = "random_jump",
+  unstable_random_transition_prob = 0.5,
+  na_range = c(0, 5),
+  include_na = TRUE,
+  consistency_range = c(0.75, 1.25),
+  level = 0.05
+)
+
+# Old parameter names still work
+result <- run_bootstrap_iteration(
+  transition_matrix = trans_mat,
+  initial_probabilities = init_probs,
+  stable_transitions = stable,
+  max_seq_length = 30,
+  num_rows = 100
+)
+} # }
+```
